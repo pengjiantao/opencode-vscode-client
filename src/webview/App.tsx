@@ -1,0 +1,200 @@
+import type { Event, Message, Part, Permission, Session, SessionStatus } from '@opencode-ai/sdk';
+import { useCallback, useEffect, useState } from 'react';
+import type { ExtToWebview } from '../shared/types';
+import { ChatView } from './components/ChatView';
+import { PromptInput } from './components/PromptInput';
+import { SessionTabs } from './components/SessionTabs';
+import { SettingsPanel } from './components/SettingsPanel';
+import { StatusBar } from './components/StatusBar';
+import { useEvents } from './hooks/useEvents';
+import { useIPC } from './hooks/useIPC';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useSessionStore } from './store/sessionStore';
+
+declare global {
+  interface Window {
+    vscode: {
+      postMessage: (message: unknown) => void;
+      getState: () => unknown;
+      setState: (state: unknown) => void;
+    };
+  }
+}
+
+export function App() {
+  const [showSettings, setShowSettings] = useState(false);
+
+  const sessions = useSessionStore((s) => s.sessions);
+  const activeSessionID = useSessionStore((s) => s.activeSessionID);
+  const messages = useSessionStore((s) => s.messages);
+  const parts = useSessionStore((s) => s.parts);
+  const sessionStatus = useSessionStore((s) => s.sessionStatus);
+
+  const setActiveSession = useSessionStore((s) => s.setActiveSession);
+  const addSession = useSessionStore((s) => s.addSession);
+  const removeSession = useSessionStore((s) => s.removeSession);
+  const updateSession = useSessionStore((s) => s.updateSession);
+  const addMessage = useSessionStore((s) => s.addMessage);
+  const updatePart = useSessionStore((s) => s.updatePart);
+  const setSessionStatus = useSessionStore((s) => s.setSessionStatus);
+  const setPendingPermission = useSessionStore((s) => s.setPendingPermission);
+
+  const { send } = useIPC(() => {});
+  useEvents();
+  useKeyboardShortcuts();
+
+  const handleServerEvent = useCallback(
+    (event: Event) => {
+      const props = event.properties as {
+        sessionID?: string;
+        info?: Session | Message | Part | SessionStatus;
+        permission?: Permission;
+      };
+
+      switch (event.type) {
+        case 'session.created':
+          addSession((props as { info: Session }).info);
+          break;
+        case 'session.updated':
+          updateSession((props as { info: Session }).info);
+          break;
+        case 'session.deleted':
+          removeSession((props as { info: Session }).info.id);
+          break;
+        case 'message.updated':
+          addMessage(
+            (props as { info: Message }).info.sessionID,
+            (props as { info: Message }).info,
+          );
+          break;
+        case 'message.part.updated':
+          updatePart((props as { part: Part }).part);
+          break;
+        case 'session.status':
+          setSessionStatus(
+            (props as { sessionID: string }).sessionID,
+            (props as { status: SessionStatus }).status,
+          );
+          break;
+        case 'permission.updated':
+          setPendingPermission((props as { permission: Permission }).permission);
+          break;
+      }
+    },
+    [
+      addSession,
+      updateSession,
+      removeSession,
+      addMessage,
+      updatePart,
+      setSessionStatus,
+      setPendingPermission,
+    ],
+  );
+
+  useEffect(() => {
+    const handler = (event: MessageEvent<ExtToWebview>) => {
+      const message = event.data;
+
+      switch (message.type) {
+        case 'session:created':
+          addSession(message.session as Session);
+          break;
+        case 'session:switched':
+          setActiveSession(message.sessionID);
+          break;
+        case 'session:archived':
+          removeSession(message.sessionID);
+          break;
+        case 'session:updated':
+          updateSession(message.session as Session);
+          break;
+        case 'session:deleted':
+          removeSession(message.sessionID);
+          break;
+        case 'event:received':
+          handleServerEvent(message.event);
+          break;
+        case 'error':
+          console.error('Server error:', message.message);
+          break;
+        case 'init':
+          break;
+      }
+    };
+
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [addSession, setActiveSession, removeSession, updateSession, handleServerEvent]);
+
+  const handleCreateSession = () => {
+    send({ type: 'session:create' } as never);
+  };
+
+  const handleSwitchSession = (sessionID: string) => {
+    send({ type: 'session:switch', sessionID } as never);
+  };
+
+  const handleArchiveSession = (sessionID: string) => {
+    send({ type: 'session:archive', sessionID } as never);
+  };
+
+  const handleSubmitPrompt = (text: string) => {
+    if (!activeSessionID) return;
+    send({ type: 'prompt:send', text } as never);
+  };
+
+  const handleModelChange = (model: string) => {
+    send({ type: 'model:switch', model } as never);
+  };
+
+  const handleAgentChange = (agent: string) => {
+    send({ type: 'agent:switch', agent } as never);
+  };
+
+  const handlePermissionReply = (permissionID: string, allow: boolean) => {
+    send({ type: 'permission:reply', permissionID, allow } as never);
+  };
+
+  const currentStatus = activeSessionID ? sessionStatus[activeSessionID] : undefined;
+
+  return (
+    <div className="app">
+      <SessionTabs
+        sessions={sessions}
+        activeSessionID={activeSessionID}
+        onSwitch={handleSwitchSession}
+        onCreate={handleCreateSession}
+        onArchive={handleArchiveSession}
+        onSettings={() => setShowSettings(true)}
+      />
+
+      <StatusBar sessionID={activeSessionID} status={currentStatus} />
+
+      {activeSessionID ? (
+        <ChatView
+          sessionID={activeSessionID}
+          messages={messages[activeSessionID] || []}
+          parts={parts}
+          onPermissionReply={handlePermissionReply}
+        />
+      ) : (
+        <div className="no-session">
+          <p>No active session. Create a new session to start.</p>
+          <button onClick={handleCreateSession}>New Session</button>
+        </div>
+      )}
+
+      <PromptInput
+        onSubmit={handleSubmitPrompt}
+        models={[]}
+        agents={[]}
+        onModelChange={handleModelChange}
+        onAgentChange={handleAgentChange}
+        disabled={!activeSessionID}
+      />
+
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+    </div>
+  );
+}

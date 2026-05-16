@@ -1,0 +1,24 @@
+import { useState } from 'react';
+
+interface ReasoningPartProps {
+  text: string;
+  metadata?: Record<string, unknown>;
+}
+
+export function ReasoningPart({ text }: ReasoningPartProps) {
+  const [collapsed, setCollapsed] = useState(true);
+
+  return (
+    <div className={`part reasoning-part ${collapsed ? 'collapsed' : 'expanded'}`}>
+      <div className="reasoning-header" onClick={() => setCollapsed(!collapsed)}>
+        <span className="collapse-icon">{collapsed ? '$(chevron-right)' : '$(chevron-down)'}</span>
+        <span className="reasoning-label">Thinking</span>
+      </div>
+      {!collapsed && (
+        <div className="reasoning-content">
+          <pre>{text}</pre>
+        </div>
+      )}
+    </div>
+  );
+}
