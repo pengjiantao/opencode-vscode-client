@@ -4,17 +4,23 @@
   align-items: stretch;
   padding: 0;
   gap: 0;
-  height: 35px;
-  min-height: 35px;
+  height: 30px;
+  min-height: 30px;
+  background-color: var(
+    --vscode-tab-inactiveBackground,
+    var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)
+  );
+  border-top: 1px solid
+    var(
+      --vscode-tab-border,
+      var(--vscode-editorGroupHeader-tabsBorder, var(--vscode-border-color, #454545))
+    );
   border-bottom: 1px solid
     var(
       --vscode-tab-border,
       var(--vscode-editorGroupHeader-tabsBorder, var(--vscode-border-color, #454545))
     );
-  background-color: var(
-    --vscode-tab-inactiveBackground,
-    var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)
-  );
+  box-sizing: border-box;
 }
 
 .tabs-list {
@@ -32,7 +38,7 @@
 .tab {
   display: flex;
   align-items: center;
-  padding: 0 8px 0 16px;
+  padding: 0 6px 0 12px;
   height: 100%;
   border: none;
   border-top: 2px solid transparent;
@@ -66,7 +72,24 @@
 .tab.active {
   background-color: var(--vscode-tab-activeBackground, var(--vscode-editor-background, #1e1e1e));
   color: var(--vscode-tab-activeForeground, #ffffff);
-  border-top-color: var(--vscode-tab-activeBorder, var(--vscode-button-background, #0e639c));
+  border-top-color: var(
+    --vscode-tab-activeBorderTop,
+    var(
+      --vscode-tab-activeBorder,
+      var(--vscode-focusBorder, var(--vscode-button-background, #0e639c))
+    )
+  );
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background-color: var(--vscode-tab-activeBackground, var(--vscode-editor-background, #1e1e1e));
+  z-index: 2;
 }
 
 .tab-title {
@@ -78,22 +101,10 @@
   pointer-events: none;
 }
 
-.tab-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: inherit;
-  font-size: 14px;
-  cursor: pointer;
+.tab .tab-close {
   opacity: 0;
-  transition:
-    opacity 0.15s,
-    background-color 0.15s;
+  transition: opacity 0.15s;
+  margin-left: 2px;
 }
 
 .tab:hover .tab-close,
@@ -102,20 +113,27 @@
 }
 
 .tab-close:hover {
-  background-color: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.15));
   opacity: 1 !important;
 }
 
 .tabs-actions {
   display: flex;
   align-items: center;
-  padding: 0 4px;
+  padding: 0 6px 0 12px;
   gap: 0;
+  height: 100%;
   background-color: var(
     --vscode-tab-inactiveBackground,
     var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)
   );
   border-left: 1px solid var(--vscode-border-color);
+  box-sizing: border-box;
+}
+
+.tabs-actions .popover-container {
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
 
 .more-menu-container {
@@ -146,30 +164,7 @@
 }
 
 .more-menu-popover {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 1000;
   min-width: 180px;
-  background-color: var(--vscode-menu-background, #252526);
-  color: var(--vscode-menu-foreground, #cccccc);
-  border: 1px solid var(--vscode-menu-border, var(--vscode-border-color, #454545));
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  margin-top: 4px;
-  padding: 4px 0;
-  animation: popoverFadeIn 0.15s ease-out;
-}
-
-@keyframes popoverFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .popover-group {

@@ -180,6 +180,34 @@ Design specifications for standard interactive elements:
 - Border radius set to `4px`.
 - Text wraps properly inside text-area inputs without overflow.
 
+### 5. Reusable Custom Components
+
+#### IconButton
+
+- Modular icon action utilizing native VS Code codicons.
+- Features a transparent background with a smooth `:hover` state transition to `var(--vscode-toolbar-hoverBackground)`.
+- Configures predefined size classes (`small` at 18px, `medium` at 24px, `large` at 30px) or custom inline dimensions.
+
+#### Popover
+
+- Dynamic overlay dialog positioned relative to its anchor trigger.
+- Dismisses automatically on click-outside (`mousedown` listener) or when pressing the `Escape` key.
+- Supports flexible vertical placements (`top` or `bottom` aligned directions).
+- Employs clean wrapper markup to ensure nested buttons are not duplicated inside the accessibility tree.
+
+#### Select (Searchable Combobox)
+
+- Native-styled dropdown control supporting item groups/categories, searchable filter queries, and custom loading states.
+- Connects directly with `Popover` to map options securely.
+- Border focus rings link dynamically to `var(--vscode-focusBorder)`.
+
+### 6. Compact Session Tabs
+
+- Enforces a dense layout height of exactly `30px` for layout consistency.
+- Standardizes top and bottom border dividers: `border-top` and `border-bottom` on `.session-tabs`.
+- Employs a relative bottom pseudo-element (`.tab.active::after`) to mask out the parent container's bottom border on the selected tab, ensuring it blends seamlessly into the active editor panel context.
+- Integrates `IconButton` close actions and `Popover` actions to ensure native styling.
+
 ---
 
 ## Do's and Don'ts
@@ -188,6 +216,7 @@ Design specifications for standard interactive elements:
 
 - **Do** always verify WCAG compliance by utilizing CSS variables.
 - **Do** use the official `@vscode/webview-ui-toolkit` widgets for interactive forms.
+- **Do** leverage our custom `Select`, `Popover`, and `IconButton` library to build unified toolbar segments.
 - **Do** make sure monospace content handles long string wrapped margins properly.
 - **Do** test user interactions in both high-contrast light and dark themes.
 
@@ -196,4 +225,5 @@ Design specifications for standard interactive elements:
 - **Don't** use absolute colors like `#ffffff` or `#000000` for backgrounds or texts.
 - **Don't** insert heavy drop-shadows on standard chat components or container components.
 - **Don't** enforce static pixel sizes for font-families or font-sizes that ignore VS Code settings.
+- **Don't** duplicate interactive element roles (e.g., nesting `role="button"` inside another button) to ensure strong screen reader support.
 - **Don't** mix multiple corner radii configurations within a single element grouping.

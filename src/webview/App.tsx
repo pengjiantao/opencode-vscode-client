@@ -10,6 +10,7 @@ import { ChatView } from './components/ChatView';
 import { PromptInput } from './components/PromptInput';
 import { SessionTabs } from './components/SessionTabs';
 import { SettingsPanel } from './components/SettingsPanel';
+import { Tooltip } from './components/Tooltip';
 import { useEvents } from './hooks/useEvents';
 import { useIPC } from './hooks/useIPC';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -276,6 +277,7 @@ export function App() {
       />
 
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+      <Tooltip />
     </div>
   );
 }

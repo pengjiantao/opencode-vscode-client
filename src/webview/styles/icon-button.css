@@ -1,0 +1,57 @@
+/* Reusable VS Code style IconButton classes */
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--vscode-editor-foreground, #cccccc);
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background-color 0.1s ease,
+    border-color 0.1s ease,
+    opacity 0.1s ease;
+  user-select: none;
+  outline: none;
+}
+
+/* Predefined sizes */
+.icon-button-small {
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+}
+
+.icon-button-medium {
+  width: 24px;
+  height: 24px;
+  font-size: 14px;
+}
+
+.icon-button-large {
+  width: 30px;
+  height: 30px;
+  font-size: 18px;
+}
+
+/* Hover effect with native VS Code toolbar token */
+.icon-button:hover:not(:disabled) {
+  background-color: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.12));
+}
+
+.icon-button:active:not(:disabled) {
+  background-color: var(--vscode-toolbar-activeBackground, rgba(255, 255, 255, 0.18));
+}
+
+/* Focus indicator conforming to VS Code active focus behavior */
+.icon-button:focus-visible {
+  border-color: var(--vscode-focusBorder, #007fd4);
+}
+
+/* Disabled state */
+.icon-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

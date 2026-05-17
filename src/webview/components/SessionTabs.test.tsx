@@ -54,7 +54,7 @@ describe('SessionTabs', () => {
       />,
     );
 
-    const activeTab = screen.getByTitle('Session 2');
+    const activeTab = screen.getByText('Session 2').closest('.tab');
     expect(activeTab).toHaveClass('active');
   });
 
@@ -90,7 +90,7 @@ describe('SessionTabs', () => {
       />,
     );
 
-    fireEvent.click(screen.getByTitle('Close Session'));
+    fireEvent.click(screen.getByRole('button', { name: 'Close Session' }));
     expect(onClose).toHaveBeenCalledWith('session-1');
   });
 });

@@ -3,17 +3,27 @@
  */
 
 import type { Session } from '@opencode-ai/sdk';
-import { useEffect, useRef, useState } from 'react';
+import { IconButton } from './IconButton';
+import { Popover } from './Popover';
 
-interface SessionTabsProps {
+/** Props for the SessionTabs component. */
+export interface SessionTabsProps {
+  /** Array of active session models. */
   sessions: Session[];
+  /** Currently active session identifier. */
   activeSessionID: string | null;
+  /** Callback fired when a tab is selected/clicked. */
   onSwitch: (sessionID: string) => void;
+  /** Callback fired when the close button on a specific tab is clicked. */
   onClose: (sessionID: string) => void;
+  /** Callback fired when 'Close All Sessions' action is clicked. */
   onCloseAll: () => void;
 }
 
-/** Top tab bar for managing multiple open sessions. */
+/**
+ * Top tab bar for managing multiple open sessions.
+ * Displays horizontal list of sessions and a Popover actions menu.
+ */
 export function SessionTabs({
   sessions,
   activeSessionID,
@@ -21,24 +31,6 @@ export function SessionTabs({
   onClose,
   onCloseAll,
 }: SessionTabsProps) {
-  const [showMenu, setShowMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Close the "More Actions" popover when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(false);
-      }
-    };
-    if (showMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showMenu]);
-
   return (
     <div className="session-tabs">
       <div className="tabs-list">
@@ -47,33 +39,30 @@ export function SessionTabs({
             key={session.id}
             className={`tab ${session.id === activeSessionID ? 'active' : ''}`}
             onClick={() => onSwitch(session.id)}
-            title={session.title || 'Untitled'}
+            data-custom-title={session.title || 'Untitled'}
           >
             <span className="tab-title">{session.title || 'Untitled'}</span>
-            <button
+            <IconButton
               className="tab-close"
+              name="close"
+              size="small"
+              title="Close Session"
               onClick={(e) => {
+                // Prevent bubbling to tab activation click handler
                 e.stopPropagation();
                 onClose(session.id);
               }}
-              title="Close Session"
-            >
-              ×
-            </button>
+            />
           </div>
         ))}
       </div>
 
       <div className="tabs-actions">
-        <div className="more-menu-container" ref={menuRef}>
-          <button
-            className="more-button"
-            onClick={() => setShowMenu(!showMenu)}
-            title="More Actions"
-          >
-            ...
-          </button>
-          {showMenu && (
+        <Popover
+          placement="bottom"
+          trigger={<IconButton name="ellipsis" title="More Actions" size="medium" />}
+        >
+          {({ close }) => (
             <div className="more-menu-popover">
               <div className="popover-group">
                 <div className="popover-group-header">Switch Session</div>
@@ -84,7 +73,7 @@ export function SessionTabs({
                       className={`popover-option ${s.id === activeSessionID ? 'selected' : ''}`}
                       onClick={() => {
                         onSwitch(s.id);
-                        setShowMenu(false);
+                        close();
                       }}
                     >
                       <span className="option-text">{s.title || 'Untitled'}</span>
@@ -102,7 +91,7 @@ export function SessionTabs({
                   className="popover-option danger"
                   onClick={() => {
                     onCloseAll();
-                    setShowMenu(false);
+                    close();
                   }}
                 >
                   Close All Sessions
@@ -110,7 +99,7 @@ export function SessionTabs({
               </div>
             </div>
           )}
-        </div>
+        </Popover>
       </div>
     </div>
   );
