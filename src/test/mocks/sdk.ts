@@ -1,3 +1,8 @@
+/**
+ * @file Mock factory functions for creating test SDK objects
+ * (messages, parts, sessions, statuses) with sensible defaults.
+ */
+
 import type {
   AssistantMessage,
   ReasoningPart,
@@ -19,6 +24,7 @@ export type {
   UserMessage,
 };
 
+/** Creates a user message with a unique ID and default properties. */
 export function createMockUserMessage(): UserMessage {
   return {
     id: 'msg-1',
@@ -30,6 +36,7 @@ export function createMockUserMessage(): UserMessage {
   };
 }
 
+/** Creates an assistant message with a parent reference to msg-1. */
 export function createMockAssistantMessage(): AssistantMessage {
   return {
     id: 'msg-2',
@@ -46,10 +53,12 @@ export function createMockAssistantMessage(): AssistantMessage {
   };
 }
 
+/** Creates a text part with optional custom text content. */
 export function createMockTextPart(text = 'Hello!'): TextPart {
   return { type: 'text', id: 'part-1', sessionID: 'session-1', messageID: 'msg-1', text };
 }
 
+/** Creates a tool part (e.g., bash) in 'running' status. */
 export function createMockToolPart(tool = 'bash'): ToolPart {
   return {
     type: 'tool',
@@ -62,6 +71,7 @@ export function createMockToolPart(tool = 'bash'): ToolPart {
   };
 }
 
+/** Creates a reasoning part with optional custom thinking text. */
 export function createMockReasoningPart(text = 'Let me think...'): ReasoningPart {
   return {
     type: 'reasoning',
@@ -73,6 +83,7 @@ export function createMockReasoningPart(text = 'Let me think...'): ReasoningPart
   };
 }
 
+/** Creates a session status (idle/busy/retry) with optional overrides. */
 export function createMockSessionStatus(
   overrides: {
     type?: 'idle' | 'busy' | 'retry';
@@ -93,6 +104,7 @@ export function createMockSessionStatus(
 
 let sessionCounter = 0;
 
+/** Creates a session with auto-incrementing unique IDs and optional field overrides. */
 export function createMockSession(overrides: Partial<Session> = {}): Session {
   return {
     id: `session-${++sessionCounter}`,

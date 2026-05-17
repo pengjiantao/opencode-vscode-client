@@ -1,3 +1,7 @@
+/**
+ * @file Unit tests for useSession — store access and IPC action dispatching.
+ */
+
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSessionStore } from '../store/sessionStore';

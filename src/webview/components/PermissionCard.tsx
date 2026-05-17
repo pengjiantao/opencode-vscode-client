@@ -1,3 +1,8 @@
+/**
+ * @file Inline permission request card displayed within the chat view.
+ * Prompts the user to Allow or Deny an agent's permission request.
+ */
+
 interface PermissionCardProps {
   id: string;
   type: string;
@@ -6,6 +11,7 @@ interface PermissionCardProps {
   onReply: (id: string, allow: boolean) => void;
 }
 
+/** Renders a permission request with Allow/Deny buttons and metadata. */
 export function PermissionCard({ id, type, title, metadata, onReply }: PermissionCardProps) {
   return (
     <div className="permission-card">

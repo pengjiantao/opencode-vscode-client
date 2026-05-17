@@ -1,3 +1,7 @@
+/**
+ * @file Hook for registering global keyboard shortcuts (Ctrl+Shift+L, Escape, Alt+1-9, etc.).
+ */
+
 import { useCallback, useEffect, useRef } from 'react';
 import { useSession } from './useSession';
 
@@ -9,6 +13,7 @@ interface KeyboardShortcut {
   action: () => void;
 }
 
+/** Registers global keyboard shortcut handlers for the webview. */
 export function useKeyboardShortcuts() {
   const { createSession, activeSessionID } = useSession();
 
@@ -48,9 +53,11 @@ export function useKeyboardShortcuts() {
     },
   ]);
 
+  /** Matches a keyboard event against registered shortcuts and executes the action. */
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     for (const shortcut of shortcuts.current) {
       const keyMatch = e.key.toLowerCase() === shortcut.key.toLowerCase();
+      // Treat Ctrl and Meta (Cmd on Mac) as equivalent for ctrlKey shortcuts
       const ctrlMatch = shortcut.ctrlKey ? e.ctrlKey || e.metaKey : !e.ctrlKey && !e.metaKey;
       const shiftMatch = shortcut.shiftKey ? e.shiftKey : !e.shiftKey;
       const altMatch = shortcut.altKey ? e.altKey : !e.altKey;

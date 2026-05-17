@@ -1,3 +1,8 @@
+/**
+ * @file Dropdown selector component for choosing a language model.
+ * Supports search, grouping by provider, and filtering disconnected models.
+ */
+
 import { useEffect, useRef, useState } from 'react';
 
 interface Model {
@@ -14,6 +19,7 @@ interface ModelSelectorProps {
   onChange: (model: string) => void;
 }
 
+/** Searchable combobox for selecting a model, grouped by provider. */
 export function ModelSelector({ models, value, onChange }: ModelSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,7 +37,7 @@ export function ModelSelector({ models, value, onChange }: ModelSelectorProps) {
 
   const isLoading = models.length === 0;
 
-  // Find currently active model
+  // Find currently active model for trigger display text
   const activeModel = models.find((m) => m.id === value);
   const triggerText = activeModel
     ? activeModel.providerName
@@ -39,10 +45,10 @@ export function ModelSelector({ models, value, onChange }: ModelSelectorProps) {
       : activeModel.name
     : value || 'Select model...';
 
-  // Filter models that are connected (isConnected is not false)
+  // Only show connected models in the dropdown
   const configuredModels = models.filter((m) => m.isConnected !== false);
 
-  // Filter based on search query
+  // Filter models by search query (matches name or provider name)
   const filteredModels = configuredModels.filter((m) => {
     const term = searchQuery.toLowerCase();
     return (
@@ -51,7 +57,7 @@ export function ModelSelector({ models, value, onChange }: ModelSelectorProps) {
     );
   });
 
-  // Group by providerName
+  // Group filtered models by provider for organized display
   const grouped: Record<string, Array<Model>> = {};
   filteredModels.forEach((m) => {
     const groupName = m.providerName || 'Other';

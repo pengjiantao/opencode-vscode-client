@@ -1,11 +1,17 @@
+/**
+ * @file Mock SSE event source for testing event subscription and streaming.
+ */
+
 import type { Event } from '@opencode-ai/sdk';
 import { vi } from 'vitest';
 
+/** Event source mock that allows emitting events programmatically. */
 export type MockEventSource = {
   emit: (event: Event) => void;
   handler: (event: Event) => void;
 };
 
+/** Creates a mock event source with emit, subscribe, and unsubscribe capabilities. */
 export const createMockEventSource = (): MockEventSource & {
   subscribe: ReturnType<typeof vi.fn>;
   unsubscribe: ReturnType<typeof vi.fn>;
@@ -35,6 +41,7 @@ export const createMockEventSource = (): MockEventSource & {
   };
 };
 
+/** Creates a ReadableStream that emits given events as SSE-formatted data. */
 export const createMockSSEStream = (events: Event[]): ReadableStream => {
   let controller: ReadableStreamDefaultController;
 

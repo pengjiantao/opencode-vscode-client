@@ -1,3 +1,8 @@
+/**
+ * @file Settings side panel with model/agent defaults, behavior toggles,
+ * and keyboard shortcut reference.
+ */
+
 import { VSCodeButton, VSCodeCheckbox, VSCodeTextField } from '@vscode/webview-ui-toolkit/react';
 import { useState } from 'react';
 
@@ -5,12 +10,14 @@ interface SettingsPanelProps {
   onClose: () => void;
 }
 
+/** Overlay settings panel for configuring defaults and behavior. */
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [defaultModel, setDefaultModel] = useState('');
   const [defaultAgent, setDefaultAgent] = useState('');
   const [autoSend, setAutoSend] = useState(false);
   const [syntaxHighlighting, setSyntaxHighlighting] = useState(true);
 
+  /** Saves settings to the extension host via IPC. */
   const handleSave = () => {
     // TODO: Persist settings via IPC
     window.vscode.postMessage({
@@ -25,6 +32,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
     onClose();
   };
 
+  /** Resets all settings to their default values. */
   const handleReset = () => {
     setDefaultModel('');
     setDefaultAgent('');

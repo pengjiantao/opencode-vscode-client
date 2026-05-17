@@ -1,3 +1,4 @@
+/* Chat message list, message turns, and user/assistant message styling */
 .chat-view {
   flex: 1;
   overflow-y: auto;

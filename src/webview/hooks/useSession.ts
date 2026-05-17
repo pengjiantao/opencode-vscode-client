@@ -1,8 +1,14 @@
+/**
+ * @file Convenience hook that bundles session store state with IPC actions.
+ * Provides a single interface for session CRUD, prompt submission, and event handling.
+ */
+
 import type { Event, Message, Part, Session, SessionStatus } from '@opencode-ai/sdk';
 import { useCallback } from 'react';
 import { useSessionStore } from '../store/sessionStore';
 import { useIPC } from './useIPC';
 
+/** Aggregates session state and actions from the store and IPC layer. */
 export function useSession() {
   const { send } = useIPC(() => {});
 
@@ -71,6 +77,7 @@ export function useSession() {
     [send],
   );
 
+  /** Dispatches SSE server events to the appropriate store mutations. */
   const handleEvent = useCallback(
     (event: Event) => {
       const props = event.properties as {
@@ -98,6 +105,7 @@ export function useSession() {
         case 'message.part.updated':
           updatePart((props as { part: Part }).part);
           break;
+        /** Appends streaming delta to a part field (e.g., incremental text). */
         case 'message.part.delta': {
           const deltaProps = (
             event as unknown as {

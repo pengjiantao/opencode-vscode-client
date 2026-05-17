@@ -1,3 +1,4 @@
+/* Status indicator bar with colored dot and text */
 .status-bar {
   display: flex;
   align-items: center;

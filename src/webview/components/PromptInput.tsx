@@ -1,3 +1,8 @@
+/**
+ * @file Chat input area with text area, model/agent selectors, and send/stop button.
+ * Supports auto-resize textarea, Enter to send, and model/agent selection.
+ */
+
 import type { SessionStatus } from '@opencode-ai/sdk';
 import { VSCodeButton } from '@vscode/webview-ui-toolkit/react';
 import React from 'react';
@@ -15,6 +20,7 @@ interface PromptInputProps {
   disabled?: boolean;
 }
 
+/** Bottom input bar with textarea, model/agent dropdowns, and send/stop button. */
 export function PromptInput({
   onSubmit,
   onAbort,

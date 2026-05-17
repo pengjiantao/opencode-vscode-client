@@ -1,3 +1,7 @@
+/**
+ * @file Tab bar showing open sessions with switch, close, and more-actions menu.
+ */
+
 import type { Session } from '@opencode-ai/sdk';
 import { useEffect, useRef, useState } from 'react';
 
@@ -9,6 +13,7 @@ interface SessionTabsProps {
   onCloseAll: () => void;
 }
 
+/** Top tab bar for managing multiple open sessions. */
 export function SessionTabs({
   sessions,
   activeSessionID,
@@ -19,6 +24,7 @@ export function SessionTabs({
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Close the "More Actions" popover when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {

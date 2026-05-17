@@ -1,3 +1,7 @@
+/**
+ * @file Status indicator bar showing the current session state (idle, busy, retry).
+ */
+
 import type { SessionStatus } from '@opencode-ai/sdk';
 
 interface StatusBarProps {
@@ -5,11 +9,13 @@ interface StatusBarProps {
   status: SessionStatus | undefined;
 }
 
+/** Displays a colored status bar indicating the current session processing state. */
 export function StatusBar({ sessionID, status }: StatusBarProps) {
   if (!sessionID) {
     return null;
   }
 
+  /** Returns human-readable text for the current session status. */
   const getStatusText = () => {
     if (!status) return 'Idle';
     switch (status.type) {
@@ -24,6 +30,7 @@ export function StatusBar({ sessionID, status }: StatusBarProps) {
     }
   };
 
+  /** Returns the VS Code theme variable for the status indicator color. */
   const getStatusColor = () => {
     if (!status) return 'var(--vscode-editor-foreground)';
     switch (status.type) {

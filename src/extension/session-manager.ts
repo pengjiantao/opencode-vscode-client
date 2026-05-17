@@ -1,12 +1,19 @@
+/**
+ * @file Manages OpenCode session lifecycle on the extension host side.
+ * Handles creation, switching, archiving, and prompt operations with state tracking.
+ */
+
 import type { Message, Part, Session } from '@opencode-ai/sdk';
 import type { SDKClient } from './sdk-client';
 
+/** Current state of the session manager. */
 export interface SessionManagerState {
   activeSessionID: string | null;
   sessions: Session[];
   isConnected: boolean;
 }
 
+/** Manages session lifecycle and delegates data operations to the SDK client. */
 export class SessionManager {
   private sdk: SDKClient;
   private _state: SessionManagerState = {
@@ -33,6 +40,7 @@ export class SessionManager {
     this.notify();
   }
 
+  /** Subscribes to state changes. Returns an unsubscribe function. */
   subscribe(listener: (state: SessionManagerState) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -44,15 +52,18 @@ export class SessionManager {
     }
   }
 
+  /** Replaces the session list without changing active session. */
   setSessions(sessions: Session[]): void {
     this.setState({ sessions });
   }
 
+  /** Starts the SDK server and marks as connected. */
   async connect(): Promise<void> {
     await this.sdk.startServer();
     this.setState({ isConnected: true });
   }
 
+  /** Creates a new session and sets it as active. */
   async create(title?: string): Promise<Session> {
     const session = await this.sdk.session.create();
 
@@ -68,6 +79,7 @@ export class SessionManager {
     return session;
   }
 
+  /** Switches the active session by ID. Throws if not found. */
   switch(id: string): void {
     if (!this.state.sessions.find((s) => s.id === id)) {
       throw new Error(`Session ${id} not found`);
@@ -75,6 +87,7 @@ export class SessionManager {
     this.setState({ activeSessionID: id });
   }
 
+  /** Archives a session by setting an archived timestamp, then removes from local state. */
   async archive(id: string): Promise<void> {
     const session = this.state.sessions.find((s) => s.id === id);
     if (!session) {
@@ -92,10 +105,12 @@ export class SessionManager {
     });
   }
 
+  /** Retrieves messages for a session. */
   async getMessages(id: string): Promise<Message[]> {
     return this.sdk.session.messages(id);
   }
 
+  /** Retrieves messages with their associated parts for a session. */
   async getMessagesAndParts(id: string): Promise<{ messages: Message[]; parts: Part[] }> {
     const list = await this.sdk.session.messagesWithParts(id);
     const messages: Message[] = [];
@@ -107,14 +122,15 @@ export class SessionManager {
     return { messages, parts };
   }
 
+  /** Sends a prompt with cleaned parts (strips ambient SDK fields to avoid schema validation errors). */
   async sendPrompt(
     sessionID: string,
     parts: Part[],
     model?: string,
     agent?: string,
   ): Promise<void> {
-    // Clean parts array to strictly adhere to the backend's PromptInput schema
-    // (removing ambient/extra fields like sessionID and messageID to avoid Schema validation errors)
+    /* Clean parts array to strictly adhere to the backend's PromptInput schema
+       (removing ambient/extra fields like sessionID and messageID to avoid Schema validation errors) */
     const cleanedParts = parts.map((part) => {
       if (part.type === 'text') {
         return {
@@ -148,6 +164,7 @@ export class SessionManager {
     await this.sdk.session.promptAsync(sessionID, cleanedParts, model, agent);
   }
 
+  /** Aborts a running prompt for the given session. */
   async abort(sessionID: string): Promise<void> {
     await this.sdk.session.abort(sessionID);
   }

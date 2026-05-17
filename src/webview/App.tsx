@@ -1,3 +1,8 @@
+/**
+ * @file Root React component for the OpenCode side panel webview.
+ * Manages IPC message routing, session state, and renders the complete UI.
+ */
+
 import type { Event, Message, Part, Permission, Session, SessionStatus } from '@opencode-ai/sdk';
 import { useCallback, useEffect, useState } from 'react';
 import type { ExtToWebview } from '../shared/types';
@@ -21,6 +26,7 @@ declare global {
   }
 }
 
+/** Main application component — orchestrates IPC, session state, and child components. */
 export function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [models, setModels] = useState<
@@ -58,6 +64,7 @@ export function App() {
   useEvents();
   useKeyboardShortcuts();
 
+  /** Dispatches SSE server events to the appropriate store actions. */
   const handleServerEvent = useCallback(
     (event: Event) => {
       const props = event.properties as {
@@ -86,6 +93,7 @@ export function App() {
         case 'message.part.updated':
           updatePart((props as { part: Part }).part);
           break;
+        /** Appends streaming delta to an existing part's field. */
         case 'message.part.delta': {
           const deltaProps = (
             event as unknown as {

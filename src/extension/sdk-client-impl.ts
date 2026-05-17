@@ -1,11 +1,19 @@
+/**
+ * @file Concrete implementation of the SDKClient interface.
+ * Manages server lifecycle (auto-connect to existing server or start new one)
+ * and wraps the @opencode-ai/sdk library operations.
+ */
+
 import type { Message, Part, Session } from '@opencode-ai/sdk';
 import { createOpencodeClient, createOpencodeServer } from '@opencode-ai/sdk';
 import type { SDKClient, ServerHandle } from './sdk-client';
 
+/** Creates a configured SDK client, attempting to reuse an existing server on localhost:4096. */
 export function createSDKClient(directory?: string): SDKClient {
   let serverHandle: ServerHandle | null = null;
   let client = createOpencodeClient({ directory });
 
+  /** Probes port 4096, then starts a new server if unavailable. */
   const startServer = async (): Promise<ServerHandle> => {
     try {
       const testUrl = 'http://127.0.0.1:4096';
@@ -13,6 +21,7 @@ export function createSDKClient(directory?: string): SDKClient {
         method: 'HEAD',
         signal: AbortSignal.timeout(1000),
       }).catch(() => null);
+      // Reuse existing server if reachable
       if (response?.ok) {
         client = createOpencodeClient({ baseUrl: testUrl, directory });
         return {
@@ -21,7 +30,7 @@ export function createSDKClient(directory?: string): SDKClient {
         };
       }
     } catch {
-      /* server not running */
+      /* server not running — will start a new one */
     }
 
     const server = await createOpencodeServer();
@@ -66,12 +75,14 @@ export function createSDKClient(directory?: string): SDKClient {
         const result = await client.session.messages({ path: { id } });
         return result.data ?? [];
       },
+      /** Sends a prompt and blocks until the response is complete. */
       prompt: async (id: string, parts: Part[], model?: string, agent?: string) => {
         const body: {
           parts: Part[];
           model?: { providerID: string; modelID: string };
           agent?: string;
         } = { parts };
+        // Parse "providerID/modelID" format from model string
         if (model) {
           const [providerID, modelID] = model.split('/');
           body.model = { providerID, modelID };
@@ -81,6 +92,7 @@ export function createSDKClient(directory?: string): SDKClient {
         }
         await client.session.prompt({ path: { id }, body: body as never });
       },
+      /** Sends a prompt and returns immediately (non-blocking). */
       promptAsync: async (id: string, parts: Part[], model?: string, agent?: string) => {
         const body: {
           parts: Part[];
@@ -100,6 +112,7 @@ export function createSDKClient(directory?: string): SDKClient {
         await client.session.abort({ path: { id } });
       },
     },
+    /** Subscribes to the SSE event stream and returns an unsubscribe callback. */
     subscribeEvents: (handler) => {
       let closed = false;
 
@@ -125,6 +138,7 @@ export function createSDKClient(directory?: string): SDKClient {
         void subscription.then((sseResult) => sseResult?.stream.return?.(undefined));
       };
     },
+    /** Aggregates models from all providers, filtering out deprecated ones. */
     getModels: async (): Promise<
       Array<{
         id: string;
@@ -160,6 +174,7 @@ export function createSDKClient(directory?: string): SDKClient {
       }
       return modelsList;
     },
+    /** Fetches the available agent list from the server. */
     getAgents: async (): Promise<
       Array<{ id: string; name: string; mode?: string; hidden?: boolean }>
     > => {

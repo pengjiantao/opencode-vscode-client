@@ -1,3 +1,7 @@
+/**
+ * @file Unit tests for SessionTabs — tab rendering, active highlighting, switch/close actions.
+ */
+
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockSession } from '../../test/mocks/sdk';

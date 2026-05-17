@@ -1,3 +1,7 @@
+/**
+ * @file Unit tests for SettingsPanel — fields rendering, shortcuts display, and close action.
+ */
+
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsPanel } from './SettingsPanel';

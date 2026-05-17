@@ -1,3 +1,7 @@
+/**
+ * @file Unit tests for SessionManager — session CRUD, switching, archiving, and prompt sanitization.
+ */
+
 import type { Part } from '@opencode-ai/sdk';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockSession } from '../test/mocks/sdk';
@@ -65,6 +69,7 @@ describe('SessionManager', () => {
     });
   });
 
+  /** Regression test: verifies that extra SDK fields are stripped before sending. */
   describe('sendPrompt regression test', () => {
     it('should sanitize parts and call promptAsync with cleaned parts', async () => {
       const mockPromptAsync = vi.fn().mockResolvedValue(undefined);

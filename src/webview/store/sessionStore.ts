@@ -1,12 +1,24 @@
+/**
+ * @file Zustand store managing all session, message, part, and permission state.
+ * Central state hub for the webview React application.
+ */
+
 import type { Message, Part, Permission, Session, SessionStatus } from '@opencode-ai/sdk';
 import { create } from 'zustand';
 
+/** Full shape of the session store's state and actions. */
 interface SessionStore {
+  /** All known sessions (open/running). */
   sessions: Session[];
+  /** Currently active session ID. */
   activeSessionID: string | null;
+  /** Messages keyed by session ID. */
   messages: Record<string, Message[]>;
+  /** Parts keyed by message ID. */
   parts: Record<string, Part[]>;
+  /** Session statuses keyed by session ID. */
   sessionStatus: Record<string, SessionStatus>;
+  /** Currently displayed permission request (null when dismissed). */
   pendingPermission: Permission | null;
 
   setActiveSession: (id: string) => void;
@@ -24,6 +36,7 @@ interface SessionStore {
   setSessionMessagesAndParts: (sessionID: string, messages: Message[], parts: Part[]) => void;
 }
 
+/** Zustand store for all session-related state in the webview. */
 export const useSessionStore = create<SessionStore>((set) => ({
   sessions: [],
   activeSessionID: null,
@@ -34,6 +47,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
 
   setActiveSession: (id) => set({ activeSessionID: id }),
 
+  /** Replaces the session list, preserving active session if still present. */
   setSessions: (sessions) =>
     set((state) => {
       const activeExists = sessions.some((s) => s.id === state.activeSessionID);
@@ -47,6 +61,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
       };
     }),
 
+  /** Adds a session if not already present (deduplication). */
   addSession: (session) =>
     set((state) => {
       if (state.sessions.some((s) => s.id === session.id)) {
@@ -57,6 +72,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
       };
     }),
 
+  /** Removes a session and clears activeSessionID if it was the active one. */
   removeSession: (id) =>
     set((state) => ({
       sessions: state.sessions.filter((s) => s.id !== id),
@@ -68,6 +84,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
       sessions: state.sessions.map((s) => (s.id === session.id ? session : s)),
     })),
 
+  /** Adds or updates a message (upsert by ID) within a session. */
   addMessage: (sessionID, message) =>
     set((state) => {
       const currentMessages = state.messages[sessionID] || [];
@@ -83,6 +100,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
       };
     }),
 
+  /** Updates a single message by ID in its session's message list. */
   updateMessage: (message) =>
     set((state) => ({
       messages: {
@@ -93,8 +111,10 @@ export const useSessionStore = create<SessionStore>((set) => ({
       },
     })),
 
+  /** Bulk-sets messages and their associated parts for a session, rebuilding the parts map. */
   setSessionMessagesAndParts: (sessionID, messages, parts) =>
     set((state) => {
+      // Initialize empty part arrays for each message, then populate
       const partsMap: Record<string, Part[]> = { ...state.parts };
       for (const m of messages) {
         partsMap[m.id] = [];
@@ -114,6 +134,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
       };
     }),
 
+  /** Appends a part to a message's part list. */
   addPart: (messageID, part) =>
     set((state) => ({
       parts: {
@@ -122,6 +143,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
       },
     })),
 
+  /** Adds or updates a part (upsert by ID) within a message. */
   updatePart: (part) =>
     set((state) => {
       const messageID = part.messageID;
@@ -138,6 +160,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
       };
     }),
 
+  /** Appends a delta string to an existing part field, creating a skeleton part if needed. */
   updatePartDelta: (messageID, partID, field, delta) =>
     set((state) => {
       const currentParts = state.parts[messageID] || [];
@@ -145,6 +168,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
 
       let newParts: Part[];
       if (exists) {
+        // Append delta to existing part's field (e.g., streaming text)
         newParts = currentParts.map((p) => {
           if (p.id === partID) {
             const record = p as Record<string, unknown>;
@@ -157,7 +181,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
           return p;
         });
       } else {
-        // If part delta arrives before part is created, initialize the part skeleton
+        // If part delta arrives before the part itself, create a skeleton
         const newPart = {
           id: partID,
           messageID,
@@ -175,10 +199,12 @@ export const useSessionStore = create<SessionStore>((set) => ({
       };
     }),
 
+  /** Updates the status for a specific session (idle, busy, retry). */
   setSessionStatus: (sessionID, status) =>
     set((state) => ({
       sessionStatus: { ...state.sessionStatus, [sessionID]: status },
     })),
 
+  /** Sets or clears the pending permission request shown to the user. */
   setPendingPermission: (permission) => set({ pendingPermission: permission }),
 }));

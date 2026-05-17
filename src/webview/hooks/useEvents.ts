@@ -1,8 +1,14 @@
+/**
+ * @file Hook that listens for SSE events from the extension host
+ * and dispatches them to the session store via useSession.
+ */
+
 import { useEffect } from 'react';
 import type { ExtToWebview } from '../../shared/types';
 import { useIPC } from './useIPC';
 import { useSession } from './useSession';
 
+/** Subscribes to event:received IPC messages and sends an init request on mount. */
 export function useEvents() {
   const { handleEvent } = useSession();
   const { send } = useIPC(() => {});

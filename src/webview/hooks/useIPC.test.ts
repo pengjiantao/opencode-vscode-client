@@ -1,3 +1,7 @@
+/**
+ * @file Unit tests for useIPC — message sending and event listener lifecycle.
+ */
+
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useIPC } from './useIPC';

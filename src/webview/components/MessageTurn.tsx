@@ -1,3 +1,8 @@
+/**
+ * @file Renders a single user→assistant message turn.
+ * Displays user message content and, if available, the assistant's response parts.
+ */
+
 import type { Message, Part } from '@opencode-ai/sdk';
 import { PartRenderer } from './PartRenderer';
 
@@ -8,6 +13,7 @@ interface MessageTurnProps {
   status?: { type: string };
 }
 
+/** A paired user message and optional assistant response with part rendering. */
 export function MessageTurn({ userMessage, assistantMessage, parts, status }: MessageTurnProps) {
   return (
     <div className="message-turn">
@@ -30,6 +36,7 @@ export function MessageTurn({ userMessage, assistantMessage, parts, status }: Me
             <span className="time">
               {new Date(assistantMessage.time.created).toLocaleTimeString()}
             </span>
+            {/* Show status indicator (e.g., streaming) when not idle */}
             {status && status.type !== 'idle' && <span className="status">{status.type}</span>}
           </div>
           <div className="message-content">

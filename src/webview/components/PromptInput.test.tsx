@@ -1,3 +1,7 @@
+/**
+ * @file Unit tests for PromptInput — submission, empty validation, dropdowns, and regression tests.
+ */
+
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -123,6 +127,7 @@ describe('PromptInput', () => {
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 
+  /** Regression: dropdowns should be disabled when empty, enabled when populated. */
   it('regression: enables model and agent dropdowns after loading data', () => {
     const { rerender } = render(
       <PromptInput
@@ -154,6 +159,7 @@ describe('PromptInput', () => {
     expect(agentSelect).not.toBeDisabled();
   });
 
+  /** Regression: send button becomes a stop button with warning colors when busy/retry. */
   it('regression: transitions button to stop (warning appearance) when status is busy or retry', () => {
     const mockOnAbort = vi.fn();
     const { rerender } = render(
@@ -193,6 +199,7 @@ describe('PromptInput', () => {
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 
+  /** Regression: subagents and hidden agents should be filtered out of the agent list. */
   it('regression: AgentSelector only lists primary (non-subagent and non-hidden) agents', () => {
     const agents = [
       { id: 'build', name: 'Build Agent', mode: 'primary', hidden: false },
@@ -219,6 +226,7 @@ describe('PromptInput', () => {
     expect(screen.queryAllByText('Hidden Agent').length).toBe(0);
   });
 
+  /** Regression: only connected (non-disconnected) models should appear, and search should filter. */
   it('regression: ModelSelector only lists connected models and allows searching', () => {
     const models = [
       { id: 'm1', name: 'GPT-4', providerName: 'OpenAI', isConnected: true },

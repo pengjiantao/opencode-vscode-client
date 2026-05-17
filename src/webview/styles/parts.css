@@ -1,3 +1,4 @@
+/* Styles for all message part types: text, tool, reasoning, file, agent */
 .part {
   margin: 8px 0;
 }

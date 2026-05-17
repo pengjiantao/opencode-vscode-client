@@ -1,3 +1,7 @@
+/**
+ * @file Unit tests for ChatView — message rendering and empty state.
+ */
+
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockAssistantMessage, createMockUserMessage } from '../../test/mocks/sdk';

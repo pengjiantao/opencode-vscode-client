@@ -1,3 +1,7 @@
+/**
+ * @file Unit tests for StatusBar — renders correct text per status type (idle, busy, retry).
+ */
+
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockSessionStatus } from '../../test/mocks/sdk';

@@ -1,3 +1,7 @@
+/**
+ * @file Collapsible reasoning/thinking block that shows the model's chain-of-thought.
+ */
+
 import { useState } from 'react';
 
 interface ReasoningPartProps {
@@ -5,6 +9,7 @@ interface ReasoningPartProps {
   metadata?: Record<string, unknown>;
 }
 
+/** Collapsible section displaying the model's internal reasoning text. */
 export function ReasoningPart({ text }: ReasoningPartProps) {
   const [collapsed, setCollapsed] = useState(true);
 

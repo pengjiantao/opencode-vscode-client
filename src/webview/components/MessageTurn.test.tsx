@@ -1,3 +1,7 @@
+/**
+ * @file Unit tests for MessageTurn — user/assistant rendering and part integration.
+ */
+
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {

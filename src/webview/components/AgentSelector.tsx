@@ -1,3 +1,8 @@
+/**
+ * @file Dropdown selector component for choosing an AI agent.
+ * Filters out subagents and hidden agents, showing only primary agents.
+ */
+
 import { useEffect, useRef, useState } from 'react';
 
 interface Agent {
@@ -13,10 +18,12 @@ interface AgentSelectorProps {
   onChange: (agent: string) => void;
 }
 
+/** Custom combobox for selecting among available primary agents. */
 export function AgentSelector({ agents, value, onChange }: AgentSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Close popover when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {

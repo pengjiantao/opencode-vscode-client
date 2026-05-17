@@ -1,3 +1,7 @@
+/**
+ * @file Renders a tool call part with its status, input, output, and error states.
+ */
+
 interface ToolPartProps {
   tool: string;
   state: {
@@ -10,6 +14,7 @@ interface ToolPartProps {
   };
 }
 
+/** Displays a tool execution with status icon, input/output details, and error info. */
 export function ToolPart({ tool, state }: ToolPartProps) {
   const getStatusIcon = () => {
     switch (state.status) {

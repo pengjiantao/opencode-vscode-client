@@ -1,3 +1,7 @@
+/**
+ * @file Unit tests for PermissionCard — renders details and handles Allow/Deny clicks.
+ */
+
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PermissionCard } from './PermissionCard';

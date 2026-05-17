@@ -1,3 +1,7 @@
+/**
+ * @file Unit tests for sessionStore (Zustand) — sessions, messages, parts, and status operations.
+ */
+
 import type { UserMessage } from '@opencode-ai/sdk';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createMockSession, createMockTextPart, createMockUserMessage } from '../../test/mocks/sdk';

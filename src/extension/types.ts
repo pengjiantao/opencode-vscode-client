@@ -1,5 +1,11 @@
+/**
+ * @file Type definitions for IPC messages between extension host and webview.
+ * These types are specific to the extension host; shared types live in src/shared/types.ts.
+ */
+
 import type { Event, Message, Part, Session } from '@opencode-ai/sdk';
 
+/** Messages sent from the extension host to the webview. */
 export type ExtToWebview =
   | { type: 'session:created'; session: Session }
   | { type: 'session:switched'; sessionID: string }
@@ -26,6 +32,7 @@ export type ExtToWebview =
     }
   | { type: 'messages:list'; sessionID: string; messages: Message[]; parts: Part[] };
 
+/** Messages sent from the webview to the extension host. */
 export type WebviewToExt =
   | { type: 'session:create' }
   | { type: 'session:switch'; sessionID: string }

@@ -1,3 +1,9 @@
+/**
+ * @file VS Code extension activation entry point.
+ * Initializes SDK client, session manager, IPC bridge, and webview provider.
+ * Registers all IPC message handlers for session lifecycle and prompt operations.
+ */
+
 import type { Part, Permission } from '@opencode-ai/sdk';
 import { commands, window, workspace, type ExtensionContext } from 'vscode';
 import { IPCBridge } from './ipc';
@@ -12,6 +18,10 @@ let sessionManager: SessionManager;
 let ipc: IPCBridge;
 let provider: OpencodeSidebarViewProvider;
 
+/**
+ * Activates the OpenCode sidebar extension.
+ * Sets up SDK connection, IPC handlers for session/prompt/model operations.
+ */
 export async function activate(context: ExtensionContext): Promise<void> {
   let activeModel: string | undefined;
   let activeAgent: string | undefined;
@@ -29,6 +39,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       window.registerWebviewViewProvider('opencode-sidebar.main', provider),
     );
 
+    /** Creates a new session, persists to workspace state, and notifies webview. */
     const handleCreateSession = () => {
       sessionManager
         .create()
@@ -47,6 +58,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         });
     };
 
+    /** Shows a QuickPick list to select and reopen a previous session from history. */
     const handleSelectHistory = () => {
       void sdk.session
         .list()
@@ -101,15 +113,18 @@ export async function activate(context: ExtensionContext): Promise<void> {
         });
     };
 
+    /** Handles webview initialization: loads sessions, messages, models, and agents. */
     ipc.on('init', () => {
       void sdk.session.list().then((sessions) => {
         const activeSessions = sessions.filter((s) => !(s.time as { archived?: unknown }).archived);
         sessionManager.setSessions(activeSessions);
 
         let openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
+        // Remove stale session IDs that no longer exist on the server
         openIDs = openIDs.filter((id) => activeSessions.some((s) => s.id === id));
 
         let activeID = sessionManager.activeSessionID;
+        // Fall back to first open session or most recent active session
         if (!activeID || !openIDs.includes(activeID)) {
           if (openIDs.length > 0) {
             activeID = openIDs[0];
@@ -123,6 +138,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
           }
         }
 
+        // No active session found — auto-create one
         if (!activeID) {
           void sessionManager
             .create()
@@ -308,6 +324,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     });
 
     sdk.subscribeEvents((event: unknown) => {
+      // Forward SSE events to webview and handle permission prompts
       ipc.send({ type: 'event:received', event } as ExtToWebview);
 
       const evt = event as { type?: string; properties?: { permission?: Permission } };
@@ -345,6 +362,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
   }
 }
 
+/**
+ * Shows a VS Code modal dialog for permission requests (Allow/Deny).
+ */
 function handlePermissionRequest(permission: Permission): void {
   window
     .showInformationMessage(

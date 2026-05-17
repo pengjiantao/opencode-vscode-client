@@ -1,3 +1,8 @@
+/**
+ * @file Dispatches rendering of a message part to the appropriate sub-component
+ * based on the part type (text, tool, reasoning, file, agent, step).
+ */
+
 import type { Part } from '@opencode-ai/sdk';
 import { FilePart } from './parts/FilePart';
 import { ReasoningPart } from './parts/ReasoningPart';
@@ -8,6 +13,7 @@ interface PartRendererProps {
   part: Part;
 }
 
+/** Routes a Part to its type-specific renderer component. */
 export function PartRenderer({ part }: PartRendererProps) {
   switch (part.type) {
     case 'text':

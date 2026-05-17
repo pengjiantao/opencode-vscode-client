@@ -1,3 +1,4 @@
+/* App-level layout, empty state placeholders, and streaming indicator */
 .app {
   display: flex;
   flex-direction: column;

@@ -1,3 +1,7 @@
+/**
+ * @file Webview test setup — mocks VS Code API, matchMedia, and adds jest-dom matchers.
+ */
+
 import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
 

@@ -1,10 +1,16 @@
+/**
+ * @file Renders a file attachment part with icon based on MIME type.
+ */
+
 interface FilePartProps {
   filename?: string;
   mime: string;
   url: string;
 }
 
+/** Displays a file attachment with a type-specific icon. */
 export function FilePart({ filename, mime }: FilePartProps) {
+  /** Returns a VS Code icon codename based on the file MIME type. */
   const getFileIcon = () => {
     if (mime.startsWith('image/')) return '$(file-media)';
     if (mime.startsWith('text/')) return '$(file-text)';

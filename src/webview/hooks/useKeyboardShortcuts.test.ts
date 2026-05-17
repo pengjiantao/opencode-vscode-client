@@ -1,3 +1,7 @@
+/**
+ * @file Unit tests for useKeyboardShortcuts — keydown listener registration and cleanup.
+ */
+
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';

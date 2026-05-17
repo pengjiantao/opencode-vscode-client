@@ -1,3 +1,8 @@
+/**
+ * @file Main chat message list component.
+ * Groups messages into user/assistant turns and renders permission prompts.
+ */
+
 import type { Message, Part } from '@opencode-ai/sdk';
 import { useMemo } from 'react';
 import { useSessionStore } from '../store/sessionStore';
@@ -11,16 +16,19 @@ interface ChatViewProps {
   onPermissionReply: (id: string, allow: boolean) => void;
 }
 
+/** Renders a list of user/assistant message turns with inline permission cards. */
 export function ChatView({ messages, parts, onPermissionReply }: ChatViewProps) {
   const pendingPermission = useSessionStore((s) => s.pendingPermission);
   const setPendingPermission = useSessionStore((s) => s.setPendingPermission);
 
+  /** Groups sequential messages into user→assistant turn pairs. */
   const turns = useMemo(() => {
     const result: Array<{ user: Message; assistant?: Message }> = [];
     let currentUser: Message | null = null;
 
     for (const msg of messages) {
       if (msg.role === 'user') {
+        // Flush previous pending user message
         if (currentUser) {
           result.push({ user: currentUser });
         }
@@ -31,6 +39,7 @@ export function ChatView({ messages, parts, onPermissionReply }: ChatViewProps) 
       }
     }
 
+    // Trailing user message with no response yet
     if (currentUser) {
       result.push({ user: currentUser });
     }

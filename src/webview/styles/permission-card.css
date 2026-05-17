@@ -1,3 +1,4 @@
+/* Inline permission request card with Allow/Deny buttons */
 .permission-card {
   border: 2px solid var(--vscode-textLink-foreground);
   border-radius: 8px;

@@ -1,3 +1,7 @@
+/**
+ * @file Unit tests for useEvents — init message and event listener registration.
+ */
+
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useEvents } from './useEvents';

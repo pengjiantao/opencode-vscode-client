@@ -1,3 +1,8 @@
+/**
+ * @file Mock VS Code API for extension host tests.
+ * Provides mock implementations of commands, window, workspace, env, and extensions.
+ */
+
 import { vi } from 'vitest';
 
 export const mockVscode = {
