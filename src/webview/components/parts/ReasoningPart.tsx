@@ -3,6 +3,7 @@
  */
 
 import { useState } from 'react';
+import { Codicon } from '../Codicon';
 
 interface ReasoningPartProps {
   text: string;
@@ -16,7 +17,9 @@ export function ReasoningPart({ text }: ReasoningPartProps) {
   return (
     <div className={`part reasoning-part ${collapsed ? 'collapsed' : 'expanded'}`}>
       <div className="reasoning-header" onClick={() => setCollapsed(!collapsed)}>
-        <span className="collapse-icon">{collapsed ? '$(chevron-right)' : '$(chevron-down)'}</span>
+        <span className="collapse-icon">
+          <Codicon name={collapsed ? '$(chevron-right)' : '$(chevron-down)'} />
+        </span>
         <span className="reasoning-label">Thinking</span>
       </div>
       {!collapsed && (

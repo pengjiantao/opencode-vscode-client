@@ -4,6 +4,7 @@
  */
 
 import type { Part } from '@opencode-ai/sdk';
+import { Codicon } from './Codicon';
 import { FilePart } from './parts/FilePart';
 import { ReasoningPart } from './parts/ReasoningPart';
 import { TextPart } from './parts/TextPart';
@@ -55,7 +56,9 @@ export function PartRenderer({ part }: PartRendererProps) {
     case 'agent':
       return (
         <div className="part agent-part">
-          <span className="agent-icon">$(person)</span>
+          <span className="agent-icon">
+            <Codicon name="$(person)" />
+          </span>
           <span className="agent-name">{part.name}</span>
         </div>
       );

@@ -3,6 +3,8 @@
  * Prompts the user to Allow or Deny an agent's permission request.
  */
 
+import { Codicon } from './Codicon';
+
 interface PermissionCardProps {
   id: string;
   type: string;
@@ -16,7 +18,9 @@ export function PermissionCard({ id, type, title, metadata, onReply }: Permissio
   return (
     <div className="permission-card">
       <div className="permission-header">
-        <span className="permission-icon">$(shield)</span>
+        <span className="permission-icon">
+          <Codicon name="$(shield)" />
+        </span>
         <span className="permission-title">{title}</span>
       </div>
       <div className="permission-body">

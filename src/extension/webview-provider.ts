@@ -75,10 +75,10 @@ export class OpencodeSidebarViewProvider implements WebviewViewProvider {
       );
     }
 
-    // Override CSP to allow connections to local servers
+    // Override CSP to allow connections to local servers and local webview resources (fonts/images)
     html = html.replace(
       /(<meta\s+http-equiv="Content-Security-Policy"\s+content=")[^"]*(")/,
-      `$1default-src 'self'; script-src 'self' 'unsafe-inline' ${webview.cspSource}; style-src 'self' 'unsafe-inline' ${webview.cspSource}; img-src 'self' data: https:; connect-src 'self' http://127.0.0.1:* https://*; font-src 'self' data:$2`,
+      `$1default-src 'self'; script-src 'self' 'unsafe-inline' ${webview.cspSource}; style-src 'self' 'unsafe-inline' ${webview.cspSource}; img-src 'self' data: https: ${webview.cspSource}; connect-src 'self' http://127.0.0.1:* https://*; font-src 'self' data: ${webview.cspSource};$2`,
     );
 
     // Vite outputs module scripts; convert to defer for VS Code webview compatibility
@@ -105,7 +105,7 @@ export class OpencodeSidebarViewProvider implements WebviewViewProvider {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' ${webview.cspSource}; style-src 'self' 'unsafe-inline' ${webview.cspSource}; img-src 'self' data: https:; connect-src 'self' http://127.0.0.1:* https://*;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' ${webview.cspSource}; style-src 'self' 'unsafe-inline' ${webview.cspSource}; img-src 'self' data: https: ${webview.cspSource}; connect-src 'self' http://127.0.0.1:* https://*; font-src 'self' data: ${webview.cspSource};">
   <title>OpenCode Sidebar</title>
   <style>
     body { margin: 0; padding: 0; background-color: var(--vscode-editor-background); color: var(--vscode-editor-foreground); font-family: var(--vscode-font-family); }

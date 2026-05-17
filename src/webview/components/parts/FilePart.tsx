@@ -2,6 +2,8 @@
  * @file Renders a file attachment part with icon based on MIME type.
  */
 
+import { Codicon } from '../Codicon';
+
 interface FilePartProps {
   filename?: string;
   mime: string;
@@ -21,7 +23,9 @@ export function FilePart({ filename, mime }: FilePartProps) {
 
   return (
     <div className="part file-part">
-      <span className="file-icon">{getFileIcon()}</span>
+      <span className="file-icon">
+        <Codicon name={getFileIcon()} />
+      </span>
       <span className="file-name">{filename || 'file'}</span>
       <span className="file-badge">{mime}</span>
     </div>
