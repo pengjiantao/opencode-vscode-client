@@ -98,8 +98,34 @@
         "command": "opencode-sidebar.focus",
         "title": "Focus OpenCode Sidebar",
         "category": "OpenCode"
+      },
+      {
+        "command": "opencode-sidebar.createSession",
+        "title": "New Session",
+        "category": "OpenCode",
+        "icon": "$(add)"
+      },
+      {
+        "command": "opencode-sidebar.showHistory",
+        "title": "History",
+        "category": "OpenCode",
+        "icon": "$(history)"
       }
     ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "opencode-sidebar.createSession",
+          "when": "view == opencode-sidebar.main",
+          "group": "navigation@1"
+        },
+        {
+          "command": "opencode-sidebar.showHistory",
+          "when": "view == opencode-sidebar.main",
+          "group": "navigation@2"
+        }
+      ]
+    },
     "configuration": {
       "title": "OpenCode Sidebar",
       "properties": {

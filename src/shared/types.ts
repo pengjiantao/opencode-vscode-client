@@ -12,8 +12,20 @@ export type ExtToWebview =
   | { type: 'event:received'; event: Event }
   | { type: 'error'; message: string }
   | { type: 'init'; sessions: unknown[] }
-  | { type: 'models:list'; models: Array<{ id: string; name: string }> }
-  | { type: 'agents:list'; agents: Array<{ id: string; name: string }> }
+  | {
+      type: 'models:list';
+      models: Array<{
+        id: string;
+        name: string;
+        providerId?: string;
+        providerName?: string;
+        isConnected?: boolean;
+      }>;
+    }
+  | {
+      type: 'agents:list';
+      agents: Array<{ id: string; name: string; mode?: string; hidden?: boolean }>;
+    }
   | { type: 'messages:list'; sessionID: string; messages: Message[]; parts: Part[] };
 
 // Webview → Extension messages

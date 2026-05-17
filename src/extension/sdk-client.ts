@@ -20,6 +20,14 @@ export interface SDKClient {
     abort(id: string): Promise<void>;
   };
   subscribeEvents(handler: (event: unknown) => void): () => void;
-  getModels(): Promise<Array<{ id: string; name: string }>>;
-  getAgents(): Promise<Array<{ id: string; name: string }>>;
+  getModels(): Promise<
+    Array<{
+      id: string;
+      name: string;
+      providerId?: string;
+      providerName?: string;
+      isConnected?: boolean;
+    }>
+  >;
+  getAgents(): Promise<Array<{ id: string; name: string; mode?: string; hidden?: boolean }>>;
 }

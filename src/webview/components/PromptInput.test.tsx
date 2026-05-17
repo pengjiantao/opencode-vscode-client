@@ -192,4 +192,60 @@ describe('PromptInput', () => {
     expect(mockOnAbort).toHaveBeenCalledTimes(1);
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
+
+  it('regression: AgentSelector only lists primary (non-subagent and non-hidden) agents', () => {
+    const agents = [
+      { id: 'build', name: 'Build Agent', mode: 'primary', hidden: false },
+      { id: 'plan', name: 'Plan Agent', mode: 'primary', hidden: false },
+      { id: 'sub', name: 'Sub Agent', mode: 'subagent', hidden: false },
+      { id: 'hide', name: 'Hidden Agent', mode: 'primary', hidden: true },
+    ];
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={agents}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const trigger = screen.getByRole('combobox', { name: /select agent/i });
+    fireEvent.click(trigger);
+
+    expect(screen.queryAllByText('Build Agent').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Plan Agent').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Sub Agent').length).toBe(0);
+    expect(screen.queryAllByText('Hidden Agent').length).toBe(0);
+  });
+
+  it('regression: ModelSelector only lists connected models and allows searching', () => {
+    const models = [
+      { id: 'm1', name: 'GPT-4', providerName: 'OpenAI', isConnected: true },
+      { id: 'm2', name: 'Claude', providerName: 'Anthropic', isConnected: true },
+      { id: 'm3', name: 'Gemini', providerName: 'Google', isConnected: false },
+    ];
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={models}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const trigger = screen.getByRole('combobox', { name: /select model/i });
+    fireEvent.click(trigger);
+
+    expect(screen.queryAllByText('GPT-4').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Claude').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Gemini').length).toBe(0);
+
+    const searchInput = screen.getByPlaceholderText('Search models...');
+    fireEvent.change(searchInput, { target: { value: 'GPT' } });
+
+    expect(screen.queryAllByText('GPT-4').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Claude').length).toBe(0);
+  });
 });

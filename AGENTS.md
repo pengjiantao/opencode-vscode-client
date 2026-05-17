@@ -53,3 +53,9 @@ npm run lint          # run lint check
 - All webview UI development MUST strictly adhere to the tokens and specifications defined in [DESIGN.md](DESIGN.md).
 - Prioritize using official `@vscode/webview-ui-toolkit` components to ensure a native look and feel.
 - Never use hardcoded colors or sizes for UI layout elements in stylesheets. Always bind them to native VS Code CSS variables (e.g., `var(--vscode-editor-background)`, `var(--vscode-editor-foreground)`) to guarantee robust, automatic adaptation when the user switches VS Code themes.
+
+## Coding Standards & Guidelines
+
+- **File Length Limitation**: A single file MUST NOT exceed 500 lines of code. If a file exceeds this limit, it must be refactored, split into smaller focused files, and its overall structure optimized.
+- **Strict Typing System**: Maintain a robust, global strong typing system. The use of `any` is strictly prohibited under all circumstances. Ensure all objects, parameters, and return types are explicitly typed or properly inferred.
+- **No Code Duplication**: Large block replication or copy-pasting of code is strictly prohibited. Identify duplicate or shared logic and proactively extract them into utility helper classes or reusable common React/VS Code components.

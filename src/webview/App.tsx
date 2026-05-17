@@ -23,8 +23,18 @@ declare global {
 
 export function App() {
   const [showSettings, setShowSettings] = useState(false);
-  const [models, setModels] = useState<Array<{ id: string; name: string }>>([]);
-  const [agents, setAgents] = useState<Array<{ id: string; name: string }>>([]);
+  const [models, setModels] = useState<
+    Array<{
+      id: string;
+      name: string;
+      providerId?: string;
+      providerName?: string;
+      isConnected?: boolean;
+    }>
+  >([]);
+  const [agents, setAgents] = useState<
+    Array<{ id: string; name: string; mode?: string; hidden?: boolean }>
+  >([]);
 
   const sessions = useSessionStore((s) => s.sessions);
   const activeSessionID = useSessionStore((s) => s.activeSessionID);
@@ -183,10 +193,6 @@ export function App() {
     send({ type: 'session:archive', sessionID } as never);
   };
 
-  const handleSelectHistory = () => {
-    send({ type: 'sessions:select-history' } as never);
-  };
-
   const handleSubmitPrompt = (text: string) => {
     console.log(
       '[Webview] handleSubmitPrompt called with text:',
@@ -222,9 +228,7 @@ export function App() {
         sessions={sessions}
         activeSessionID={activeSessionID}
         onSwitch={handleSwitchSession}
-        onCreate={handleCreateSession}
         onArchive={handleArchiveSession}
-        onSelectHistory={handleSelectHistory}
         onSettings={() => setShowSettings(true)}
       />
 

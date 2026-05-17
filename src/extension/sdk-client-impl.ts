@@ -125,27 +125,51 @@ export function createSDKClient(directory?: string): SDKClient {
         void subscription.then((sseResult) => sseResult?.stream.return?.(undefined));
       };
     },
-    getModels: async (): Promise<Array<{ id: string; name: string }>> => {
+    getModels: async (): Promise<
+      Array<{
+        id: string;
+        name: string;
+        providerId?: string;
+        providerName?: string;
+        isConnected?: boolean;
+      }>
+    > => {
       const result = await client.provider.list();
       const providers = result.data?.all ?? [];
-      const modelsList: Array<{ id: string; name: string }> = [];
+      const connected = result.data?.connected ?? [];
+      const modelsList: Array<{
+        id: string;
+        name: string;
+        providerId?: string;
+        providerName?: string;
+        isConnected?: boolean;
+      }> = [];
       for (const p of providers) {
+        const isConnected = connected.includes(p.id);
         for (const mId of Object.keys(p.models || {})) {
           const model = p.models[mId];
+          if (model.status === 'deprecated') continue;
           modelsList.push({
             id: `${p.id}/${model.id}`,
-            name: `${p.name} - ${model.name || model.id}`,
+            name: model.name || model.id,
+            providerId: p.id,
+            providerName: p.name,
+            isConnected,
           });
         }
       }
       return modelsList;
     },
-    getAgents: async (): Promise<Array<{ id: string; name: string }>> => {
+    getAgents: async (): Promise<
+      Array<{ id: string; name: string; mode?: string; hidden?: boolean }>
+    > => {
       const result = await client.app.agents();
       const agents = result.data ?? [];
       return agents.map((a) => ({
         id: a.name,
         name: a.name,
+        mode: a.mode,
+        hidden: (a as { hidden?: boolean }).hidden,
       }));
     },
   };

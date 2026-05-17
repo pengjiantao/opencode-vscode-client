@@ -75,6 +75,81 @@ export async function activate(context: ExtensionContext): Promise<void> {
       window.registerWebviewViewProvider('opencode-sidebar.main', provider),
     );
 
+    const handleCreateSession = () => {
+      sessionManager
+        .create()
+        .then((session) => {
+          const openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
+          if (!openIDs.includes(session.id)) {
+            openIDs.push(session.id);
+            void context.workspaceState.update('openSessionIDs', openIDs);
+          }
+          ipc.send({ type: 'session:created', session });
+          ipc.send({ type: 'session:switched', sessionID: session.id });
+          ipc.send({ type: 'messages:list', sessionID: session.id, messages: [], parts: [] });
+        })
+        .catch((err) => {
+          ipc.send({ type: 'error', message: (err as Error).message });
+        });
+    };
+
+    const handleSelectHistory = () => {
+      void sdk.session
+        .list()
+        .then((sessions) => {
+          const activeSessions = sessions.filter(
+            (s) => !(s.time as { archived?: unknown }).archived,
+          );
+          if (activeSessions.length === 0) {
+            void window.showInformationMessage('No previous sessions found.');
+            return;
+          }
+
+          // Sort by last updated time desc
+          const sorted = [...activeSessions].sort(
+            (a, b) => (b.time?.updated || 0) - (a.time?.updated || 0),
+          );
+
+          const items = sorted.map((s) => ({
+            label: s.title || 'Untitled Session',
+            description: new Date(s.time.updated || s.time.created).toLocaleString(),
+            sessionID: s.id,
+            session: s,
+          }));
+
+          void window
+            .showQuickPick(items, {
+              placeHolder: 'Select a previous session to open',
+              title: 'OpenCode Session History',
+            })
+            .then((selected) => {
+              if (!selected) return;
+
+              const sessionID = selected.sessionID;
+              const openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
+
+              // If not already in open tabs list, add it and notify webview
+              if (!openIDs.includes(sessionID)) {
+                openIDs.push(sessionID);
+                void context.workspaceState.update('openSessionIDs', openIDs);
+                ipc.send({ type: 'session:created', session: selected.session });
+              }
+
+              // Switch to it
+              sessionManager.switch(sessionID);
+              ipc.send({ type: 'session:switched', sessionID });
+              void sessionManager.getMessagesAndParts(sessionID).then(({ messages, parts }) => {
+                ipc.send({ type: 'messages:list', sessionID, messages, parts });
+              });
+            });
+        })
+        .catch((err) => {
+          void window.showErrorMessage(
+            `Failed to retrieve session history: ${(err as Error).message}`,
+          );
+        });
+    };
+
     ipc.on('init', () => {
       void sdk.session.list().then((sessions) => {
         const activeSessions = sessions.filter((s) => !(s.time as { archived?: unknown }).archived);
@@ -152,21 +227,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     });
 
     ipc.on('session:create', () => {
-      sessionManager
-        .create()
-        .then((session) => {
-          const openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
-          if (!openIDs.includes(session.id)) {
-            openIDs.push(session.id);
-            void context.workspaceState.update('openSessionIDs', openIDs);
-          }
-          ipc.send({ type: 'session:created', session });
-          ipc.send({ type: 'session:switched', sessionID: session.id });
-          ipc.send({ type: 'messages:list', sessionID: session.id, messages: [], parts: [] });
-        })
-        .catch((err) => {
-          ipc.send({ type: 'error', message: (err as Error).message });
-        });
+      handleCreateSession();
     });
 
     ipc.on('session:switch', (msg) => {
@@ -222,60 +283,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     });
 
     ipc.on('sessions:select-history', () => {
-      void sdk.session
-        .list()
-        .then((sessions) => {
-          const activeSessions = sessions.filter(
-            (s) => !(s.time as { archived?: unknown }).archived,
-          );
-          if (activeSessions.length === 0) {
-            void window.showInformationMessage('No previous sessions found.');
-            return;
-          }
-
-          // Sort by last updated time desc
-          const sorted = [...activeSessions].sort(
-            (a, b) => (b.time?.updated || 0) - (a.time?.updated || 0),
-          );
-
-          const items = sorted.map((s) => ({
-            label: s.title || 'Untitled Session',
-            description: new Date(s.time.updated || s.time.created).toLocaleString(),
-            sessionID: s.id,
-            session: s,
-          }));
-
-          void window
-            .showQuickPick(items, {
-              placeHolder: 'Select a previous session to open',
-              title: 'OpenCode Session History',
-            })
-            .then((selected) => {
-              if (!selected) return;
-
-              const sessionID = selected.sessionID;
-              const openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
-
-              // If not already in open tabs list, add it and notify webview
-              if (!openIDs.includes(sessionID)) {
-                openIDs.push(sessionID);
-                void context.workspaceState.update('openSessionIDs', openIDs);
-                ipc.send({ type: 'session:created', session: selected.session });
-              }
-
-              // Switch to it
-              sessionManager.switch(sessionID);
-              ipc.send({ type: 'session:switched', sessionID });
-              void sessionManager.getMessagesAndParts(sessionID).then(({ messages, parts }) => {
-                ipc.send({ type: 'messages:list', sessionID, messages, parts });
-              });
-            });
-        })
-        .catch((err) => {
-          void window.showErrorMessage(
-            `Failed to retrieve session history: ${(err as Error).message}`,
-          );
-        });
+      handleSelectHistory();
     });
 
     ipc.on('prompt:send', (msg) => {
@@ -356,6 +364,18 @@ export async function activate(context: ExtensionContext): Promise<void> {
     context.subscriptions.push(
       commands.registerCommand('opencode-sidebar.focus', () => {
         currentView?.show(true);
+      }),
+    );
+
+    context.subscriptions.push(
+      commands.registerCommand('opencode-sidebar.createSession', () => {
+        handleCreateSession();
+      }),
+    );
+
+    context.subscriptions.push(
+      commands.registerCommand('opencode-sidebar.showHistory', () => {
+        handleSelectHistory();
       }),
     );
 

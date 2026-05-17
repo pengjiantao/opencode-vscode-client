@@ -25,7 +25,6 @@ describe('SessionTabs', () => {
         sessions={sessions}
         activeSessionID="session-1"
         onSwitch={() => {}}
-        onCreate={() => {}}
         onArchive={() => {}}
       />,
     );
@@ -45,12 +44,12 @@ describe('SessionTabs', () => {
         sessions={sessions}
         activeSessionID="session-2"
         onSwitch={() => {}}
-        onCreate={() => {}}
         onArchive={() => {}}
       />,
     );
 
     const tabs = screen.getAllByRole('button');
+    // Note: Tab buttons are before the Archive button
     expect(tabs[0]).not.toHaveClass('active');
     expect(tabs[1]).toHaveClass('active');
   });
@@ -64,29 +63,11 @@ describe('SessionTabs', () => {
         sessions={sessions}
         activeSessionID={null}
         onSwitch={onSwitch}
-        onCreate={() => {}}
         onArchive={() => {}}
       />,
     );
 
     fireEvent.click(screen.getByText('Session 1'));
     expect(onSwitch).toHaveBeenCalledWith('session-1');
-  });
-
-  it('calls onCreate when new button is clicked', () => {
-    const onCreate = vi.fn();
-
-    render(
-      <SessionTabs
-        sessions={[]}
-        activeSessionID={null}
-        onSwitch={() => {}}
-        onCreate={onCreate}
-        onArchive={() => {}}
-      />,
-    );
-
-    fireEvent.click(screen.getByText('+ New'));
-    expect(onCreate).toHaveBeenCalled();
   });
 });
