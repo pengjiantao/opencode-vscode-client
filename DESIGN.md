@@ -201,6 +201,11 @@ Design specifications for standard interactive elements:
 - Connects directly with `Popover` to map options securely.
 - Border focus rings link dynamically to `var(--vscode-focusBorder)`.
 
+#### Tooltip (Visual Hover Overlay)
+
+- Sleek visual replacement for browser-native HTML `title` tooltips, ensuring theme consistency.
+- Activated globally by adding the `data-custom-title` attribute to any DOM element.
+
 ### 6. Compact Session Tabs
 
 - Enforces a dense layout height of exactly `30px` for layout consistency.
@@ -216,13 +221,15 @@ Design specifications for standard interactive elements:
 
 - **Do** always verify WCAG compliance by utilizing CSS variables.
 - **Do** use the official `@vscode/webview-ui-toolkit` widgets for interactive forms.
-- **Do** leverage our custom `Select`, `Popover`, and `IconButton` library to build unified toolbar segments.
+- **Do** leverage our custom `Select`, `Popover`, `IconButton`, and `Tooltip` library to build unified toolbar segments.
+- **Do** use the `data-custom-title` attribute instead of the native `title` attribute to leverage our custom visual tooltip engine.
 - **Do** make sure monospace content handles long string wrapped margins properly.
 - **Do** test user interactions in both high-contrast light and dark themes.
 
 ### Don'ts
 
 - **Don't** use absolute colors like `#ffffff` or `#000000` for backgrounds or texts.
+- **Don't** use the native `title` attribute directly on HTML/component nodes, as it triggers cluttered native browser-level tooltips. Use `data-custom-title` instead.
 - **Don't** insert heavy drop-shadows on standard chat components or container components.
 - **Don't** enforce static pixel sizes for font-families or font-sizes that ignore VS Code settings.
 - **Don't** duplicate interactive element roles (e.g., nesting `role="button"` inside another button) to ensure strong screen reader support.
