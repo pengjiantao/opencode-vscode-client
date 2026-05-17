@@ -110,6 +110,12 @@
         "title": "History",
         "category": "OpenCode",
         "icon": "$(history)"
+      },
+      {
+        "command": "opencode-sidebar.openSettings",
+        "title": "Settings",
+        "category": "OpenCode",
+        "icon": "$(settings-gear)"
       }
     ],
     "menus": {
@@ -123,6 +129,11 @@
           "command": "opencode-sidebar.showHistory",
           "when": "view == opencode-sidebar.main",
           "group": "navigation@2"
+        },
+        {
+          "command": "opencode-sidebar.openSettings",
+          "when": "view == opencode-sidebar.main",
+          "group": "navigation@3"
         }
       ]
     },

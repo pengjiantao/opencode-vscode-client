@@ -160,6 +160,9 @@ export function App() {
         case 'messages:list':
           setSessionMessagesAndParts(message.sessionID, message.messages, message.parts);
           break;
+        case 'settings:open':
+          setShowSettings(true);
+          break;
         case 'error':
           console.error('Server error:', message.message);
           break;
@@ -189,8 +192,12 @@ export function App() {
     send({ type: 'session:switch', sessionID } as never);
   };
 
-  const handleArchiveSession = (sessionID: string) => {
-    send({ type: 'session:archive', sessionID } as never);
+  const handleCloseSession = (sessionID: string) => {
+    send({ type: 'session:close', sessionID } as never);
+  };
+
+  const handleCloseAllSessions = () => {
+    send({ type: 'session:close-all' } as never);
   };
 
   const handleSubmitPrompt = (text: string) => {
@@ -228,8 +235,8 @@ export function App() {
         sessions={sessions}
         activeSessionID={activeSessionID}
         onSwitch={handleSwitchSession}
-        onArchive={handleArchiveSession}
-        onSettings={() => setShowSettings(true)}
+        onClose={handleCloseSession}
+        onCloseAll={handleCloseAllSessions}
       />
 
       <StatusBar sessionID={activeSessionID} status={currentStatus} />

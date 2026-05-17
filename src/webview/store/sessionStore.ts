@@ -34,7 +34,18 @@ export const useSessionStore = create<SessionStore>((set) => ({
 
   setActiveSession: (id) => set({ activeSessionID: id }),
 
-  setSessions: (sessions) => set({ sessions }),
+  setSessions: (sessions) =>
+    set((state) => {
+      const activeExists = sessions.some((s) => s.id === state.activeSessionID);
+      return {
+        sessions,
+        activeSessionID: activeExists
+          ? state.activeSessionID
+          : sessions.length > 0
+            ? sessions[0].id
+            : null,
+      };
+    }),
 
   addSession: (session) =>
     set((state) => {

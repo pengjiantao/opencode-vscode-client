@@ -1,0 +1,143 @@
+.part {
+  margin: 8px 0;
+}
+
+.text-part .markdown-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tool-part {
+  border: 1px solid var(--vscode-border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tool-part .tool-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: color-mix(in srgb, var(--vscode-editor-widget-background) 80%, transparent);
+  border-bottom: 1px solid var(--vscode-border-color);
+}
+
+.tool-part .tool-icon {
+  font-size: 14px;
+}
+
+.tool-part .tool-name {
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.tool-part .tool-title {
+  opacity: 0.7;
+  font-size: 12px;
+}
+
+.tool-part .tool-input,
+.tool-part .tool-output {
+  padding: 8px 12px;
+  border-top: 1px solid var(--vscode-border-color);
+}
+
+.tool-part .tool-output pre,
+.tool-part .tool-input pre {
+  margin: 0;
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.tool-part.status-pending .tool-header {
+  opacity: 0.6;
+}
+
+.tool-part.status-running .tool-header {
+  color: var(--vscode-textLink-foreground);
+}
+
+.tool-part.status-error {
+  border-color: var(--vscode-error-foreground);
+}
+
+.tool-part.status-error .tool-error {
+  padding: 8px 12px;
+  color: var(--vscode-error-foreground);
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.reasoning-part {
+  border: 1px solid var(--vscode-border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.reasoning-part .reasoning-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: color-mix(in srgb, var(--vscode-editor-widget-background) 80%, transparent);
+  cursor: pointer;
+  user-select: none;
+}
+
+.reasoning-part .reasoning-label {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--vscode-editor-foreground);
+  opacity: 0.7;
+}
+
+.reasoning-part .reasoning-content {
+  padding: 12px;
+  border-top: 1px solid var(--vscode-border-color);
+}
+
+.reasoning-part .reasoning-content pre {
+  margin: 0;
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  opacity: 0.8;
+}
+
+.file-part {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--vscode-border-color);
+  border-radius: 6px;
+  background-color: var(--vscode-editor-background);
+}
+
+.file-part .file-icon {
+  font-size: 16px;
+}
+
+.file-part .file-name {
+  font-weight: 500;
+}
+
+.file-part .file-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: var(--vscode-list-hoverBackground);
+  opacity: 0.8;
+}
+
+.agent-part {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--vscode-border-color);
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--vscode-textLink-foreground) 10%, transparent);
+}

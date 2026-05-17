@@ -50,16 +50,28 @@ describe('useSession', () => {
     });
   });
 
-  it('calls send when archiveSession is called', () => {
+  it('calls send when closeSession is called', () => {
     const { result } = renderHook(() => useSession());
 
     act(() => {
-      result.current.archiveSession('session-1');
+      result.current.closeSession('session-1');
     });
 
     expect(window.vscode.postMessage).toHaveBeenCalledWith({
-      type: 'session:archive',
+      type: 'session:close',
       sessionID: 'session-1',
+    });
+  });
+
+  it('calls send when closeAllSessions is called', () => {
+    const { result } = renderHook(() => useSession());
+
+    act(() => {
+      result.current.closeAllSessions();
+    });
+
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'session:close-all',
     });
   });
 

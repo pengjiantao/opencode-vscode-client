@@ -25,7 +25,8 @@ describe('SessionTabs', () => {
         sessions={sessions}
         activeSessionID="session-1"
         onSwitch={() => {}}
-        onArchive={() => {}}
+        onClose={() => {}}
+        onCloseAll={() => {}}
       />,
     );
 
@@ -44,14 +45,13 @@ describe('SessionTabs', () => {
         sessions={sessions}
         activeSessionID="session-2"
         onSwitch={() => {}}
-        onArchive={() => {}}
+        onClose={() => {}}
+        onCloseAll={() => {}}
       />,
     );
 
-    const tabs = screen.getAllByRole('button');
-    // Note: Tab buttons are before the Archive button
-    expect(tabs[0]).not.toHaveClass('active');
-    expect(tabs[1]).toHaveClass('active');
+    const activeTab = screen.getByTitle('Session 2');
+    expect(activeTab).toHaveClass('active');
   });
 
   it('calls onSwitch when tab is clicked', () => {
@@ -63,11 +63,30 @@ describe('SessionTabs', () => {
         sessions={sessions}
         activeSessionID={null}
         onSwitch={onSwitch}
-        onArchive={() => {}}
+        onClose={() => {}}
+        onCloseAll={() => {}}
       />,
     );
 
     fireEvent.click(screen.getByText('Session 1'));
     expect(onSwitch).toHaveBeenCalledWith('session-1');
+  });
+
+  it('calls onClose when close button is clicked', () => {
+    const sessions = [createMockSession({ id: 'session-1', title: 'Session 1' })];
+    const onClose = vi.fn();
+
+    render(
+      <SessionTabs
+        sessions={sessions}
+        activeSessionID="session-1"
+        onSwitch={() => {}}
+        onClose={onClose}
+        onCloseAll={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByTitle('Close Session'));
+    expect(onClose).toHaveBeenCalledWith('session-1');
   });
 });

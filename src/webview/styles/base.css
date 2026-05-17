@@ -1,0 +1,51 @@
+:root {
+  --vscode-font-family: var(--vscode-editor-font-family, system-ui, sans-serif);
+  --vscode-font-size: var(--vscode-editor-font-size, 13px);
+  --vscode-border-color: var(--vscode-editor-widget-border, #454545);
+  --vscode-input-background: var(--vscode-input-background, #3c3c3c);
+  --vscode-input-foreground: var(--vscode-input-foreground, #cccccc);
+  --vscode-button-background: var(--vscode-button-background, #0e639c);
+  --vscode-button-foreground: var(--vscode-button-foreground, #ffffff);
+  --vscode-list-activeSelectionBackground: var(--vscode-list-activeSelectionBackground, #094771);
+  --vscode-list-hoverBackground: var(--vscode-list-hoverBackground, #2a2d2e);
+  --vscode-textLink-foreground: var(--vscode-textLink-foreground, #4daafc);
+  --vscode-error-foreground: var(--vscode-error-foreground, #f48771);
+  --vscode-progressBar-background: var(--vscode-progressBar-background, #0e639c);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--vscode-scrollbarSlider-background);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--vscode-scrollbarSlider-hoverBackground);
+}

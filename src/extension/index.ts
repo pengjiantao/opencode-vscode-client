@@ -1,73 +1,27 @@
 import type { Part, Permission } from '@opencode-ai/sdk';
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
-import {
-  CancellationToken,
-  commands,
-  Uri,
-  WebviewViewProvider,
-  window,
-  workspace,
-  type ExtensionContext,
-  type Webview,
-} from 'vscode';
+import { commands, window, workspace, type ExtensionContext } from 'vscode';
 import { IPCBridge } from './ipc';
 import type { SDKClient } from './sdk-client';
 import { createSDKClient } from './sdk-client-impl';
 import { SessionManager } from './session-manager';
 import type { ExtToWebview } from './types';
+import { OpencodeSidebarViewProvider } from './webview-provider';
 
 let sdk: SDKClient;
 let sessionManager: SessionManager;
 let ipc: IPCBridge;
-let currentView: { webview: Webview; show(preserveFocus?: boolean): void } | undefined;
-let extensionContext: ExtensionContext;
-
-class OpencodeSidebarViewProvider implements WebviewViewProvider {
-  resolveWebviewView(
-    webviewView: { webview: Webview; show(preserveFocus?: boolean): void },
-    context: unknown,
-    token: CancellationToken,
-  ): void | Thenable<void> {
-    void context;
-    void token;
-    currentView = webviewView;
-
-    webviewView.webview.options = {
-      enableScripts: true,
-      localResourceRoots: [Uri.joinPath(extensionContext.extensionUri, 'dist')],
-    };
-
-    const distPath = join(extensionContext.extensionPath, 'dist', 'webview');
-    if (existsSync(distPath)) {
-      const indexPath = join(distPath, 'index.html');
-      if (existsSync(indexPath)) {
-        webviewView.webview.html = getWebviewHtml(webviewView.webview, distPath);
-      } else {
-        webviewView.webview.html = getFallbackHtml(webviewView.webview);
-      }
-    } else {
-      webviewView.webview.html = getFallbackHtml(webviewView.webview);
-    }
-
-    ipc.setPanel(webviewView as never);
-  }
-}
-
-const provider = new OpencodeSidebarViewProvider();
+let provider: OpencodeSidebarViewProvider;
 
 export async function activate(context: ExtensionContext): Promise<void> {
-  extensionContext = context;
-
   let activeModel: string | undefined;
   let activeAgent: string | undefined;
 
   try {
     const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath;
-    const sdkClient = createSDKClient(workspaceRoot);
-    sdk = sdkClient;
+    sdk = createSDKClient(workspaceRoot);
     sessionManager = new SessionManager(sdk);
     ipc = new IPCBridge();
+    provider = new OpencodeSidebarViewProvider(context, ipc);
 
     await sessionManager.connect();
 
@@ -105,7 +59,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
             return;
           }
 
-          // Sort by last updated time desc
           const sorted = [...activeSessions].sort(
             (a, b) => (b.time?.updated || 0) - (a.time?.updated || 0),
           );
@@ -128,14 +81,12 @@ export async function activate(context: ExtensionContext): Promise<void> {
               const sessionID = selected.sessionID;
               const openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
 
-              // If not already in open tabs list, add it and notify webview
               if (!openIDs.includes(sessionID)) {
                 openIDs.push(sessionID);
                 void context.workspaceState.update('openSessionIDs', openIDs);
                 ipc.send({ type: 'session:created', session: selected.session });
               }
 
-              // Switch to it
               sessionManager.switch(sessionID);
               ipc.send({ type: 'session:switched', sessionID });
               void sessionManager.getMessagesAndParts(sessionID).then(({ messages, parts }) => {
@@ -156,11 +107,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
         sessionManager.setSessions(activeSessions);
 
         let openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
-        // Filter out IDs that do not exist or are archived
         openIDs = openIDs.filter((id) => activeSessions.some((s) => s.id === id));
 
         let activeID = sessionManager.activeSessionID;
-        // Resolve active session
         if (!activeID || !openIDs.includes(activeID)) {
           if (openIDs.length > 0) {
             activeID = openIDs[0];
@@ -174,7 +123,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
           }
         }
 
-        // If no sessions exist in DB, create a new one automatically
         if (!activeID) {
           void sessionManager
             .create()
@@ -256,7 +204,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
           ipc.send({ type: 'session:archived', sessionID });
 
-          // If the archived session was the active one, switch to the next open one, or create new
           if (previousActiveID === sessionID) {
             if (openIDs.length > 0) {
               const nextActiveID = openIDs[openIDs.length - 1];
@@ -266,7 +213,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
                 ipc.send({ type: 'messages:list', sessionID: nextActiveID, messages, parts });
               });
             } else {
-              // Create a brand new session
               void sessionManager.create().then((session) => {
                 const nextOpen = [session.id];
                 void context.workspaceState.update('openSessionIDs', nextOpen);
@@ -282,6 +228,37 @@ export async function activate(context: ExtensionContext): Promise<void> {
         });
     });
 
+    ipc.on('session:close', (msg) => {
+      const { sessionID } = msg as { sessionID: string };
+      const previousActiveID = sessionManager.activeSessionID;
+
+      let openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
+      openIDs = openIDs.filter((id) => id !== sessionID);
+      void context.workspaceState.update('openSessionIDs', openIDs);
+
+      ipc.send({ type: 'session:deleted', sessionID });
+
+      if (openIDs.length === 0) {
+        handleCreateSession();
+        return;
+      }
+
+      if (previousActiveID === sessionID) {
+        const nextActiveID = openIDs[openIDs.length - 1];
+        sessionManager.switch(nextActiveID);
+        ipc.send({ type: 'session:switched', sessionID: nextActiveID });
+        void sessionManager.getMessagesAndParts(nextActiveID).then(({ messages, parts }) => {
+          ipc.send({ type: 'messages:list', sessionID: nextActiveID, messages, parts });
+        });
+      }
+    });
+
+    ipc.on('session:close-all', () => {
+      void context.workspaceState.update('openSessionIDs', []);
+      ipc.send({ type: 'init', sessions: [] });
+      handleCreateSession();
+    });
+
     ipc.on('sessions:select-history', () => {
       handleSelectHistory();
     });
@@ -289,18 +266,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
     ipc.on('prompt:send', (msg) => {
       const { text } = msg as { text: string };
       const activeID = sessionManager.activeSessionID;
-      console.log(
-        '[Extension] Received prompt:send event with text:',
-        text,
-        'activeSessionID:',
-        activeID,
-      );
       if (!activeID) {
-        console.warn('[Extension] No active session found. Aborting prompt:send.');
         ipc.send({ type: 'error', message: 'No active session' });
         return;
       }
-      console.log('[Extension] Calling sessionManager.sendPrompt');
       sessionManager
         .sendPrompt(
           activeID,
@@ -316,11 +285,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
           activeModel,
           activeAgent,
         )
-        .then(() => {
-          console.log('[Extension] sendPrompt finished initiating successfully.');
-        })
         .catch((err) => {
-          console.error('[Extension] sendPrompt failed with error:', err);
           ipc.send({ type: 'error', message: (err as Error).message });
         });
     });
@@ -342,12 +307,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
       activeAgent = agent || undefined;
     });
 
-    ipc.on('permission:reply', (msg) => {
-      const { permissionID, allow } = msg as { permissionID: string; allow: boolean };
-      void permissionID;
-      void allow;
-    });
-
     sdk.subscribeEvents((event: unknown) => {
       ipc.send({ type: 'event:received', event } as ExtToWebview);
 
@@ -357,13 +316,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
       }
     });
 
-    sessionManager.subscribe(() => {
-      // Handle session state changes
-    });
-
     context.subscriptions.push(
       commands.registerCommand('opencode-sidebar.focus', () => {
-        currentView?.show(true);
+        provider.view?.show(true);
       }),
     );
 
@@ -379,20 +334,18 @@ export async function activate(context: ExtensionContext): Promise<void> {
       }),
     );
 
-    context.subscriptions.push({
-      dispose: () => {
-        // cleanup
-      },
-    });
+    context.subscriptions.push(
+      commands.registerCommand('opencode-sidebar.openSettings', () => {
+        ipc.send({ type: 'settings:open' });
+      }),
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     window.showErrorMessage(`OpenCode Sidebar activation failed: ${message}`);
-    console.error('OpenCode Sidebar activation error:', err);
   }
 }
 
 function handlePermissionRequest(permission: Permission): void {
-  void permission;
   window
     .showInformationMessage(
       `OpenCode Permission: ${permission.title}`,
@@ -403,67 +356,4 @@ function handlePermissionRequest(permission: Permission): void {
     .then(() => {
       // Permission handling via IPC
     });
-}
-
-function getWebviewHtml(webview: Webview, distPath: string): string {
-  const indexPath = join(distPath, 'index.html');
-  let html = readFileSync(indexPath, 'utf-8');
-
-  const assetsDir = join(distPath, 'assets');
-  if (existsSync(assetsDir)) {
-    html = html.replace(
-      /(href|src)="\.\/assets\/([^"]*)"/g,
-      (_match: string, attr: string, file: string) => {
-        const fileUri = webview.asWebviewUri(Uri.file(join(assetsDir, file)));
-        return `${attr}="${fileUri.toString()}"`;
-      },
-    );
-  }
-
-  html = html.replace(
-    /(<meta\s+http-equiv="Content-Security-Policy"\s+content=")[^"]*(")/,
-    `$1default-src 'self'; script-src 'self' 'unsafe-inline' ${webview.cspSource}; style-src 'self' 'unsafe-inline' ${webview.cspSource}; img-src 'self' data: https:; connect-src 'self' http://127.0.0.1:* https://*; font-src 'self' data:$2`,
-  );
-
-  html = html.replace(/ type="module"/g, ' defer');
-  html = html.replace(/ crossorigin="[^"]*"/g, '');
-
-  html = html.replace(
-    '<body>',
-    `<body>
-  <script>
-    const vscode = acquireVsCodeApi();
-    window.vscode = vscode;
-  </script>`,
-  );
-
-  return html;
-}
-
-function getFallbackHtml(webview: Webview): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' ${webview.cspSource}; style-src 'self' 'unsafe-inline' ${webview.cspSource}; img-src 'self' data: https:; connect-src 'self' http://127.0.0.1:* https://*;">
-  <title>OpenCode Sidebar</title>
-  <style>
-    body { margin: 0; padding: 0; background-color: var(--vscode-editor-background); color: var(--vscode-editor-foreground); font-family: var(--vscode-font-family); }
-    #root { padding: 20px; }
-    .error { color: var(--vscode-errorForeground); }
-    .info { color: var(--vscode-editor-foreground); }
-  </style>
-</head>
-<body>
-  <div id="root">
-    <p class="info">OpenCode Sidebar is loading...</p>
-    <p class="info">Make sure you have run: npm run build</p>
-  </div>
-  <script>
-    const vscode = acquireVsCodeApi();
-    window.vscode = vscode;
-  </script>
-</body>
-</html>`;
 }

@@ -32,12 +32,16 @@ export function useSession() {
     [send],
   );
 
-  const archiveSession = useCallback(
+  const closeSession = useCallback(
     (sessionID: string) => {
-      send({ type: 'session:archive', sessionID });
+      send({ type: 'session:close', sessionID });
     },
     [send],
   );
+
+  const closeAllSessions = useCallback(() => {
+    send({ type: 'session:close-all' });
+  }, [send]);
 
   const sendPrompt = useCallback(
     (text: string) => {
@@ -143,7 +147,8 @@ export function useSession() {
     setSessions,
     createSession,
     switchSession,
-    archiveSession,
+    closeSession,
+    closeAllSessions,
     sendPrompt,
     switchModel,
     switchAgent,

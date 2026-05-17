@@ -12,6 +12,7 @@ export type ExtToWebview =
   | { type: 'event:received'; event: Event }
   | { type: 'error'; message: string }
   | { type: 'init'; sessions: unknown[] }
+  | { type: 'settings:open' }
   | {
       type: 'models:list';
       models: Array<{
@@ -33,6 +34,8 @@ export type WebviewToExt =
   | { type: 'session:create' }
   | { type: 'session:switch'; sessionID: string }
   | { type: 'session:archive'; sessionID: string }
+  | { type: 'session:close'; sessionID: string }
+  | { type: 'session:close-all' }
   | { type: 'session:title'; sessionID: string; title: string }
   | { type: 'prompt:send'; text: string }
   | { type: 'prompt:abort'; sessionID: string }
