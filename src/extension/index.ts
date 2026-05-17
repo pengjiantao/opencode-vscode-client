@@ -7,6 +7,7 @@ import {
   Uri,
   WebviewViewProvider,
   window,
+  workspace,
   type ExtensionContext,
   type Webview,
 } from 'vscode';
@@ -74,7 +75,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
   extensionContext = context;
 
   try {
-    const sdkClient = createSDKClient();
+    const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const sdkClient = createSDKClient(workspaceRoot);
     sdk = sdkClient;
     sessionManager = new SessionManager(sdk);
     ipc = new IPCBridge();

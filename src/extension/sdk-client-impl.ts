@@ -2,8 +2,9 @@ import type { Message, Part, Session } from '@opencode-ai/sdk';
 import { createOpencodeClient, createOpencodeServer } from '@opencode-ai/sdk';
 import type { SDKClient, ServerHandle } from './sdk-client';
 
-export function createSDKClient(): SDKClient {
+export function createSDKClient(directory?: string): SDKClient {
   let serverHandle: ServerHandle | null = null;
+  let client = createOpencodeClient({ directory });
 
   const startServer = async (): Promise<ServerHandle> => {
     try {
@@ -13,6 +14,7 @@ export function createSDKClient(): SDKClient {
         signal: AbortSignal.timeout(1000),
       }).catch(() => null);
       if (response?.ok) {
+        client = createOpencodeClient({ baseUrl: testUrl, directory });
         return {
           url: testUrl,
           close: () => {},
@@ -27,10 +29,9 @@ export function createSDKClient(): SDKClient {
       url: server.url,
       close: () => server.close(),
     };
+    client = createOpencodeClient({ baseUrl: server.url, directory });
     return serverHandle;
   };
-
-  const client = createOpencodeClient();
 
   return {
     startServer,
