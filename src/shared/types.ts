@@ -1,4 +1,4 @@
-import type { Event } from '@opencode-ai/sdk';
+import type { Event, Message, Part } from '@opencode-ai/sdk';
 
 export type { Event };
 
@@ -13,7 +13,8 @@ export type ExtToWebview =
   | { type: 'error'; message: string }
   | { type: 'init'; sessions: unknown[] }
   | { type: 'models:list'; models: Array<{ id: string; name: string }> }
-  | { type: 'agents:list'; agents: Array<{ id: string; name: string }> };
+  | { type: 'agents:list'; agents: Array<{ id: string; name: string }> }
+  | { type: 'messages:list'; sessionID: string; messages: Message[]; parts: Part[] };
 
 // Webview → Extension messages
 export type WebviewToExt =
@@ -26,5 +27,6 @@ export type WebviewToExt =
   | { type: 'model:switch'; model: string }
   | { type: 'agent:switch'; agent: string }
   | { type: 'permission:reply'; permissionID: string; allow: boolean }
+  | { type: 'sessions:select-history' }
   | { type: 'init' }
   | { type: 'pong' };

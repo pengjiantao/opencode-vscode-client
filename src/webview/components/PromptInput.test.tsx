@@ -4,8 +4,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PromptInput } from './PromptInput';
 
 vi.mock('@vscode/webview-ui-toolkit/react', () => ({
-  VSCodeButton: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
-    <button onClick={onClick}>{children}</button>
+  VSCodeButton: ({
+    children,
+    onClick,
+    className,
+    disabled,
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    className?: string;
+    disabled?: boolean;
+  }) => (
+    <button onClick={onClick} className={className} disabled={disabled}>
+      {children}
+    </button>
   ),
   VSCodeTextArea: ({
     value,
@@ -140,5 +152,44 @@ describe('PromptInput', () => {
 
     expect(modelSelect).not.toBeDisabled();
     expect(agentSelect).not.toBeDisabled();
+  });
+
+  it('regression: transitions button to stop (warning appearance) when status is busy or retry', () => {
+    const mockOnAbort = vi.fn();
+    const { rerender } = render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        onAbort={mockOnAbort}
+        status={{ type: 'idle' }}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const sendBtn = screen.getByRole('button', { name: /send/i });
+    expect(sendBtn).toHaveTextContent('Send');
+    expect(sendBtn).not.toHaveClass('stop-btn');
+
+    rerender(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        onAbort={mockOnAbort}
+        status={{ type: 'busy' }}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const stopBtn = screen.getByRole('button', { name: /stop/i });
+    expect(stopBtn).toHaveTextContent('Stop');
+    expect(stopBtn).toHaveClass('stop-btn');
+
+    fireEvent.click(stopBtn);
+    expect(mockOnAbort).toHaveBeenCalledTimes(1);
+    expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 });

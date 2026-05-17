@@ -18,6 +18,7 @@ export function useSession() {
   const updateSession = useSessionStore((s) => s.updateSession);
   const addMessage = useSessionStore((s) => s.addMessage);
   const updatePart = useSessionStore((s) => s.updatePart);
+  const updatePartDelta = useSessionStore((s) => s.updatePartDelta);
   const setSessionStatus = useSessionStore((s) => s.setSessionStatus);
 
   const createSession = useCallback(() => {
@@ -71,9 +72,10 @@ export function useSession() {
       const props = event.properties as {
         sessionID?: string;
         info?: Session | Message | Part | SessionStatus;
+        part?: Part;
       };
 
-      switch (event.type) {
+      switch (event.type as string) {
         case 'session.created':
           addSession((props as { info: Session }).info);
           break;
@@ -92,6 +94,25 @@ export function useSession() {
         case 'message.part.updated':
           updatePart((props as { part: Part }).part);
           break;
+        case 'message.part.delta': {
+          const deltaProps = (
+            event as unknown as {
+              properties: {
+                messageID: string;
+                partID: string;
+                field: string;
+                delta: string;
+              };
+            }
+          ).properties;
+          updatePartDelta(
+            deltaProps.messageID,
+            deltaProps.partID,
+            deltaProps.field,
+            deltaProps.delta,
+          );
+          break;
+        }
         case 'session.status':
           setSessionStatus(
             (props as { sessionID: string }).sessionID,
@@ -102,7 +123,15 @@ export function useSession() {
           break;
       }
     },
-    [addSession, updateSession, removeSession, addMessage, updatePart, setSessionStatus],
+    [
+      addSession,
+      updateSession,
+      removeSession,
+      addMessage,
+      updatePart,
+      updatePartDelta,
+      setSessionStatus,
+    ],
   );
 
   return {

@@ -62,6 +62,10 @@ export function createSDKClient(directory?: string): SDKClient {
         const result = await client.session.messages({ path: { id } });
         return result.data?.map((m: { info: Message; parts: Part[] }) => m.info) ?? [];
       },
+      messagesWithParts: async (id: string): Promise<Array<{ info: Message; parts: Part[] }>> => {
+        const result = await client.session.messages({ path: { id } });
+        return result.data ?? [];
+      },
       prompt: async (id: string, parts: Part[], model?: string, agent?: string) => {
         const body: {
           parts: Part[];

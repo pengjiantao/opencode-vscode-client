@@ -17,7 +17,9 @@ export function MessageTurn({ userMessage, assistantMessage, parts, status }: Me
           <span className="time">{new Date(userMessage.time.created).toLocaleTimeString()}</span>
         </div>
         <div className="message-content">
-          <p>{JSON.stringify(userMessage)}</p>
+          {parts[userMessage.id]?.map((part) => <PartRenderer key={part.id} part={part} />) || (
+            <p>{(userMessage as unknown as { text?: string }).text || ''}</p>
+          )}
         </div>
       </div>
 

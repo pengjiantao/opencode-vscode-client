@@ -562,6 +562,12 @@ body {
   height: 26px;
 }
 
+.prompt-input-footer vscode-button.stop-btn {
+  --vscode-button-background: var(--vscode-statusBarItem-errorBackground, #c74c3c);
+  --vscode-button-hoverBackground: var(--vscode-statusBarItem-errorHoverBackground, #e74c3c);
+  --vscode-button-foreground: var(--vscode-statusBarItem-errorForeground, #ffffff);
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 10px;

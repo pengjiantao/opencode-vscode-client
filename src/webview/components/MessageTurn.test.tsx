@@ -1,6 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMockAssistantMessage, createMockUserMessage } from '../../test/mocks/sdk';
+import {
+  createMockAssistantMessage,
+  createMockTextPart,
+  createMockUserMessage,
+} from '../../test/mocks/sdk';
 import { MessageTurn } from './MessageTurn';
 
 describe('MessageTurn', () => {
@@ -14,6 +18,17 @@ describe('MessageTurn', () => {
     render(<MessageTurn userMessage={userMsg} parts={{}} />);
 
     expect(screen.getByText('You')).toBeInTheDocument();
+  });
+
+  it('renders user message parts using PartRenderer instead of JSON.stringify', () => {
+    const userMsg = createMockUserMessage();
+    const textPart = createMockTextPart('Hello user message part!');
+    textPart.messageID = userMsg.id;
+
+    render(<MessageTurn userMessage={userMsg} parts={{ [userMsg.id]: [textPart] }} />);
+
+    expect(screen.getByText('Hello user message part!')).toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(userMsg.id))).not.toBeInTheDocument();
   });
 
   it('renders assistant message when provided', () => {

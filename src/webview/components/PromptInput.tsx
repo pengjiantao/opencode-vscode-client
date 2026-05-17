@@ -1,3 +1,4 @@
+import type { SessionStatus } from '@opencode-ai/sdk';
 import { VSCodeButton } from '@vscode/webview-ui-toolkit/react';
 import React from 'react';
 import { AgentSelector } from './AgentSelector';
@@ -5,6 +6,8 @@ import { ModelSelector } from './ModelSelector';
 
 interface PromptInputProps {
   onSubmit: (text: string) => void;
+  onAbort?: () => void;
+  status?: SessionStatus;
   models: Array<{ id: string; name: string }>;
   agents: Array<{ id: string; name: string }>;
   onModelChange: (model: string) => void;
@@ -14,6 +17,8 @@ interface PromptInputProps {
 
 export function PromptInput({
   onSubmit,
+  onAbort,
+  status,
   models,
   agents,
   onModelChange,
@@ -26,6 +31,8 @@ export function PromptInput({
   const [isFocused, setIsFocused] = React.useState(false);
 
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const isRunning = status?.type === 'busy' || status?.type === 'retry';
 
   // Derive active model and agent (implicit first element when not selected yet)
   const activeModel = selectedModel || (models.length > 0 ? models[0].id : '');
@@ -56,7 +63,9 @@ export function PromptInput({
   }, [text]);
 
   const handleSubmit = () => {
-    if (text.trim()) {
+    if (isRunning) {
+      onAbort?.();
+    } else if (text.trim()) {
       onSubmit(text.trim());
       setText('');
     }
@@ -104,8 +113,12 @@ export function PromptInput({
             />
           </div>
 
-          <VSCodeButton onClick={handleSubmit} disabled={disabled || !text.trim()}>
-            Send
+          <VSCodeButton
+            onClick={handleSubmit}
+            disabled={disabled || (!isRunning && !text.trim())}
+            className={isRunning ? 'stop-btn' : ''}
+          >
+            {isRunning ? 'Stop' : 'Send'}
           </VSCodeButton>
         </div>
       </div>

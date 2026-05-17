@@ -1,4 +1,4 @@
-import type { Event, Session } from '@opencode-ai/sdk';
+import type { Event, Message, Part, Session } from '@opencode-ai/sdk';
 
 export type ExtToWebview =
   | { type: 'session:created'; session: Session }
@@ -10,7 +10,8 @@ export type ExtToWebview =
   | { type: 'error'; message: string }
   | { type: 'init'; sessions: Session[] }
   | { type: 'models:list'; models: Array<{ id: string; name: string }> }
-  | { type: 'agents:list'; agents: Array<{ id: string; name: string }> };
+  | { type: 'agents:list'; agents: Array<{ id: string; name: string }> }
+  | { type: 'messages:list'; sessionID: string; messages: Message[]; parts: Part[] };
 
 export type WebviewToExt =
   | { type: 'session:create' }

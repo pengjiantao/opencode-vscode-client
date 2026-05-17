@@ -33,13 +33,16 @@ export function App() {
   const sessionStatus = useSessionStore((s) => s.sessionStatus);
 
   const setActiveSession = useSessionStore((s) => s.setActiveSession);
+  const setSessions = useSessionStore((s) => s.setSessions);
   const addSession = useSessionStore((s) => s.addSession);
   const removeSession = useSessionStore((s) => s.removeSession);
   const updateSession = useSessionStore((s) => s.updateSession);
   const addMessage = useSessionStore((s) => s.addMessage);
   const updatePart = useSessionStore((s) => s.updatePart);
+  const updatePartDelta = useSessionStore((s) => s.updatePartDelta);
   const setSessionStatus = useSessionStore((s) => s.setSessionStatus);
   const setPendingPermission = useSessionStore((s) => s.setPendingPermission);
+  const setSessionMessagesAndParts = useSessionStore((s) => s.setSessionMessagesAndParts);
 
   const { send } = useIPC(() => {});
   useEvents();
@@ -50,10 +53,11 @@ export function App() {
       const props = event.properties as {
         sessionID?: string;
         info?: Session | Message | Part | SessionStatus;
+        part?: Part;
         permission?: Permission;
       };
 
-      switch (event.type) {
+      switch (event.type as string) {
         case 'session.created':
           addSession((props as { info: Session }).info);
           break;
@@ -72,6 +76,25 @@ export function App() {
         case 'message.part.updated':
           updatePart((props as { part: Part }).part);
           break;
+        case 'message.part.delta': {
+          const deltaProps = (
+            event as unknown as {
+              properties: {
+                messageID: string;
+                partID: string;
+                field: string;
+                delta: string;
+              };
+            }
+          ).properties;
+          updatePartDelta(
+            deltaProps.messageID,
+            deltaProps.partID,
+            deltaProps.field,
+            deltaProps.delta,
+          );
+          break;
+        }
         case 'session.status':
           setSessionStatus(
             (props as { sessionID: string }).sessionID,
@@ -89,6 +112,7 @@ export function App() {
       removeSession,
       addMessage,
       updatePart,
+      updatePartDelta,
       setSessionStatus,
       setPendingPermission,
     ],
@@ -123,17 +147,29 @@ export function App() {
         case 'agents:list':
           setAgents(message.agents);
           break;
+        case 'messages:list':
+          setSessionMessagesAndParts(message.sessionID, message.messages, message.parts);
+          break;
         case 'error':
           console.error('Server error:', message.message);
           break;
         case 'init':
+          setSessions(message.sessions as Session[]);
           break;
       }
     };
 
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [addSession, setActiveSession, removeSession, updateSession, handleServerEvent]);
+  }, [
+    addSession,
+    setActiveSession,
+    removeSession,
+    updateSession,
+    handleServerEvent,
+    setSessionMessagesAndParts,
+    setSessions,
+  ]);
 
   const handleCreateSession = () => {
     send({ type: 'session:create' } as never);
@@ -147,8 +183,22 @@ export function App() {
     send({ type: 'session:archive', sessionID } as never);
   };
 
+  const handleSelectHistory = () => {
+    send({ type: 'sessions:select-history' } as never);
+  };
+
   const handleSubmitPrompt = (text: string) => {
-    if (!activeSessionID) return;
+    console.log(
+      '[Webview] handleSubmitPrompt called with text:',
+      text,
+      'activeSessionID:',
+      activeSessionID,
+    );
+    if (!activeSessionID) {
+      console.warn('[Webview] handleSubmitPrompt aborted because activeSessionID is null');
+      return;
+    }
+    console.log('[Webview] posting prompt:send to extension host');
     send({ type: 'prompt:send', text } as never);
   };
 
@@ -174,6 +224,7 @@ export function App() {
         onSwitch={handleSwitchSession}
         onCreate={handleCreateSession}
         onArchive={handleArchiveSession}
+        onSelectHistory={handleSelectHistory}
         onSettings={() => setShowSettings(true)}
       />
 
@@ -195,6 +246,12 @@ export function App() {
 
       <PromptInput
         onSubmit={handleSubmitPrompt}
+        onAbort={() => {
+          if (activeSessionID) {
+            send({ type: 'prompt:abort', sessionID: activeSessionID } as never);
+          }
+        }}
+        status={currentStatus}
         models={models}
         agents={agents}
         onModelChange={handleModelChange}

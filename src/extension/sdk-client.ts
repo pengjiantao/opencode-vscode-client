@@ -14,6 +14,7 @@ export interface SDKClient {
     update(id: string, patch: Partial<Session>): Promise<Session>;
     delete(id: string): Promise<void>;
     messages(id: string): Promise<Message[]>;
+    messagesWithParts(id: string): Promise<Array<{ info: Message; parts: Part[] }>>;
     prompt(id: string, parts: Part[], model?: string, agent?: string): Promise<void>;
     promptAsync(id: string, parts: Part[], model?: string, agent?: string): Promise<void>;
     abort(id: string): Promise<void>;

@@ -18,8 +18,10 @@ interface SessionStore {
   updateMessage: (message: Message) => void;
   addPart: (messageID: string, part: Part) => void;
   updatePart: (part: Part) => void;
+  updatePartDelta: (messageID: string, partID: string, field: string, delta: string) => void;
   setSessionStatus: (sessionID: string, status: SessionStatus) => void;
   setPendingPermission: (permission: Permission | null) => void;
+  setSessionMessagesAndParts: (sessionID: string, messages: Message[], parts: Part[]) => void;
 }
 
 export const useSessionStore = create<SessionStore>((set) => ({
@@ -56,12 +58,19 @@ export const useSessionStore = create<SessionStore>((set) => ({
     })),
 
   addMessage: (sessionID, message) =>
-    set((state) => ({
-      messages: {
-        ...state.messages,
-        [sessionID]: [...(state.messages[sessionID] || []), message],
-      },
-    })),
+    set((state) => {
+      const currentMessages = state.messages[sessionID] || [];
+      const exists = currentMessages.some((m) => m.id === message.id);
+      const newMessages = exists
+        ? currentMessages.map((m) => (m.id === message.id ? message : m))
+        : [...currentMessages, message];
+      return {
+        messages: {
+          ...state.messages,
+          [sessionID]: newMessages,
+        },
+      };
+    }),
 
   updateMessage: (message) =>
     set((state) => ({
@@ -73,6 +82,27 @@ export const useSessionStore = create<SessionStore>((set) => ({
       },
     })),
 
+  setSessionMessagesAndParts: (sessionID, messages, parts) =>
+    set((state) => {
+      const partsMap: Record<string, Part[]> = { ...state.parts };
+      for (const m of messages) {
+        partsMap[m.id] = [];
+      }
+      for (const p of parts) {
+        if (!partsMap[p.messageID]) {
+          partsMap[p.messageID] = [];
+        }
+        partsMap[p.messageID].push(p);
+      }
+      return {
+        messages: {
+          ...state.messages,
+          [sessionID]: messages,
+        },
+        parts: partsMap,
+      };
+    }),
+
   addPart: (messageID, part) =>
     set((state) => ({
       parts: {
@@ -82,14 +112,57 @@ export const useSessionStore = create<SessionStore>((set) => ({
     })),
 
   updatePart: (part) =>
-    set((state) => ({
-      parts: {
-        ...state.parts,
-        [part.messageID]: (state.parts[part.messageID] || []).map((p) =>
-          p.id === part.id ? part : p,
-        ),
-      },
-    })),
+    set((state) => {
+      const messageID = part.messageID;
+      const currentParts = state.parts[messageID] || [];
+      const exists = currentParts.some((p) => p.id === part.id);
+      const newParts = exists
+        ? currentParts.map((p) => (p.id === part.id ? part : p))
+        : [...currentParts, part];
+      return {
+        parts: {
+          ...state.parts,
+          [messageID]: newParts,
+        },
+      };
+    }),
+
+  updatePartDelta: (messageID, partID, field, delta) =>
+    set((state) => {
+      const currentParts = state.parts[messageID] || [];
+      const exists = currentParts.some((p) => p.id === partID);
+
+      let newParts: Part[];
+      if (exists) {
+        newParts = currentParts.map((p) => {
+          if (p.id === partID) {
+            const record = p as Record<string, unknown>;
+            const existingValue = record[field] as string | undefined;
+            return {
+              ...p,
+              [field]: (existingValue || '') + delta,
+            };
+          }
+          return p;
+        });
+      } else {
+        // If part delta arrives before part is created, initialize the part skeleton
+        const newPart = {
+          id: partID,
+          messageID,
+          type: 'text', // Fallback to 'text' type default
+          [field]: delta,
+        };
+        newParts = [...currentParts, newPart as unknown as Part];
+      }
+
+      return {
+        parts: {
+          ...state.parts,
+          [messageID]: newParts,
+        },
+      };
+    }),
 
   setSessionStatus: (sessionID, status) =>
     set((state) => ({

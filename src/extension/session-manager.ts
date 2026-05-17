@@ -44,6 +44,10 @@ export class SessionManager {
     }
   }
 
+  setSessions(sessions: Session[]): void {
+    this.setState({ sessions });
+  }
+
   async connect(): Promise<void> {
     await this.sdk.startServer();
     this.setState({ isConnected: true });
@@ -92,13 +96,56 @@ export class SessionManager {
     return this.sdk.session.messages(id);
   }
 
+  async getMessagesAndParts(id: string): Promise<{ messages: Message[]; parts: Part[] }> {
+    const list = await this.sdk.session.messagesWithParts(id);
+    const messages: Message[] = [];
+    const parts: Part[] = [];
+    for (const m of list) {
+      messages.push(m.info);
+      parts.push(...m.parts);
+    }
+    return { messages, parts };
+  }
+
   async sendPrompt(
     sessionID: string,
     parts: Part[],
     model?: string,
     agent?: string,
   ): Promise<void> {
-    await this.sdk.session.prompt(sessionID, parts, model, agent);
+    // Clean parts array to strictly adhere to the backend's PromptInput schema
+    // (removing ambient/extra fields like sessionID and messageID to avoid Schema validation errors)
+    const cleanedParts = parts.map((part) => {
+      if (part.type === 'text') {
+        return {
+          type: 'text',
+          text: part.text,
+          synthetic: part.synthetic,
+          ignored: part.ignored,
+          time: part.time,
+          metadata: part.metadata,
+        } as unknown as Part;
+      }
+      if (part.type === 'file') {
+        return {
+          type: 'file',
+          mime: part.mime,
+          filename: part.filename,
+          url: part.url,
+          source: part.source,
+        } as unknown as Part;
+      }
+      if (part.type === 'agent') {
+        return {
+          type: 'agent',
+          name: part.name,
+          source: part.source,
+        } as unknown as Part;
+      }
+      return part;
+    });
+
+    await this.sdk.session.promptAsync(sessionID, cleanedParts, model, agent);
   }
 
   async abort(sessionID: string): Promise<void> {

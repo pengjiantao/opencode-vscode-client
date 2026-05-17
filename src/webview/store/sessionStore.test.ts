@@ -1,6 +1,6 @@
 import type { UserMessage } from '@opencode-ai/sdk';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createMockSession, createMockUserMessage } from '../../test/mocks/sdk';
+import { createMockSession, createMockTextPart, createMockUserMessage } from '../../test/mocks/sdk';
 import { useSessionStore } from './sessionStore';
 
 describe('sessionStore', () => {
@@ -81,6 +81,19 @@ describe('sessionStore', () => {
 
       const stored = useSessionStore.getState().messages['session-1'][0] as UserMessage;
       expect(stored.agent).toBe('updated-agent');
+    });
+
+    it('sets session messages and parts in bulk', () => {
+      const message = createMockUserMessage();
+      const part = createMockTextPart();
+      part.messageID = message.id;
+
+      useSessionStore.getState().setSessionMessagesAndParts('session-1', [message], [part]);
+
+      expect(useSessionStore.getState().messages['session-1']).toHaveLength(1);
+      expect(useSessionStore.getState().messages['session-1'][0]).toEqual(message);
+      expect(useSessionStore.getState().parts[message.id]).toHaveLength(1);
+      expect(useSessionStore.getState().parts[message.id][0]).toEqual(part);
     });
   });
 

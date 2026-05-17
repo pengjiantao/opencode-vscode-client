@@ -8,14 +8,15 @@ export function useEvents() {
   const { send } = useIPC(() => {});
 
   useEffect(() => {
-    const handler = (message: ExtToWebview) => {
-      if (message.type === 'event:received') {
+    const handler = (event: MessageEvent<ExtToWebview>) => {
+      const message = event.data;
+      if (message && message.type === 'event:received') {
         handleEvent(message.event);
       }
     };
 
-    window.addEventListener('message', handler as unknown as EventListener);
-    return () => window.removeEventListener('message', handler as unknown as EventListener);
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
   }, [handleEvent]);
 
   useEffect(() => {
