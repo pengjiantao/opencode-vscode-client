@@ -30,6 +30,14 @@ describe('sessionStore', () => {
       expect(useSessionStore.getState().sessions[0]).toEqual(session);
     });
 
+    it('does not add duplicate sessions', () => {
+      const session = createMockSession();
+      useSessionStore.getState().addSession(session);
+      useSessionStore.getState().addSession(session);
+
+      expect(useSessionStore.getState().sessions).toHaveLength(1);
+    });
+
     it('removes a session', () => {
       const session = createMockSession();
       useSessionStore.getState().addSession(session);

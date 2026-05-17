@@ -25,8 +25,9 @@ export function SessionTabs({
             key={session.id}
             className={`tab ${session.id === activeSessionID ? 'active' : ''}`}
             onClick={() => onSwitch(session.id)}
+            title={session.title || 'Untitled'}
           >
-            {session.title || 'Untitled'}
+            <span className="tab-title">{session.title || 'Untitled'}</span>
           </button>
         ))}
       </div>

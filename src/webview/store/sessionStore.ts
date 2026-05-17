@@ -35,9 +35,14 @@ export const useSessionStore = create<SessionStore>((set) => ({
   setSessions: (sessions) => set({ sessions }),
 
   addSession: (session) =>
-    set((state) => ({
-      sessions: [...state.sessions, session],
-    })),
+    set((state) => {
+      if (state.sessions.some((s) => s.id === session.id)) {
+        return {};
+      }
+      return {
+        sessions: [...state.sessions, session],
+      };
+    }),
 
   removeSession: (id) =>
     set((state) => ({

@@ -68,43 +68,114 @@ body {
 /* Session Tabs */
 .session-tabs {
   display: flex;
-  align-items: center;
-  padding: 8px;
-  gap: 8px;
-  border-bottom: 1px solid var(--vscode-border-color);
-  background-color: var(--vscode-editor-background);
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
+  height: 35px;
+  min-height: 35px;
+  border-bottom: 1px solid
+    var(
+      --vscode-tab-border,
+      var(--vscode-editorGroupHeader-tabsBorder, var(--vscode-border-color, #454545))
+    );
+  background-color: var(
+    --vscode-tab-inactiveBackground,
+    var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)
+  );
 }
 
 .tabs-list {
   display: flex;
   flex: 1;
-  gap: 4px;
+  align-items: stretch;
   overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.tabs-list::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .tab {
-  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 100%;
   border: none;
-  border-radius: 4px;
-  background-color: transparent;
-  color: var(--vscode-input-foreground);
+  border-top: 2px solid transparent;
+  border-right: 1px solid
+    var(
+      --vscode-tab-border,
+      var(--vscode-editorGroupHeader-tabsBorder, var(--vscode-border-color, #454545))
+    );
+  background-color: var(--vscode-tab-inactiveBackground, #2d2d2d);
+  color: var(--vscode-tab-inactiveForeground, rgba(255, 255, 255, 0.5));
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
+  font-family: var(--vscode-font-family);
   white-space: nowrap;
-  transition: background-color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+  position: relative;
+  border-radius: 0;
 }
 
 .tab:hover {
-  background-color: var(--vscode-list-hoverBackground);
+  background-color: var(
+    --vscode-tab-hoverBackground,
+    var(--vscode-tab-inactiveBackground, #2d2d2d)
+  );
+  color: var(--vscode-tab-hoverForeground, var(--vscode-tab-activeForeground, #ffffff));
 }
 
 .tab.active {
-  background-color: var(--vscode-list-activeSelectionBackground);
+  background-color: var(--vscode-tab-activeBackground, var(--vscode-editor-background, #1e1e1e));
+  color: var(--vscode-tab-activeForeground, #ffffff);
+  border-top-color: var(--vscode-tab-activeBorder, var(--vscode-button-background, #0e639c));
+}
+
+.tab-title {
+  display: inline-block;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tabs-actions {
   display: flex;
+  align-items: center;
+  padding: 0 8px;
   gap: 4px;
+  background-color: var(
+    --vscode-tab-inactiveBackground,
+    var(--vscode-editorGroupHeader-tabsBackground, #2d2d2d)
+  );
+  border-bottom: 1px solid
+    var(
+      --vscode-tab-border,
+      var(--vscode-editorGroupHeader-tabsBorder, var(--vscode-border-color, #454545))
+    );
+}
+
+.tabs-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--vscode-editor-foreground, #ffffff);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.tabs-actions button:hover {
+  background-color: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.15));
 }
 
 /* Chat View */
