@@ -42,3 +42,9 @@ npm run lint          # run lint check
 - `@vscode/webview-ui-toolkit` — VS Code styled components
 - `zustand` — webview state management
 - `react` 18 — webview UI
+
+## Webview Styling & Design
+
+- All webview UI development MUST strictly adhere to the tokens and specifications defined in [DESIGN.md](DESIGN.md).
+- Prioritize using official `@vscode/webview-ui-toolkit` components to ensure a native look and feel.
+- Never use hardcoded colors or sizes for UI layout elements in stylesheets. Always bind them to native VS Code CSS variables (e.g., `var(--vscode-editor-background)`, `var(--vscode-editor-foreground)`) to guarantee robust, automatic adaptation when the user switches VS Code themes.
