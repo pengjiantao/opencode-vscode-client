@@ -23,6 +23,8 @@ declare global {
 
 export function App() {
   const [showSettings, setShowSettings] = useState(false);
+  const [models, setModels] = useState<Array<{ id: string; name: string }>>([]);
+  const [agents, setAgents] = useState<Array<{ id: string; name: string }>>([]);
 
   const sessions = useSessionStore((s) => s.sessions);
   const activeSessionID = useSessionStore((s) => s.activeSessionID);
@@ -115,6 +117,12 @@ export function App() {
         case 'event:received':
           handleServerEvent(message.event);
           break;
+        case 'models:list':
+          setModels(message.models);
+          break;
+        case 'agents:list':
+          setAgents(message.agents);
+          break;
         case 'error':
           console.error('Server error:', message.message);
           break;
@@ -187,8 +195,8 @@ export function App() {
 
       <PromptInput
         onSubmit={handleSubmitPrompt}
-        models={[]}
-        agents={[]}
+        models={models}
+        agents={agents}
         onModelChange={handleModelChange}
         onAgentChange={handleAgentChange}
         disabled={!activeSessionID}

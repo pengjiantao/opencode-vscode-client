@@ -14,9 +14,11 @@ export interface SDKClient {
     update(id: string, patch: Partial<Session>): Promise<Session>;
     delete(id: string): Promise<void>;
     messages(id: string): Promise<Message[]>;
-    prompt(id: string, parts: Part[]): Promise<void>;
-    promptAsync(id: string, parts: Part[]): Promise<void>;
+    prompt(id: string, parts: Part[], model?: string, agent?: string): Promise<void>;
+    promptAsync(id: string, parts: Part[], model?: string, agent?: string): Promise<void>;
     abort(id: string): Promise<void>;
   };
   subscribeEvents(handler: (event: unknown) => void): () => void;
+  getModels(): Promise<Array<{ id: string; name: string }>>;
+  getAgents(): Promise<Array<{ id: string; name: string }>>;
 }

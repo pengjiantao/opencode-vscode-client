@@ -19,6 +19,7 @@
 - Full test suite: `npm run test` (runs both)
 - Webview tests use jsdom with `@testing-library/jest-dom` and a setup file (`test/setup/webview.ts`) that mocks `acquireVsCodeApi`
 - `npm run test:watch` only watches webview tests
+- **Regression Testing Rule**: Every time a bug is fixed, a corresponding regression test **MUST** be added to cover the specific problem-triggering scenario in the appropriate test suite to prevent recurrences.
 
 ## Commands
 
@@ -35,6 +36,10 @@ npm run lint          # run lint check
 - SSE events routed by `sessionID` in `event.properties`
 - Extension host manages SSE subscription; webview receives via IPC (`event:received`)
 - `src/shared/types.ts` contains IPC message types used by both sides
+
+## External Source Code References
+
+- **Opencode Source Repository**: The complete `opencode` backend monorepo source code is cloned in the parent directory at `../opencode` (absolute path: `/home/fiyqkrc/Documents/project/opencode`). When debugging backend interactions, understanding service behaviors, verifying API endpoints, or clarifying complex specifications, the AI **MUST** read and analyze the raw codebase in `../opencode` to ensure total correctness.
 
 ## Key Dependencies
 

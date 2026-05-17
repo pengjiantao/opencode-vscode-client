@@ -24,12 +24,14 @@ interface SDKClientInterface {
     update(id: string, patch: Partial<Session>): Promise<Session>;
     delete(id: string): Promise<void>;
     messages(id: string): Promise<Message[]>;
-    prompt(id: string, parts: Part[]): Promise<void>;
-    promptAsync(id: string, parts: Part[]): Promise<void>;
+    prompt(id: string, parts: Part[], model?: string, agent?: string): Promise<void>;
+    promptAsync(id: string, parts: Part[], model?: string, agent?: string): Promise<void>;
     abort(id: string): Promise<void>;
   };
   subscribeEvents(handler: (event: unknown) => void): () => void;
   startServer(): Promise<{ url: string; close(): void }>;
+  getModels(): Promise<Array<{ id: string; name: string }>>;
+  getAgents(): Promise<Array<{ id: string; name: string }>>;
 }
 
 let sdk: SDKClientInterface;
@@ -74,6 +76,9 @@ const provider = new OpencodeSidebarViewProvider();
 export async function activate(context: ExtensionContext): Promise<void> {
   extensionContext = context;
 
+  let activeModel: string | undefined;
+  let activeAgent: string | undefined;
+
   try {
     const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath;
     const sdkClient = createSDKClient(workspaceRoot);
@@ -95,6 +100,22 @@ export async function activate(context: ExtensionContext): Promise<void> {
           ipc.send({ type: 'session:switched', sessionID: activeID });
         }
       });
+      void sdk
+        .getModels()
+        .then((models) => {
+          ipc.send({ type: 'models:list', models });
+        })
+        .catch((err) => {
+          console.error('Failed to load models:', err);
+        });
+      void sdk
+        .getAgents()
+        .then((agents) => {
+          ipc.send({ type: 'agents:list', agents });
+        })
+        .catch((err) => {
+          console.error('Failed to load agents:', err);
+        });
     });
 
     ipc.on('session:create', () => {
@@ -135,15 +156,20 @@ export async function activate(context: ExtensionContext): Promise<void> {
         return;
       }
       sessionManager
-        .sendPrompt(activeID, [
-          {
-            type: 'text',
-            id: 'temp',
-            sessionID: activeID,
-            messageID: 'temp',
-            text,
-          } as unknown as Part,
-        ])
+        .sendPrompt(
+          activeID,
+          [
+            {
+              type: 'text',
+              id: 'temp',
+              sessionID: activeID,
+              messageID: 'temp',
+              text,
+            } as unknown as Part,
+          ],
+          activeModel,
+          activeAgent,
+        )
         .catch((err) => {
           ipc.send({ type: 'error', message: (err as Error).message });
         });
@@ -158,12 +184,12 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     ipc.on('model:switch', (msg) => {
       const { model } = msg as { model: string };
-      void model;
+      activeModel = model || undefined;
     });
 
     ipc.on('agent:switch', (msg) => {
       const { agent } = msg as { agent: string };
-      void agent;
+      activeAgent = agent || undefined;
     });
 
     ipc.on('permission:reply', (msg) => {

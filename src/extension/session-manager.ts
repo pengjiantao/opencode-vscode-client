@@ -92,8 +92,13 @@ export class SessionManager {
     return this.sdk.session.messages(id);
   }
 
-  async sendPrompt(sessionID: string, parts: Part[]): Promise<void> {
-    await this.sdk.session.prompt(sessionID, parts);
+  async sendPrompt(
+    sessionID: string,
+    parts: Part[],
+    model?: string,
+    agent?: string,
+  ): Promise<void> {
+    await this.sdk.session.prompt(sessionID, parts, model, agent);
   }
 
   async abort(sessionID: string): Promise<void> {

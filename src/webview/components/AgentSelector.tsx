@@ -7,29 +7,24 @@ interface AgentSelectorProps {
 }
 
 export function AgentSelector({ agents, value, onChange }: AgentSelectorProps) {
-  if (agents.length === 0) {
-    return (
-      <VSCodeDropdown
-        aria-label="Select agent"
-        onChange={(e) => onChange((e.target as HTMLSelectElement).value)}
-        disabled
-      >
-        <VSCodeOption value="">Loading agents...</VSCodeOption>
-      </VSCodeDropdown>
-    );
-  }
+  const isLoading = agents.length === 0;
 
   return (
     <VSCodeDropdown
       aria-label="Select agent"
       value={value}
       onChange={(e) => onChange((e.target as HTMLSelectElement).value)}
+      disabled={isLoading}
     >
-      {agents.map((a) => (
-        <VSCodeOption key={a.id} value={a.id}>
-          {a.name}
-        </VSCodeOption>
-      ))}
+      {isLoading ? (
+        <VSCodeOption value="">Loading agents...</VSCodeOption>
+      ) : (
+        agents.map((a) => (
+          <VSCodeOption key={a.id} value={a.id}>
+            {a.name}
+          </VSCodeOption>
+        ))
+      )}
     </VSCodeDropdown>
   );
 }

@@ -495,30 +495,71 @@ body {
 
 /* Prompt Input */
 .prompt-input {
+  padding: 12px;
+  border-top: 1px solid
+    var(
+      --vscode-tab-border,
+      var(--vscode-editorGroupHeader-tabsBorder, var(--vscode-border-color, #454545))
+    );
+  background-color: var(--vscode-editor-background, #1e1e1e);
+}
+
+.prompt-input-container {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  border-top: 1px solid var(--vscode-border-color);
-  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-input-border, #3c3c3c);
+  border-radius: 4px;
+  background-color: var(--vscode-input-background, #252526);
+  padding: 4px;
+  transition: border-color 0.15s ease;
 }
 
-.prompt-input .selectors {
+.prompt-input-container.focused {
+  border-color: var(--vscode-focusBorder, #007fd4);
+}
+
+.prompt-input-container textarea {
+  box-sizing: border-box;
+  width: 100%;
+  resize: none;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-editor-font-size, 13px);
+  line-height: 1.4;
+  min-height: 40px; /* 2 lines default */
+  max-height: 200px; /* ~10 lines */
+  padding: 8px 12px;
+  background-color: transparent;
+  color: var(--vscode-input-foreground, #cccccc);
+  border: none;
+  outline: none;
+  overflow-y: auto;
+}
+
+.prompt-input-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px 4px;
+  border-top: 1px dashed
+    var(
+      --vscode-tab-border,
+      var(--vscode-editorGroupHeader-tabsBorder, var(--vscode-border-color, #454545))
+    );
+  background-color: transparent;
+}
+
+.prompt-input-footer .selectors {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
-.prompt-input vscode-text-area {
-  min-height: 80px;
-}
-
-.prompt-input vscode-button {
-  align-self: flex-end;
-}
-
-/* Dropdown styles */
-vscode-dropdown {
+.prompt-input-footer vscode-dropdown {
   min-width: 120px;
+}
+
+.prompt-input-footer vscode-button {
+  height: 26px;
 }
 
 /* Scrollbar */

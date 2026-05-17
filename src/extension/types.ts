@@ -8,7 +8,9 @@ export type ExtToWebview =
   | { type: 'session:deleted'; sessionID: string }
   | { type: 'event:received'; event: Event }
   | { type: 'error'; message: string }
-  | { type: 'init'; sessions: Session[] };
+  | { type: 'init'; sessions: Session[] }
+  | { type: 'models:list'; models: Array<{ id: string; name: string }> }
+  | { type: 'agents:list'; agents: Array<{ id: string; name: string }> };
 
 export type WebviewToExt =
   | { type: 'session:create' }

@@ -7,29 +7,24 @@ interface ModelSelectorProps {
 }
 
 export function ModelSelector({ models, value, onChange }: ModelSelectorProps) {
-  if (models.length === 0) {
-    return (
-      <VSCodeDropdown
-        aria-label="Select model"
-        onChange={(e) => onChange((e.target as HTMLSelectElement).value)}
-        disabled
-      >
-        <VSCodeOption value="">Loading models...</VSCodeOption>
-      </VSCodeDropdown>
-    );
-  }
+  const isLoading = models.length === 0;
 
   return (
     <VSCodeDropdown
       aria-label="Select model"
       value={value}
       onChange={(e) => onChange((e.target as HTMLSelectElement).value)}
+      disabled={isLoading}
     >
-      {models.map((m) => (
-        <VSCodeOption key={m.id} value={m.id}>
-          {m.name}
-        </VSCodeOption>
-      ))}
+      {isLoading ? (
+        <VSCodeOption value="">Loading models...</VSCodeOption>
+      ) : (
+        models.map((m) => (
+          <VSCodeOption key={m.id} value={m.id}>
+            {m.name}
+          </VSCodeOption>
+        ))
+      )}
     </VSCodeDropdown>
   );
 }

@@ -19,13 +19,15 @@ vi.mock('@vscode/webview-ui-toolkit/react', () => ({
   VSCodeDropdown: ({
     children,
     onChange,
+    disabled,
     'aria-label': ariaLabel,
   }: {
     children?: React.ReactNode;
     onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+    disabled?: boolean;
     'aria-label'?: string;
   }) => (
-    <select aria-label={ariaLabel} onChange={onChange}>
+    <select aria-label={ariaLabel} onChange={onChange} disabled={disabled}>
       {children}
     </select>
   ),
@@ -107,5 +109,36 @@ describe('PromptInput', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /send/i }));
     expect(mockOnSubmit).not.toHaveBeenCalled();
+  });
+
+  it('regression: enables model and agent dropdowns after loading data', () => {
+    const { rerender } = render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const modelSelect = screen.getByRole('combobox', { name: /select model/i });
+    const agentSelect = screen.getByRole('combobox', { name: /select agent/i });
+
+    expect(modelSelect).toBeDisabled();
+    expect(agentSelect).toBeDisabled();
+
+    rerender(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[{ id: 'model-1', name: 'Model 1' }]}
+        agents={[{ id: 'agent-1', name: 'Agent 1' }]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    expect(modelSelect).not.toBeDisabled();
+    expect(agentSelect).not.toBeDisabled();
   });
 });

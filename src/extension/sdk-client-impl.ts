@@ -62,11 +62,35 @@ export function createSDKClient(directory?: string): SDKClient {
         const result = await client.session.messages({ path: { id } });
         return result.data?.map((m: { info: Message; parts: Part[] }) => m.info) ?? [];
       },
-      prompt: async (id: string, parts: Part[]) => {
-        await client.session.prompt({ path: { id }, body: { parts: parts as never } });
+      prompt: async (id: string, parts: Part[], model?: string, agent?: string) => {
+        const body: {
+          parts: Part[];
+          model?: { providerID: string; modelID: string };
+          agent?: string;
+        } = { parts };
+        if (model) {
+          const [providerID, modelID] = model.split('/');
+          body.model = { providerID, modelID };
+        }
+        if (agent) {
+          body.agent = agent;
+        }
+        await client.session.prompt({ path: { id }, body: body as never });
       },
-      promptAsync: async (id: string, parts: Part[]) => {
-        await client.session.promptAsync({ path: { id }, body: { parts: parts as never } });
+      promptAsync: async (id: string, parts: Part[], model?: string, agent?: string) => {
+        const body: {
+          parts: Part[];
+          model?: { providerID: string; modelID: string };
+          agent?: string;
+        } = { parts };
+        if (model) {
+          const [providerID, modelID] = model.split('/');
+          body.model = { providerID, modelID };
+        }
+        if (agent) {
+          body.agent = agent;
+        }
+        await client.session.promptAsync({ path: { id }, body: body as never });
       },
       abort: async (id: string) => {
         await client.session.abort({ path: { id } });
@@ -96,6 +120,29 @@ export function createSDKClient(directory?: string): SDKClient {
         closed = true;
         void subscription.then((sseResult) => sseResult?.stream.return?.(undefined));
       };
+    },
+    getModels: async (): Promise<Array<{ id: string; name: string }>> => {
+      const result = await client.provider.list();
+      const providers = result.data?.all ?? [];
+      const modelsList: Array<{ id: string; name: string }> = [];
+      for (const p of providers) {
+        for (const mId of Object.keys(p.models || {})) {
+          const model = p.models[mId];
+          modelsList.push({
+            id: `${p.id}/${model.id}`,
+            name: `${p.name} - ${model.name || model.id}`,
+          });
+        }
+      }
+      return modelsList;
+    },
+    getAgents: async (): Promise<Array<{ id: string; name: string }>> => {
+      const result = await client.app.agents();
+      const agents = result.data ?? [];
+      return agents.map((a) => ({
+        id: a.name,
+        name: a.name,
+      }));
     },
   };
 }
