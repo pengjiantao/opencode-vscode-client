@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./test/setup/webview.ts'],
+    setupFiles: ['./test/setup/webview.ts', './test/mocks/vscode.ts'],
     include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
     coverage: {
       provider: 'v8',
@@ -20,6 +20,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
+      vscode: resolve(__dirname, 'test/mocks/vscode.ts'),
     },
   },
 });

@@ -10,7 +10,6 @@ import { ChatView } from './components/ChatView';
 import { PromptInput } from './components/PromptInput';
 import { SessionTabs } from './components/SessionTabs';
 import { SettingsPanel } from './components/SettingsPanel';
-import { StatusBar } from './components/StatusBar';
 import { useEvents } from './hooks/useEvents';
 import { useIPC } from './hooks/useIPC';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -246,8 +245,6 @@ export function App() {
         onClose={handleCloseSession}
         onCloseAll={handleCloseAllSessions}
       />
-
-      <StatusBar sessionID={activeSessionID} status={currentStatus} />
 
       {activeSessionID ? (
         <ChatView

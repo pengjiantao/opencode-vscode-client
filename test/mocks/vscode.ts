@@ -6,6 +6,13 @@
 import { vi } from 'vitest';
 
 export const mockVscode = {
+  StatusBarAlignment: {
+    Left: 1,
+    Right: 2,
+  },
+  ThemeColor: class {
+    constructor(public readonly id: string) {}
+  },
   commands: {
     executeCommand: vi.fn(),
     registerCommand: vi.fn(() => ({ dispose: vi.fn() })),
@@ -14,6 +21,16 @@ export const mockVscode = {
     showInformationMessage: vi.fn(),
     showErrorMessage: vi.fn(),
     showWarningMessage: vi.fn(),
+    registerWebviewViewProvider: vi.fn(() => ({ dispose: vi.fn() })),
+    createStatusBarItem: vi.fn(() => ({
+      show: vi.fn(),
+      hide: vi.fn(),
+      dispose: vi.fn(),
+      text: '',
+      tooltip: '',
+      command: '',
+      backgroundColor: undefined,
+    })),
     createWebviewPanel: vi.fn(() => ({
       webview: {
         postMessage: vi.fn(),

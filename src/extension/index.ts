@@ -4,8 +4,15 @@
  * Registers all IPC message handlers for session lifecycle and prompt operations.
  */
 
-import type { Part, Permission } from '@opencode-ai/sdk';
-import { commands, window, workspace, type ExtensionContext } from 'vscode';
+import type { Part, Permission, SessionStatus } from '@opencode-ai/sdk';
+import {
+  commands,
+  StatusBarAlignment,
+  ThemeColor,
+  window,
+  workspace,
+  type ExtensionContext,
+} from 'vscode';
 import { IPCBridge } from './ipc';
 import type { SDKClient } from './sdk-client';
 import { createSDKClient } from './sdk-client-impl';
@@ -25,6 +32,7 @@ let provider: OpencodeSidebarViewProvider;
 export async function activate(context: ExtensionContext): Promise<void> {
   let activeModel: string | undefined;
   let activeAgent: string | undefined;
+  const sessionStatuses = new Map<string, SessionStatus>();
 
   try {
     const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -32,6 +40,49 @@ export async function activate(context: ExtensionContext): Promise<void> {
     sessionManager = new SessionManager(sdk);
     ipc = new IPCBridge();
     provider = new OpencodeSidebarViewProvider(context, ipc);
+
+    // Initialize native status bar item to show current session processing status
+    const statusBarItem = window.createStatusBarItem(StatusBarAlignment.Right, 100);
+    statusBarItem.name = 'OpenCode Status';
+    statusBarItem.command = 'opencode-sidebar.focus';
+    statusBarItem.text = '$(circle-outline) OpenCode: Ready';
+    statusBarItem.tooltip = 'OpenCode is idle and ready';
+    statusBarItem.show();
+    context.subscriptions.push(statusBarItem);
+
+    /**
+     * Updates the native status bar item's styling and text to match
+     * the active session's latest processing state.
+     */
+    const updateStatusBar = (): void => {
+      const activeSessionID = sessionManager.activeSessionID;
+      if (!activeSessionID) {
+        statusBarItem.hide();
+        return;
+      }
+
+      const status = sessionStatuses.get(activeSessionID);
+      if (!status || status.type === 'idle') {
+        statusBarItem.text = '$(circle-outline) OpenCode: Ready';
+        statusBarItem.tooltip = `Session: ${activeSessionID}\nStatus: Ready`;
+        statusBarItem.backgroundColor = undefined;
+      } else if (status.type === 'busy') {
+        statusBarItem.text = '$(sync~spin) OpenCode: Processing...';
+        statusBarItem.tooltip = `Session: ${activeSessionID}\nStatus: Processing`;
+        statusBarItem.backgroundColor = undefined;
+      } else if (status.type === 'retry') {
+        statusBarItem.text = `$(warning) OpenCode: Retrying (${status.attempt}/${status.next})`;
+        statusBarItem.tooltip = `Session: ${activeSessionID}\nStatus: Retrying...\nMessage: ${status.message || 'None'}`;
+        statusBarItem.backgroundColor = new ThemeColor('statusBarItem.warningBackground');
+      }
+      statusBarItem.show();
+    };
+
+    // Keep status bar in sync when active session changes, registering a disposable for clean cleanup
+    const unsubscribeActiveSession = sessionManager.subscribe(() => {
+      updateStatusBar();
+    });
+    context.subscriptions.push({ dispose: unsubscribeActiveSession });
 
     await sessionManager.connect();
 
@@ -210,6 +261,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     ipc.on('session:archive', (msg) => {
       const { sessionID } = msg as { sessionID: string };
+      // Delete session status to prevent unbounded map growth
+      sessionStatuses.delete(sessionID);
       const previousActiveID = sessionManager.activeSessionID;
       sessionManager
         .archive(sessionID)
@@ -246,6 +299,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     ipc.on('session:close', (msg) => {
       const { sessionID } = msg as { sessionID: string };
+      // Delete session status to prevent unbounded map growth
+      sessionStatuses.delete(sessionID);
       const previousActiveID = sessionManager.activeSessionID;
 
       let openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
@@ -270,6 +325,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
     });
 
     ipc.on('session:close-all', () => {
+      // Clear all statuses to prevent memory leaks and unbounded map growth
+      sessionStatuses.clear();
       void context.workspaceState.update('openSessionIDs', []);
       ipc.send({ type: 'init', sessions: [] });
       handleCreateSession();
@@ -323,15 +380,36 @@ export async function activate(context: ExtensionContext): Promise<void> {
       activeAgent = agent || undefined;
     });
 
-    sdk.subscribeEvents((event: unknown) => {
+    // Subscribe to events and register disposable to prevent memory leaks
+    const unsubscribeEvents = sdk.subscribeEvents((event: unknown) => {
       // Forward SSE events to webview and handle permission prompts
       ipc.send({ type: 'event:received', event } as ExtToWebview);
 
-      const evt = event as { type?: string; properties?: { permission?: Permission } };
+      const evt = event as {
+        type?: string;
+        properties?: {
+          permission?: Permission;
+          sessionID?: string;
+          status?: SessionStatus;
+          info?: { id?: string };
+        };
+      };
       if (evt.type === 'permission.updated' && evt.properties?.permission) {
         handlePermissionRequest(evt.properties.permission);
+      } else if (
+        evt.type === 'session.status' &&
+        evt.properties?.sessionID &&
+        evt.properties?.status
+      ) {
+        sessionStatuses.set(evt.properties.sessionID, evt.properties.status);
+        updateStatusBar();
+      } else if (evt.type === 'session.deleted' && evt.properties?.info?.id) {
+        // Clean up status of deleted sessions to prevent unbounded map growth
+        sessionStatuses.delete(evt.properties.info.id);
+        updateStatusBar();
       }
     });
+    context.subscriptions.push({ dispose: unsubscribeEvents });
 
     context.subscriptions.push(
       commands.registerCommand('opencode-sidebar.focus', () => {
