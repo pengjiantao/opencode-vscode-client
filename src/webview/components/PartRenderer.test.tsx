@@ -10,6 +10,7 @@ import {
   createMockToolPart,
 } from '../../test/mocks/sdk';
 import { PartRenderer } from './PartRenderer';
+import { getToolIcon } from './parts/ToolPart';
 
 describe('PartRenderer', () => {
   beforeEach(() => {
@@ -25,13 +26,38 @@ describe('PartRenderer', () => {
   it('renders tool part', () => {
     const part = createMockToolPart('bash');
     render(<PartRenderer part={part} />);
-    expect(screen.getByText(/Tool: bash/)).toBeInTheDocument();
+    expect(screen.getByText(/bash/)).toBeInTheDocument();
+  });
+
+  it('renders tool part with tool-specific icon and no Tool prefix', () => {
+    const part = createMockToolPart('bash');
+    const { container } = render(<PartRenderer part={part} />);
+    // Check that we render the terminal icon for bash
+    const iconElement = container.querySelector('.codicon-terminal');
+    expect(iconElement).toBeInTheDocument();
+    // Check that the summary text doesn't have the "Tool: " prefix
+    expect(screen.getByText(/bash/)).toBeInTheDocument();
+    expect(screen.queryByText(/Tool: bash/)).not.toBeInTheDocument();
   });
 
   it('renders reasoning part', () => {
     const part = createMockReasoningPart('Let me think about this...');
     render(<PartRenderer part={part} />);
     expect(screen.getByText(/Thinking/)).toBeInTheDocument();
+  });
+
+  it('renders reasoning part with dynamic loading and completed icons', () => {
+    // 1. Check thinking/loading state
+    const partRunning = createMockReasoningPart('Let me think...');
+    partRunning.time = { start: Date.now() }; // end is undefined
+    const { container: containerRunning } = render(<PartRenderer part={partRunning} />);
+    expect(containerRunning.querySelector('.codicon-sync')).toBeInTheDocument();
+
+    // 2. Check completed state
+    const partCompleted = createMockReasoningPart('Done thinking.');
+    partCompleted.time = { start: Date.now(), end: Date.now() + 1000 };
+    const { container: containerCompleted } = render(<PartRenderer part={partCompleted} />);
+    expect(containerCompleted.querySelector('.codicon-lightbulb')).toBeInTheDocument();
   });
 
   it('renders file part', () => {
@@ -109,5 +135,23 @@ describe('PartRenderer', () => {
     expect(copyBtn).toBeInTheDocument();
     expect(copyBtn).not.toHaveAttribute('title');
     expect(copyBtn).toHaveAttribute('data-custom-title', 'Copy Code');
+  });
+
+  describe('getToolIcon', () => {
+    it('maps tools to correct icons in a case-insensitive manner', () => {
+      expect(getToolIcon('BASH')).toBe('$(terminal)');
+      expect(getToolIcon('run_command')).toBe('$(terminal)');
+      expect(getToolIcon('grep_search')).toBe('$(search)');
+      expect(getToolIcon('list_dir')).toBe('$(folder)');
+      expect(getToolIcon('write_to_file')).toBe('$(edit)');
+      expect(getToolIcon('read_file')).toBe('$(file-code)');
+      expect(getToolIcon('browser_search')).toBe('$(browser)');
+      expect(getToolIcon('web_search')).toBe('$(browser)');
+    });
+
+    it('falls back to toolbox icon for unknown tools', () => {
+      expect(getToolIcon('unknown_custom_tool')).toBe('$(tools)');
+      expect(getToolIcon('')).toBe('$(tools)');
+    });
   });
 });

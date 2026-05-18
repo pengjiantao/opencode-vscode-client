@@ -17,14 +17,62 @@ interface ToolPartProps {
   };
 }
 
+/**
+ * Resolves the appropriate VS Code Codicon class name or identifier for a given tool name.
+ * Maps common tools like bash, grep, search, files, and browsers to their corresponding icons.
+ *
+ * @param tool The raw tool name (e.g., 'bash', 'grep_search', 'write_to_file')
+ * @returns The codicon icon name string (e.g., '$(terminal)')
+ */
+export function getToolIcon(tool: string): string {
+  const name = tool.toLowerCase();
+  // Match specialized browser/web search tools first before general search to avoid keyword overlap (e.g., browser_search)
+  if (name.includes('browser') || name.includes('web') || name.includes('url')) {
+    return '$(browser)';
+  }
+  // Map bash/terminal commands to terminal icon
+  if (
+    name.includes('bash') ||
+    name.includes('command') ||
+    name.includes('terminal') ||
+    name.includes('run_command')
+  ) {
+    return '$(terminal)';
+  }
+  // Map search / pattern matching to search icon
+  if (name.includes('grep') || name.includes('search')) {
+    return '$(search)';
+  }
+  // Map list_dir / folder operations to folder icon
+  if (name.includes('list_dir') || name.includes('list_directory') || name.includes('folder')) {
+    return '$(folder)';
+  }
+  // Map edit / write / save operations to edit icon
+  if (
+    name.includes('write') ||
+    name.includes('replace') ||
+    name.includes('edit') ||
+    name.includes('save')
+  ) {
+    return '$(edit)';
+  }
+  // Map read / view file operations to file-code icon
+  if (name.includes('read') || name.includes('view') || name.includes('file')) {
+    return '$(file-code)';
+  }
+  // Fallback to a general toolbox/tools icon
+  return '$(tools)';
+}
+
 /** Displays a tool execution in a collapsible borderless box, default collapsed. */
 export function ToolPart({ tool, state }: ToolPartProps) {
   const [collapsed, setCollapsed] = useState(true);
 
+  // Omit "Tool:" prefix to keep the sidebar presentation compact and developer-centric
   const getSummaryText = () => {
     const statusText =
       state.status === 'running' ? ' (running...)' : state.status === 'error' ? ' (failed)' : '';
-    return `Tool: ${tool}${state.title ? ` - ${state.title}` : ''}${statusText}`;
+    return `${tool}${state.title ? ` - ${state.title}` : ''}${statusText}`;
   };
 
   return (
@@ -32,6 +80,7 @@ export function ToolPart({ tool, state }: ToolPartProps) {
       className={`part tool-part status-${state.status} ${collapsed ? 'collapsed' : 'expanded'}`}
     >
       <div className="tool-header" onClick={() => setCollapsed(!collapsed)}>
+        <Codicon name={getToolIcon(tool)} className="tool-header-icon" />
         <span className="tool-name">{getSummaryText()}</span>
       </div>
 

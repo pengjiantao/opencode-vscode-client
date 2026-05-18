@@ -3,6 +3,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { Codicon } from '../Codicon';
 import { Markdown } from '../Markdown';
 
 interface ReasoningPartProps {
@@ -34,7 +35,10 @@ function useCollapseOnComplete(hasEnd: boolean) {
 export function ReasoningPart({ text, time }: ReasoningPartProps) {
   const hasEnd = time?.end !== undefined;
   const [collapsed, setCollapsed] = useCollapseOnComplete(hasEnd);
+  // Spinner icon during running state, static idea lightbulb on complete
+  const iconName = hasEnd ? '$(lightbulb)' : '$(sync~spin)';
 
+  // Show progress state while active, and transition to precise elapsed duration when complete.
   const getDurationText = () => {
     if (time?.end && time?.start) {
       const duration = ((time.end - time.start) / 1000).toFixed(1);
@@ -46,6 +50,7 @@ export function ReasoningPart({ text, time }: ReasoningPartProps) {
   return (
     <div className={`part reasoning-part ${collapsed ? 'collapsed' : 'expanded'}`}>
       <div className="reasoning-header" onClick={() => setCollapsed(!collapsed)}>
+        <Codicon name={iconName} className="reasoning-header-icon" />
         <span className="reasoning-label">{getDurationText()}</span>
       </div>
       <div
