@@ -175,7 +175,7 @@ describe('PromptInput', () => {
     );
 
     const sendBtn = screen.getByRole('button', { name: /send/i });
-    expect(sendBtn).toHaveTextContent('Send');
+    expect(sendBtn).toHaveAttribute('aria-label', 'Send');
     expect(sendBtn).not.toHaveClass('stop-btn');
 
     rerender(
@@ -191,7 +191,7 @@ describe('PromptInput', () => {
     );
 
     const stopBtn = screen.getByRole('button', { name: /stop/i });
-    expect(stopBtn).toHaveTextContent('Stop');
+    expect(stopBtn).toHaveAttribute('aria-label', 'Stop');
     expect(stopBtn).toHaveClass('stop-btn');
 
     fireEvent.click(stopBtn);
@@ -255,5 +255,31 @@ describe('PromptInput', () => {
 
     expect(screen.queryAllByText('GPT-4').length).toBeGreaterThan(0);
     expect(screen.queryAllByText('Claude').length).toBe(0);
+  });
+
+  /** Regression: respects controlled activeModel and activeAgent props. */
+  it('regression: respects controlled activeModel and activeAgent props', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[
+          { id: 'model-1', name: 'Model 1' },
+          { id: 'model-2', name: 'Model 2' },
+        ]}
+        agents={[
+          { id: 'plan', name: 'Plan Agent' },
+          { id: 'build', name: 'Build Agent' },
+        ]}
+        activeModel="model-2"
+        activeAgent="build"
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    expect(screen.getByRole('combobox', { name: /select model/i })).toHaveTextContent('Model 2');
+    expect(screen.getByRole('combobox', { name: /select agent/i })).toHaveTextContent(
+      'Build Agent',
+    );
   });
 });

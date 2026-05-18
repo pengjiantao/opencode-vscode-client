@@ -3,6 +3,7 @@
  * Supports search, grouping by provider, and filtering disconnected models.
  */
 
+import { Codicon } from './Codicon';
 import { Select } from './Select';
 
 /** Structure representing a language model. */
@@ -35,11 +36,7 @@ export function ModelSelector({ models, value, onChange }: ModelSelectorProps) {
 
   // Find currently active model for trigger display text
   const activeModel = models.find((m) => m.id === value);
-  const triggerText = activeModel
-    ? activeModel.providerName
-      ? `${activeModel.providerName}: ${activeModel.name}`
-      : activeModel.name
-    : value || 'Select model...';
+  const triggerText = activeModel ? activeModel.name : value || 'Select model...';
 
   // Only show connected models in the dropdown
   const configuredModels = models.filter((m) => m.isConnected !== false);
@@ -60,6 +57,7 @@ export function ModelSelector({ models, value, onChange }: ModelSelectorProps) {
       placeholder="Search models..."
       searchable={true}
       triggerText={triggerText}
+      icon={<Codicon name="robot" />}
       isLoading={isLoading}
       loadingText="Loading models..."
       noResultsText="No models found"

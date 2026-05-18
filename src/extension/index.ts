@@ -30,8 +30,8 @@ let provider: OpencodeSidebarViewProvider;
  * Sets up SDK connection, IPC handlers for session/prompt/model operations.
  */
 export async function activate(context: ExtensionContext): Promise<void> {
-  let activeModel: string | undefined;
-  let activeAgent: string | undefined;
+  let activeModel = context.globalState.get<string>('lastUsedModel');
+  let activeAgent = context.globalState.get<string>('lastUsedAgent');
   const sessionStatuses = new Map<string, SessionStatus>();
 
   try {
@@ -196,7 +196,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
             .then((session) => {
               openIDs = [session.id];
               void context.workspaceState.update('openSessionIDs', openIDs);
-              ipc.send({ type: 'init', sessions: [session] });
+              ipc.send({ type: 'init', sessions: [session], activeModel, activeAgent });
               ipc.send({ type: 'session:switched', sessionID: session.id });
               ipc.send({ type: 'messages:list', sessionID: session.id, messages: [], parts: [] });
             })
@@ -208,7 +208,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
           void context.workspaceState.update('openSessionIDs', openIDs);
 
           const openSessions = activeSessions.filter((s) => openIDs.includes(s.id));
-          ipc.send({ type: 'init', sessions: openSessions });
+          ipc.send({ type: 'init', sessions: openSessions, activeModel, activeAgent });
           ipc.send({ type: 'session:switched', sessionID: activeID });
 
           void sessionManager
@@ -373,11 +373,13 @@ export async function activate(context: ExtensionContext): Promise<void> {
     ipc.on('model:switch', (msg) => {
       const { model } = msg as { model: string };
       activeModel = model || undefined;
+      void context.globalState.update('lastUsedModel', model || undefined);
     });
 
     ipc.on('agent:switch', (msg) => {
       const { agent } = msg as { agent: string };
       activeAgent = agent || undefined;
+      void context.globalState.update('lastUsedAgent', agent || undefined);
     });
 
     // Subscribe to events and register disposable to prevent memory leaks

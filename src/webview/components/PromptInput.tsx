@@ -4,9 +4,9 @@
  */
 
 import type { SessionStatus } from '@opencode-ai/sdk';
-import { VSCodeButton } from '@vscode/webview-ui-toolkit/react';
 import React from 'react';
 import { AgentSelector } from './AgentSelector';
+import { IconButton } from './IconButton';
 import { ModelSelector } from './ModelSelector';
 
 interface PromptInputProps {
@@ -15,6 +15,8 @@ interface PromptInputProps {
   status?: SessionStatus;
   models: Array<{ id: string; name: string }>;
   agents: Array<{ id: string; name: string }>;
+  activeModel?: string;
+  activeAgent?: string;
   onModelChange: (model: string) => void;
   onAgentChange: (agent: string) => void;
   disabled?: boolean;
@@ -27,14 +29,24 @@ export function PromptInput({
   status,
   models,
   agents,
+  activeModel: controlledModel,
+  activeAgent: controlledAgent,
   onModelChange,
   onAgentChange,
   disabled = false,
 }: PromptInputProps) {
   const [text, setText] = React.useState('');
-  const [selectedModel, setSelectedModel] = React.useState('');
-  const [selectedAgent, setSelectedAgent] = React.useState('');
   const [isFocused, setIsFocused] = React.useState(false);
+
+  // Hybrid controlled/uncontrolled pattern:
+  // If controlled props (controlledModel / controlledAgent) are provided (e.g. from persisted App/globalState),
+  // they are prioritized. Otherwise, we fallback to local component state (localModel / localAgent) for backwards
+  // compatibility, component autonomy, and unit test isolation.
+  const [localModel, setLocalModel] = React.useState('');
+  const [localAgent, setLocalAgent] = React.useState('');
+
+  const selectedModel = controlledModel !== undefined ? controlledModel : localModel;
+  const selectedAgent = controlledAgent !== undefined ? controlledAgent : localAgent;
 
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
@@ -104,7 +116,7 @@ export function PromptInput({
               models={models}
               value={activeModel}
               onChange={(m) => {
-                setSelectedModel(m);
+                setLocalModel(m);
                 onModelChange(m);
               }}
             />
@@ -113,19 +125,31 @@ export function PromptInput({
               agents={agents}
               value={activeAgent}
               onChange={(a) => {
-                setSelectedAgent(a);
+                setLocalAgent(a);
                 onAgentChange(a);
               }}
             />
           </div>
 
-          <VSCodeButton
-            onClick={handleSubmit}
-            disabled={disabled || (!isRunning && !text.trim())}
-            className={isRunning ? 'stop-btn' : ''}
+          <span
+            data-custom-title={isRunning ? 'Stop' : 'Send'}
+            style={{
+              display: 'inline-flex',
+              cursor: disabled || (!isRunning && !text.trim()) ? 'not-allowed' : 'default',
+            }}
           >
-            {isRunning ? 'Stop' : 'Send'}
-          </VSCodeButton>
+            <IconButton
+              name={isRunning ? 'debug-stop' : 'send'}
+              onClick={handleSubmit}
+              disabled={disabled || (!isRunning && !text.trim())}
+              title={isRunning ? 'Stop' : 'Send'}
+              className={isRunning ? 'stop-btn' : 'send-btn'}
+              size="medium"
+              style={{
+                pointerEvents: disabled || (!isRunning && !text.trim()) ? 'none' : 'auto',
+              }}
+            />
+          </span>
         </div>
       </div>
     </div>

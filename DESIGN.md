@@ -47,7 +47,7 @@ components:
   input-text:
     backgroundColor: '{colors.secondary}'
     textColor: '{colors.on-surface}'
-    rounded: '{rounded.sm}'
+    rounded: '{rounded.lg}'
     padding: 6px
 ---
 
@@ -63,7 +63,7 @@ The OpenCode VS Code client is designed to feel like a first-party, natural exte
 
 - **Integration**: The interface behaves as a cohesive workspace sidebar or editor panel. It does not introduce competing UI styles.
 - **Theme Adaptability**: Color schemes are fully dynamic. Using native VS Code theme variables ensures that any developer-selected theme (Dark+, Light+, GitHub Light, Cyberpunk, High Contrast) will be inherited perfectly.
-- **Component Toolkit**: Interactive components are built using the official `@vscode/webview-ui-toolkit` to preserve standard VS Code form controls.
+- **Component Toolkit**: Interactive components are built using the official `@vscode/webview-ui-toolkit` and native React components styled to match VS Code toolbar segments perfectly.
 
 ---
 
@@ -146,72 +146,45 @@ VS Code uses a flat, border-oriented design system. Rather than using large, fuz
 
 ## Shapes
 
-Shapes follow the **Fluent Design** style with minimal corner rounding:
+Shapes follow a modern, Fluent-inspired styling system with tailored corner roundness ratios to maintain visual hierarchy:
 
-- **sm (4px)**: Input elements, tabs, pills, and basic action buttons.
-- **md (6px)**: Nested container segments (tool blocks, reasoning headers, pre-code logs).
-- **lg (8px)**: Primary chat message balloons and permission boxes.
+- **sm (4px)**: Inactive tabs, pill tags, and basic micro-layout buttons.
+- **md (6px)**: Popover dropdown boxes, select search containers, and standard menu list items.
+- **lg (8px)**: Prompt input text container box, primary chat bubbles, and permission cards.
 - **full (9999px)**: Circular status tags, online indicators, and indicators.
 
 ---
 
-## Components
+## Components & User Style Preferences
 
-Design specifications for standard interactive elements:
+Interactive controls are engineered to reflect premium user preference specifications:
 
-### 1. Buttons
+### 1. Model & Agent Selectors
 
-- Primary buttons use `var(--vscode-button-background)` and inherit `:hover` scale.
-- Padding is set to `8px 16px` for standard elements.
+- **Clean Naming Scheme**: The active choice in trigger buttons only displays the concise entity name, omitting provider prefixes (e.g. `GPT-4o` instead of `OpenAI / GPT-4o`) to preserve visual focus.
+- **Visual Context Icons**: Every selector couples with a dedicated codicon next to the text (`$(robot)` for models, `$(notebook)` for planning, `$(terminal)` for building) to give the user instant clarity of capabilities at a glance.
+- **Borderless Design**: Selector trigger buttons in toolbar segments are styled borderless (`border-color: transparent`) with a transparent background, transitioning to a native `var(--vscode-toolbar-hoverBackground)` on hover to integrate smoothly.
+- **Persistent States**: Selections are saved dynamically using VS Code's `globalState` (e.g. `'lastUsedModel'`, `'lastUsedAgent'`) to ensure that workspace loads and session switches remember the user's active choices.
 
-### 2. Tabs (.tab)
+### 2. Searchable Select Dropdowns & Popovers
 
-- Translucent background, turning to `--vscode-list-hoverBackground` on hover.
-- Active state matches `--vscode-list-activeSelectionBackground` with fully readable white text.
+- **Dynamic Adaptive Width**: The dropdown container (`.select-popover`) is configured with `width: max-content` bound inside logical constraints (`min-width: 220px; max-width: 400px;`) so it scales natively with option content lengths.
+- **Strict Text Truncation**: Option labels must never wrap onto multiple lines. Apply `white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;` on item texts to maintain elegant alignments.
+- **Unified Spacing & Roundness**: Options in lists are structured with standard gaps, rounded corners (`border-radius: 4px`), and container paddings (`4px 0` at list container borders) to match first-party dropdown overlays.
 
-### 3. Collapsible Containers (.reasoning-part)
+### 3. Action IconButton Controls
 
-- Header background uses 80% widget background.
-- Font inherits monospace layout, collapsible content is padded by `12px` and uses `--vscode-border-color`.
+- **Icon Buttons Over Standard Buttons**: Replaced heavy text-based buttons for footer commands (e.g. "Send" or "Stop") with lightweight, modern, and spacious `IconButton` elements.
+- **Interactive State Transitions**: Toggle button icons dynamically depending on execution status (e.g., standard `send` codicon when ready, `debug-stop` codicon when busy).
+- **Subtle Highlight Tones**: Colorize active icons using dynamic theme tokens (e.g., link foreground `var(--vscode-textLink-foreground)` for active send, and status error `var(--vscode-statusBarItem-errorBackground)` for active stop) on top of standard transparent background hover effects.
 
-### 4. Input Fields (vscode-text-area, vscode-text-field)
+### 4. Custom Visual Tooltips (`data-custom-title`)
 
-- Integrates directly into bottom bar layout.
-- Border radius set to `4px`.
-- Text wraps properly inside text-area inputs without overflow.
-
-### 5. Reusable Custom Components
-
-#### IconButton
-
-- Modular icon action utilizing native VS Code codicons.
-- Features a transparent background with a smooth `:hover` state transition to `var(--vscode-toolbar-hoverBackground)`.
-- Configures predefined size classes (`small` at 18px, `medium` at 24px, `large` at 30px) or custom inline dimensions.
-
-#### Popover
-
-- Dynamic overlay dialog positioned relative to its anchor trigger.
-- Dismisses automatically on click-outside (`mousedown` listener) or when pressing the `Escape` key.
-- Supports flexible vertical placements (`top` or `bottom` aligned directions).
-- Employs clean wrapper markup to ensure nested buttons are not duplicated inside the accessibility tree.
-
-#### Select (Searchable Combobox)
-
-- Native-styled dropdown control supporting item groups/categories, searchable filter queries, and custom loading states.
-- Connects directly with `Popover` to map options securely.
-- Border focus rings link dynamically to `var(--vscode-focusBorder)`.
-
-#### Tooltip (Visual Hover Overlay)
-
-- Sleek visual replacement for browser-native HTML `title` tooltips, ensuring theme consistency.
-- Activated globally by adding the `data-custom-title` attribute to any DOM element.
-
-### 6. Compact Session Tabs
-
-- Enforces a dense layout height of exactly `30px` for layout consistency.
-- Standardizes top and bottom border dividers: `border-top` and `border-bottom` on `.session-tabs`.
-- Employs a relative bottom pseudo-element (`.tab.active::after`) to mask out the parent container's bottom border on the selected tab, ensuring it blends seamlessly into the active editor panel context.
-- Integrates `IconButton` close actions and `Popover` actions to ensure native styling.
+- **Global Tooltip Coverage**: Use `data-custom-title` on all `IconButton` components and any elements displaying potentially truncated text (such as select trigger names, option list texts, session menu titles) to enable the custom visual tooltip engine.
+- **Disabled State Hover Delegation**: Browsers natively discard hover events on `<button disabled>`. To guarantee visual tooltips appear on disabled elements:
+  - Wrap the disabled component in a parent `<span>` containing the `data-custom-title`.
+  - Set `pointer-events: none` on the disabled button so pointer hovers bypass it.
+  - Set `cursor: not-allowed` directly on the parent wrapper span to present active state feedback.
 
 ---
 
@@ -223,14 +196,14 @@ Design specifications for standard interactive elements:
 - **Do** use the official `@vscode/webview-ui-toolkit` widgets for interactive forms.
 - **Do** leverage our custom `Select`, `Popover`, `IconButton`, and `Tooltip` library to build unified toolbar segments.
 - **Do** use the `data-custom-title` attribute instead of the native `title` attribute to leverage our custom visual tooltip engine.
-- **Do** make sure monospace content handles long string wrapped margins properly.
+- **Do** wrap disabled controls with a hover-delegating parent span to show disabled state tooltips.
 - **Do** test user interactions in both high-contrast light and dark themes.
 
 ### Don'ts
 
 - **Don't** use absolute colors like `#ffffff` or `#000000` for backgrounds or texts.
 - **Don't** use the native `title` attribute directly on HTML/component nodes, as it triggers cluttered native browser-level tooltips. Use `data-custom-title` instead.
-- **Don't** insert heavy drop-shadows on standard chat components or container components.
+- **Don't** allow long option items in selectors to wrap; always truncate cleanly in a single line.
 - **Don't** enforce static pixel sizes for font-families or font-sizes that ignore VS Code settings.
 - **Don't** duplicate interactive element roles (e.g., nesting `role="button"` inside another button) to ensure strong screen reader support.
 - **Don't** mix multiple corner radii configurations within a single element grouping.

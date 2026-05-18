@@ -41,6 +41,8 @@ export function App() {
   const [agents, setAgents] = useState<
     Array<{ id: string; name: string; mode?: string; hidden?: boolean }>
   >([]);
+  const [activeModel, setActiveModel] = useState<string>('');
+  const [activeAgent, setActiveAgent] = useState<string>('');
 
   const sessions = useSessionStore((s) => s.sessions);
   const activeSessionID = useSessionStore((s) => s.activeSessionID);
@@ -176,6 +178,12 @@ export function App() {
           break;
         case 'init':
           setSessions(message.sessions as Session[]);
+          if (message.activeModel) {
+            setActiveModel(message.activeModel);
+          }
+          if (message.activeAgent) {
+            setActiveAgent(message.activeAgent);
+          }
           break;
       }
     };
@@ -224,10 +232,12 @@ export function App() {
   };
 
   const handleModelChange = (model: string) => {
+    setActiveModel(model);
     send({ type: 'model:switch', model } as never);
   };
 
   const handleAgentChange = (agent: string) => {
+    setActiveAgent(agent);
     send({ type: 'agent:switch', agent } as never);
   };
 
@@ -271,6 +281,8 @@ export function App() {
         status={currentStatus}
         models={models}
         agents={agents}
+        activeModel={activeModel}
+        activeAgent={activeAgent}
         onModelChange={handleModelChange}
         onAgentChange={handleAgentChange}
         disabled={!activeSessionID}

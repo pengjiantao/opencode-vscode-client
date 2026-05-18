@@ -163,11 +163,22 @@
   background-color: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.15));
 }
 
+.more-menu-popover-container {
+  padding: 6px !important; /* distance to parent container */
+  border-radius: 6px;
+}
+
 .more-menu-popover {
   min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .popover-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   padding: 4px 0;
   border-bottom: 1px solid var(--vscode-menu-separatorBackground, #454545);
 }
@@ -177,7 +188,7 @@
 }
 
 .popover-group-header {
-  padding: 4px 12px;
+  padding: 4px 8px;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -189,16 +200,20 @@
 .popover-options-list {
   max-height: 300px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* gap between items */
 }
 
 .popover-option {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 12px;
+  padding: 6px 10px;
   font-size: 13px;
   cursor: pointer;
   user-select: none;
+  border-radius: 4px; /* add border-radius to items */
 }
 
 .popover-option:hover {

@@ -89,8 +89,7 @@
         {
           "type": "webview",
           "id": "opencode-sidebar.main",
-          "name": "OpenCode",
-          "when": "workspaceFolderCount > 0"
+          "name": "OpenCode"
         }
       ]
     },

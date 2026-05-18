@@ -13,7 +13,7 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--vscode-input-border, #3c3c3c);
-  border-radius: 4px;
+  border-radius: 8px;
   background-color: var(--vscode-input-background, #252526);
   padding: 4px;
   transition: border-color 0.15s ease;
@@ -63,14 +63,22 @@
   min-width: 120px;
 }
 
-.prompt-input-footer vscode-button {
-  height: 26px;
+.prompt-input-footer .send-btn {
+  color: var(--vscode-textLink-foreground, var(--vscode-button-background, #007fd4));
+  transition: color 0.12s ease;
 }
 
-.prompt-input-footer vscode-button.stop-btn {
-  --vscode-button-background: var(--vscode-statusBarItem-errorBackground, #c74c3c);
-  --vscode-button-hoverBackground: var(--vscode-statusBarItem-errorHoverBackground, #e74c3c);
-  --vscode-button-foreground: var(--vscode-statusBarItem-errorForeground, #ffffff);
+.prompt-input-footer .send-btn:hover:not(:disabled) {
+  color: var(--vscode-textLink-activeForeground, var(--vscode-button-hoverBackground, #0062a3));
+}
+
+.prompt-input-footer .stop-btn {
+  color: var(--vscode-statusBarItem-errorBackground, #c74c3c);
+  transition: color 0.12s ease;
+}
+
+.prompt-input-footer .stop-btn:hover:not(:disabled) {
+  color: var(--vscode-statusBarItem-errorHoverBackground, #e74c3c);
 }
 
 /* Custom Select Components */

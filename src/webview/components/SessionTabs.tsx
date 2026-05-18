@@ -60,6 +60,7 @@ export function SessionTabs({
       <div className="tabs-actions">
         <Popover
           placement="bottom"
+          popoverClassName="more-menu-popover-container"
           trigger={<IconButton name="ellipsis" title="More Actions" size="medium" />}
         >
           {({ close }) => (
@@ -76,7 +77,9 @@ export function SessionTabs({
                         close();
                       }}
                     >
-                      <span className="option-text">{s.title || 'Untitled'}</span>
+                      <span className="option-text" data-custom-title={s.title || 'Untitled'}>
+                        {s.title || 'Untitled'}
+                      </span>
                       {s.id === activeSessionID && <span className="check-icon">✓</span>}
                     </div>
                   ))}

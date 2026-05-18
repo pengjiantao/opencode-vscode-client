@@ -16,7 +16,7 @@ export type ExtToWebview =
   | { type: 'session:deleted'; sessionID: string }
   | { type: 'event:received'; event: Event }
   | { type: 'error'; message: string }
-  | { type: 'init'; sessions: unknown[] }
+  | { type: 'init'; sessions: unknown[]; activeModel?: string; activeAgent?: string }
   | { type: 'settings:open' }
   | {
       type: 'models:list';

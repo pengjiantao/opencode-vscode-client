@@ -3,6 +3,7 @@
  * Filters out subagents and hidden agents, showing only primary agents.
  */
 
+import { Codicon } from './Codicon';
 import { Select } from './Select';
 
 /** Structure representing an Agent object. */
@@ -48,6 +49,8 @@ export function AgentSelector({ agents, value, onChange }: AgentSelectorProps) {
 
   const activeAgent = primaryAgents.find((a) => a.id === value) || primaryAgents[0];
   const triggerText = activeAgent ? activeAgent.name : value || 'Select agent...';
+  const icon =
+    activeAgent?.id === 'plan' ? <Codicon name="notebook" /> : <Codicon name="terminal" />;
 
   return (
     <Select
@@ -56,6 +59,7 @@ export function AgentSelector({ agents, value, onChange }: AgentSelectorProps) {
       value={value}
       onChange={onChange}
       triggerText={triggerText}
+      icon={icon}
       isLoading={isLoading}
       loadingText="Loading agents..."
       noResultsText="No agents found"

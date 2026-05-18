@@ -2,7 +2,8 @@
  * @file Reusable Select (Combobox) component using the generic Popover.
  */
 
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
+import { Codicon } from './Codicon';
 import { Popover } from './Popover';
 
 /** Structure for options in the Select component. */
@@ -43,6 +44,8 @@ export interface SelectProps {
   popoverClassName?: string;
   /** Accessibility label for the combobox trigger button. */
   ariaLabel?: string;
+  /** Optional icon to render inside the trigger button before text. */
+  icon?: ReactNode;
 }
 
 /**
@@ -63,6 +66,7 @@ export function Select({
   className = '',
   popoverClassName = '',
   ariaLabel,
+  icon,
 }: SelectProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -112,8 +116,11 @@ export function Select({
           disabled={isLoading}
           className="select-trigger"
         >
-          <span className="select-trigger-text">{displayLabel}</span>
-          <span className="select-trigger-chevron">▼</span>
+          {icon && <span className="select-trigger-icon">{icon}</span>}
+          <span className="select-trigger-text" data-custom-title={displayLabel}>
+            {displayLabel}
+          </span>
+          <Codicon name="chevron-down" className="select-trigger-chevron" />
         </button>
       }
     >
@@ -152,7 +159,9 @@ export function Select({
                           close();
                         }}
                       >
-                        <span className="select-option-name">{opt.label}</span>
+                        <span className="select-option-name" data-custom-title={opt.label}>
+                          {opt.label}
+                        </span>
                         {opt.id === value && <span className="select-check-icon">✓</span>}
                       </div>
                     ))}
@@ -172,7 +181,9 @@ export function Select({
                       close();
                     }}
                   >
-                    <span className="select-option-name">{opt.label}</span>
+                    <span className="select-option-name" data-custom-title={opt.label}>
+                      {opt.label}
+                    </span>
                     {opt.id === value && <span className="select-check-icon">✓</span>}
                   </div>
                 ))}

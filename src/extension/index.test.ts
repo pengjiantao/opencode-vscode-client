@@ -86,7 +86,10 @@ describe('Extension Status Bar Activation', () => {
         get: vi.fn().mockReturnValue([]),
         update: vi.fn().mockResolvedValue(undefined),
       },
-      globalState: {} as never,
+      globalState: {
+        get: vi.fn().mockReturnValue(undefined),
+        update: vi.fn().mockResolvedValue(undefined),
+      } as never,
       extensionPath: '/test',
       asAbsolutePath: vi.fn(),
       storagePath: '/test-storage',

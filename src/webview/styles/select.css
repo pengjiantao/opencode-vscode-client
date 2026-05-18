@@ -7,29 +7,27 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   height: 26px;
-  padding: 0 8px;
-  background-color: var(--vscode-dropdown-background, var(--vscode-input-background, #3c3c3c));
+  padding: 0 6px;
+  background-color: transparent; /* transparent dropdown button as requested */
   color: var(--vscode-dropdown-foreground, var(--vscode-input-foreground, #cccccc));
-  border: 1px solid var(--vscode-dropdown-border, var(--vscode-border-color, #3c3c3c));
+  border: 1px solid transparent; /* no visible border */
   border-radius: 4px;
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-font-size, 13px);
   cursor: pointer;
   outline: none;
-  min-width: 140px;
-  max-width: 240px;
+  min-width: auto; /* let it adapt to content naturally */
+  max-width: 280px; /* maximum bounds for trigger button */
   text-align: left;
   user-select: none;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+  transition: background-color 0.15s ease;
 }
 
 .select-trigger:hover:not(:disabled) {
-  background-color: var(--vscode-list-hoverBackground, #2a2d2e);
-  border-color: var(--vscode-focusBorder, #007fd4);
+  background-color: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.08));
+  border-color: transparent;
 }
 
 .select-trigger:focus:not(:disabled) {
@@ -41,39 +39,55 @@
   cursor: not-allowed;
 }
 
+.select-trigger-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--vscode-icon-foreground, var(--vscode-foreground, #cccccc));
+  flex-shrink: 0;
+}
+
 .select-trigger-text {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .select-trigger-chevron {
-  font-size: 8px;
+  font-size: 12px;
   opacity: 0.7;
+  flex-shrink: 0;
+  margin-left: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Dropdown popover overlay */
 .select-popover {
   min-width: 220px;
-  max-width: 320px;
+  max-width: 400px; /* allow popover to grow larger up to 400px */
+  width: max-content; /* popover width scales between min and max based on item content */
   background-color: var(--vscode-dropdown-background, var(--vscode-input-background, #252526));
   border: 1px solid var(--vscode-dropdown-border, var(--vscode-border-color, #454545));
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  padding: 0; /* Override popover.css padding for search containment */
+  padding: 6px; /* distance to parent container */
 }
 
 .select-popover-content {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  gap: 4px;
 }
 
 .select-search-container {
-  padding: 6px;
-  border-bottom: 1px solid var(--vscode-border-color, #454545);
-  background-color: var(--vscode-editor-background, #1e1e1e);
+  padding: 2px 2px 4px 2px;
+  background-color: transparent; /* match search area background with list area */
 }
 
 .select-search-input {
@@ -97,11 +111,14 @@
 .select-options-list {
   max-height: 250px;
   overflow-y: auto;
-  padding: 4px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* gap between items */
 }
 
 .select-no-results {
-  padding: 8px 12px;
+  padding: 8px;
   color: var(--vscode-input-foreground);
   opacity: 0.6;
   font-size: 12px;
@@ -109,6 +126,9 @@
 }
 
 .select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* gap between group items */
   margin-bottom: 4px;
 }
 
@@ -117,7 +137,7 @@
 }
 
 .select-group-header {
-  padding: 6px 12px 4px;
+  padding: 6px 8px 4px;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -131,11 +151,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 12px;
+  gap: 8px; /* space between text and check icon */
+  padding: 6px 10px;
   font-size: var(--vscode-font-size, 13px);
   color: var(--vscode-dropdown-foreground, var(--vscode-input-foreground, #cccccc));
   cursor: pointer;
   user-select: none;
+  border-radius: 4px; /* add border-radius to items */
   transition: background-color 0.1s ease;
 }
 
@@ -149,8 +171,18 @@
   color: var(--vscode-list-activeSelectionForeground, #ffffff);
 }
 
+.select-option-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap; /* item text does not wrap, folded with ellipsis */
+  min-width: 0; /* allows shrinking in flex layout */
+  text-align: left;
+}
+
 .select-check-icon {
   font-size: 11px;
   font-weight: bold;
   margin-left: 8px;
+  flex-shrink: 0; /* never shrink check icon */
 }
