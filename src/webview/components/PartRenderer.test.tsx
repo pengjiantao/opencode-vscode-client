@@ -137,6 +137,16 @@ describe('PartRenderer', () => {
     expect(copyBtn).toHaveAttribute('data-custom-title', 'Copy Code');
   });
 
+  it('renders markdown code block without any leading whitespace in the first line of code', () => {
+    const part = createMockTextPart('```js\nconsole.log("hello");\n```');
+    const { container } = render(<PartRenderer part={part} />);
+
+    const codeElement = container.querySelector('pre.code-block code');
+    expect(codeElement).toBeInTheDocument();
+    expect(codeElement?.textContent?.startsWith(' ')).toBe(false);
+    expect(codeElement?.textContent?.startsWith('\n')).toBe(false);
+  });
+
   describe('getToolIcon', () => {
     it('maps tools to correct icons in a case-insensitive manner', () => {
       expect(getToolIcon('BASH')).toBe('$(terminal)');

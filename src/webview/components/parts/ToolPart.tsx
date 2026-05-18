@@ -24,6 +24,7 @@ interface ToolPartProps {
  * @param tool The raw tool name (e.g., 'bash', 'grep_search', 'write_to_file')
  * @returns The codicon icon name string (e.g., '$(terminal)')
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function getToolIcon(tool: string): string {
   const name = tool.toLowerCase();
   // Match specialized browser/web search tools first before general search to avoid keyword overlap (e.g., browser_search)

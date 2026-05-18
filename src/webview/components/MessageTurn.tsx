@@ -9,9 +9,15 @@ import { Codicon } from './Codicon';
 import { PartRenderer } from './PartRenderer';
 
 interface MessageTurnProps {
+  /** The user message initiated in this turn. */
   userMessage: Message;
+  /** Single assistant response message (legacy / test support). */
   assistantMessage?: Message;
+  /** One or more assistant messages generated as response steps. */
+  assistantMessages?: Message[];
+  /** Map of all parts keyed by message ID. */
   parts: Record<string, Part[]>;
+  /** Whether the assistant is currently generating output. */
   isGenerating?: boolean;
 }
 
@@ -35,6 +41,7 @@ function getMessageText(message: Message): string {
 export function MessageTurn({
   userMessage,
   assistantMessage,
+  assistantMessages,
   parts,
   isGenerating = false,
 }: MessageTurnProps) {
@@ -49,12 +56,24 @@ export function MessageTurn({
     }
   }, [copied]);
 
+  const messagesToRender = assistantMessages
+    ? assistantMessages
+    : assistantMessage
+      ? [assistantMessage]
+      : [];
+
   const copyAnswer = () => {
-    if (!assistantMessage) return;
-    const assistantParts = parts[assistantMessage.id] || [];
-    const answerText = assistantParts
+    if (messagesToRender.length === 0) return;
+    const answerText = messagesToRender
+      .flatMap((msg) => parts[msg.id] || [])
       .filter((part) => part.type === 'text')
-      .map((part) => (part as { text: string }).text)
+      .map((part) => {
+        if ('text' in part && typeof part.text === 'string') {
+          return part.text;
+        }
+        return '';
+      })
+      .filter(Boolean)
       .join('\n');
     void navigator.clipboard.writeText(answerText || '');
     setCopied(true);
@@ -75,7 +94,7 @@ export function MessageTurn({
     }
   };
 
-  const showActions = assistantMessage && !isGenerating;
+  const showActions = messagesToRender.length > 0 && !isGenerating;
 
   return (
     <div className="message-turn">
@@ -87,42 +106,38 @@ export function MessageTurn({
         </div>
       </div>
 
-      {assistantMessage && (
-        <div className="assistant-message">
+      {messagesToRender.map((msg) => (
+        <div key={msg.id} className="assistant-message">
           <div className="message-content">
-            {parts[assistantMessage.id]?.map((part) => (
+            {parts[msg.id]?.map((part) => (
               <PartRenderer key={part.id} part={part} isAssistant={true} />
             )) || <span className="streaming">Thinking...</span>}
           </div>
+        </div>
+      ))}
 
-          {showActions && (
-            <div className="message-actions">
-              <button
-                className="action-btn"
-                onClick={copyAnswer}
-                data-custom-title={copied ? 'Copied!' : 'Copy Answer'}
-              >
-                <Codicon name={copied ? '$(check)' : '$(copy)'} />
-                <span>{copied ? 'Copied!' : 'Copy Answer'}</span>
-              </button>
-              <button
-                className="action-btn"
-                onClick={scrollToTop}
-                data-custom-title="Scroll to top"
-              >
-                <Codicon name="$(arrow-up)" />
-                <span>To Top</span>
-              </button>
-              <button
-                className="action-btn"
-                onClick={scrollToRecentUser}
-                data-custom-title="Scroll to recent user message"
-              >
-                <Codicon name="$(chevron-down)" />
-                <span>To Recent User</span>
-              </button>
-            </div>
-          )}
+      {showActions && (
+        <div className="message-actions">
+          <button
+            className="action-btn"
+            onClick={copyAnswer}
+            data-custom-title={copied ? 'Copied!' : 'Copy Answer'}
+          >
+            <Codicon name={copied ? '$(check)' : '$(copy)'} />
+            <span>{copied ? 'Copied!' : 'Copy Answer'}</span>
+          </button>
+          <button className="action-btn" onClick={scrollToTop} data-custom-title="Scroll to top">
+            <Codicon name="$(arrow-up)" />
+            <span>To Top</span>
+          </button>
+          <button
+            className="action-btn"
+            onClick={scrollToRecentUser}
+            data-custom-title="Scroll to recent user message"
+          >
+            <Codicon name="$(chevron-down)" />
+            <span>To Recent User</span>
+          </button>
         </div>
       )}
     </div>

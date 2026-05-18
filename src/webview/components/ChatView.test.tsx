@@ -40,6 +40,27 @@ describe('ChatView', () => {
     expect(container.querySelector('.assistant-message')).toBeInTheDocument();
   });
 
+  it('groups multiple consecutive assistant messages into a single turn', () => {
+    const userMsg = createMockUserMessage();
+    const assistantMsg1 = { ...createMockAssistantMessage(), id: 'msg-2' };
+    const assistantMsg2 = { ...createMockAssistantMessage(), id: 'msg-3' };
+    const messages = [userMsg, assistantMsg1, assistantMsg2];
+
+    const { container } = render(
+      <ChatView
+        sessionID="session-1"
+        messages={messages}
+        parts={{}}
+        onPermissionReply={() => {}}
+      />,
+    );
+
+    // There should only be one message turn (one .message-turn container)
+    expect(container.querySelectorAll('.message-turn')).toHaveLength(1);
+    // But it should contain multiple assistant messages
+    expect(container.querySelectorAll('.assistant-message')).toHaveLength(2);
+  });
+
   it('renders empty state when no messages', () => {
     render(
       <ChatView sessionID="session-1" messages={[]} parts={{}} onPermissionReply={() => {}} />,

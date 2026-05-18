@@ -29,7 +29,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 6px;
   user-select: none;
   cursor: pointer;
   border-radius: 4px;
@@ -163,7 +163,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 6px;
   user-select: none;
   cursor: pointer;
   border-radius: 4px;
@@ -237,10 +237,13 @@
 /* Code block markdown rendering container */
 .code-block-container {
   margin: 12px 0;
-  border: 1px solid var(--vscode-border-color);
+  border: none;
   border-radius: 6px;
   overflow: hidden;
-  background-color: var(--vscode-editor-background);
+  background-color: var(
+    --vscode-textCodeBlock-background,
+    color-mix(in srgb, var(--vscode-editor-foreground) 8%, transparent)
+  );
 }
 
 .code-block-header {
@@ -248,7 +251,10 @@
   justify-content: space-between;
   align-items: center;
   padding: 6px 12px;
-  background-color: color-mix(in srgb, var(--vscode-editor-widget-background) 80%, transparent);
+  background-color: var(
+    --vscode-textCodeBlock-background,
+    color-mix(in srgb, var(--vscode-editor-foreground) 8%, transparent)
+  );
   border-bottom: 1px solid var(--vscode-border-color);
 }
 
@@ -260,33 +266,25 @@
   font-family: var(--vscode-editor-font-family, monospace);
 }
 
-.copy-code-btn {
-  background: transparent;
-  border: 1px solid var(--vscode-border-color);
-  color: var(--vscode-editor-foreground);
-  cursor: pointer;
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  opacity: 0.8;
-  transition:
-    background-color 0.2s ease,
-    opacity 0.2s ease;
-}
-
-.copy-code-btn:hover {
-  background-color: var(--vscode-toolbar-hoverBackground);
-  opacity: 1;
-}
-
 pre.code-block {
   margin: 0;
   padding: 12px;
   overflow-x: auto;
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 12px;
-  background-color: var(--vscode-editor-background);
+  background-color: var(
+    --vscode-textCodeBlock-background,
+    color-mix(in srgb, var(--vscode-editor-foreground) 8%, transparent)
+  );
   line-height: 1.5;
+}
+
+pre.code-block code {
+  padding: 0;
+  background-color: transparent;
+  border-radius: 0;
+  font-size: inherit;
+  font-family: inherit;
 }
 
 /* VS Code dynamic theme syntax highlighting tokens */
@@ -308,6 +306,10 @@ pre.code-block {
   color: var(--vscode-editor-number-foreground, #b5cea8);
 }
 
+.token.boolean {
+  color: var(--vscode-symbolIcon-keywordForeground, #569cd6);
+}
+
 .token.function {
   color: var(--vscode-editor-function-foreground, #dcdcaa);
 }
@@ -315,6 +317,44 @@ pre.code-block {
 .token.operator {
   color: var(--vscode-editor-foreground, #d4d4d4);
   opacity: 0.9;
+}
+
+.token.punctuation {
+  color: var(--vscode-editor-foreground, #d4d4d4);
+  opacity: 0.8;
+}
+
+.token.property {
+  color: var(--vscode-symbolIcon-propertyForeground, #9cdcfe);
+}
+
+.token.class-name,
+.token.type {
+  color: var(--vscode-symbolIcon-classForeground, #4ec9b0);
+}
+
+.token.regex {
+  color: var(--vscode-debugConsole-stringForeground, #d16969);
+}
+
+.token.variable {
+  color: var(--vscode-symbolIcon-variableForeground, #9cdcfe);
+}
+
+.token.tag {
+  color: var(--vscode-symbolIcon-elementForeground, #569cd6);
+}
+
+.token.attr-name {
+  color: var(--vscode-symbolIcon-fieldForeground, #9cdcfe);
+}
+
+.token.attr-value {
+  color: var(--vscode-debugConsole-stringForeground, #ce9178);
+}
+
+.token.selector {
+  color: var(--vscode-symbolIcon-classForeground, #d7ba7d);
 }
 
 /* File part, agent part styling */
@@ -352,4 +392,9 @@ pre.code-block {
   border: 1px solid var(--vscode-border-color);
   border-radius: 6px;
   background-color: color-mix(in srgb, var(--vscode-textLink-foreground) 10%, transparent);
+}
+
+/** text part */
+.user-message .text-part {
+  margin: 0;
 }

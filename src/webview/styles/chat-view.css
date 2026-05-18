@@ -11,7 +11,6 @@
 .message-turn {
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
 .user-message {
@@ -32,22 +31,19 @@
 }
 
 .message-content {
-  padding: 8px 12px;
-  border-radius: 8px;
   word-break: break-word;
 }
 
 .user-message .message-content {
   background-color: color-mix(in srgb, var(--vscode-textLink-foreground) 15%, transparent);
+  padding: 8px;
+  border-radius: 8px;
+  color: var(--vscode-textLink-foreground);
+  font-weight: 500;
   border: none;
 }
 
 .assistant-message .message-content {
-  background-color: color-mix(
-    in srgb,
-    var(--vscode-editor-widget-background) 60%,
-    var(--vscode-editor-background)
-  );
   border: none;
 }
 

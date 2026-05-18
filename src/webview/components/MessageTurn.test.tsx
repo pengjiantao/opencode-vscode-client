@@ -277,5 +277,54 @@ describe('MessageTurn', () => {
         }
       });
     });
+
+    it('renders multiple assistant messages in assistant-message containers when assistantMessages is provided', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg1 = { ...createMockAssistantMessage(), id: 'msg-2' };
+      const assistantMsg2 = { ...createMockAssistantMessage(), id: 'msg-3' };
+
+      const { container } = render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessages={[assistantMsg1, assistantMsg2]}
+          parts={{}}
+          isGenerating={false}
+        />,
+      );
+
+      expect(container.querySelectorAll('.assistant-message')).toHaveLength(2);
+    });
+
+    it('copies aggregated text of all assistant messages when copy answer is clicked with assistantMessages', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg1 = { ...createMockAssistantMessage(), id: 'msg-2' };
+      const assistantMsg2 = { ...createMockAssistantMessage(), id: 'msg-3' };
+      const textPart1 = createMockTextPart('Text from assistant 1.');
+      textPart1.messageID = assistantMsg1.id;
+      const textPart2 = createMockTextPart('Text from assistant 2.');
+      textPart2.id = 'part-2';
+      textPart2.messageID = assistantMsg2.id;
+
+      const parts = {
+        [assistantMsg1.id]: [textPart1],
+        [assistantMsg2.id]: [textPart2],
+      };
+
+      render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessages={[assistantMsg1, assistantMsg2]}
+          parts={parts}
+          isGenerating={false}
+        />,
+      );
+
+      const copyBtn = screen.getByText('Copy Answer').closest('button')!;
+      act(() => {
+        fireEvent.click(copyBtn);
+      });
+
+      expect(writeTextSpy).toHaveBeenCalledWith('Text from assistant 1.\nText from assistant 2.');
+    });
   });
 });

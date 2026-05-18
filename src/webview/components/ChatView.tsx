@@ -24,27 +24,24 @@ export function ChatView({ sessionID, messages, parts, onPermissionReply }: Chat
 
   const activeSessionStatus = sessionID ? sessionStatus[sessionID] : undefined;
 
-  /** Groups sequential messages into user→assistant turn pairs. */
+  /** Groups sequential messages into user→assistant turn pairs with support for multiple assistant responses. */
   const turns = useMemo(() => {
-    const result: Array<{ user: Message; assistant?: Message }> = [];
-    let currentUser: Message | null = null;
+    const result: Array<{ user: Message; assistantMessages: Message[] }> = [];
+    let currentTurn: { user: Message; assistantMessages: Message[] } | null = null;
 
     for (const msg of messages) {
       if (msg.role === 'user') {
-        // Flush previous pending user message
-        if (currentUser) {
-          result.push({ user: currentUser });
+        if (currentTurn) {
+          result.push(currentTurn);
         }
-        currentUser = msg;
-      } else if (msg.role === 'assistant' && currentUser) {
-        result.push({ user: currentUser, assistant: msg });
-        currentUser = null;
+        currentTurn = { user: msg, assistantMessages: [] };
+      } else if (msg.role === 'assistant' && currentTurn) {
+        currentTurn.assistantMessages.push(msg);
       }
     }
 
-    // Trailing user message with no response yet
-    if (currentUser) {
-      result.push({ user: currentUser });
+    if (currentTurn) {
+      result.push(currentTurn);
     }
 
     return result;
@@ -76,7 +73,7 @@ export function ChatView({ sessionID, messages, parts, onPermissionReply }: Chat
           <MessageTurn
             key={turn.user.id}
             userMessage={turn.user}
-            assistantMessage={turn.assistant}
+            assistantMessages={turn.assistantMessages}
             parts={parts}
             isGenerating={isGenerating}
           />

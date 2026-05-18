@@ -1,89 +1,125 @@
 /**
- * @file Robust, lightweight, streaming-safe Markdown component with code syntax highlighting.
+ * @file Robust, lightweight, streaming-safe Markdown component with professional PrismJS code syntax highlighting.
  * Renders bold, italic, code blocks, lists, headings, and inline code natively.
  */
 
+import Prism from 'prismjs';
+import 'prismjs/components/prism-bash';
+import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-go';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-markdown';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-rust';
+import 'prismjs/components/prism-typescript';
 import React from 'react';
+import { IconButton } from './IconButton';
 
 interface MarkdownProps {
+  /** The markdown text to parse and render. */
   text: string;
 }
 
-/** Regex tokenizer for code syntax highlighting. */
-const tokenRegex = new RegExp(
-  '(?<comment>\\/\\/.*|\\/\\*[\\s\\S]*?\\*\\/)|' +
-    '(?<string>\'(?:\\\\.|[^\'\\\\])*\'|"(?:\\\\.|[^"\\\\])*"|`(?:\\\\.|[^`\\\\])*`)|' +
-    '(?<keyword>\\b(?:const|let|var|function|class|import|export|from|return|if|else|for|while|switch|case|default|break|continue|try|catch|finally|throw|new|this|interface|type|extends|implements|public|private|protected|static|readonly|as|any|string|number|boolean|void|true|false|null|undefined)\\b)|' +
-    '(?<number>\\b\\d+(?:\\.\\d+)?\\b)|' +
-    '(?<fn>\\b[a-zA-Z_]\\w*(?=\\s*\\())|' +
-    '(?<operator>[+\\-*\\/%&|^!~=<>:?]+)',
-  'g',
-);
+/** Recursively renders a PrismJS token or string to React nodes. */
+function renderToken(token: string | Prism.Token, key: string): React.ReactNode {
+  if (typeof token === 'string') {
+    return token;
+  }
+  const type = token.type;
+  const content = token.content;
 
-/** Generates React nodes with syntax highlight classes for the provided code block. */
-function highlightCode(code: string): React.ReactNode {
-  const nodes: React.ReactNode[] = [];
-  let match;
-  let lastIndex = 0;
-  let keyIdx = 0;
-
-  // Reset regex index
-  tokenRegex.lastIndex = 0;
-
-  while ((match = tokenRegex.exec(code)) !== null) {
-    if (match.index > lastIndex) {
-      nodes.push(code.substring(lastIndex, match.index));
-    }
-
-    const groups = match.groups || {};
-    if (groups.comment) {
-      nodes.push(
-        <span key={`comment-${keyIdx++}`} className="token comment">
-          {groups.comment}
-        </span>,
-      );
-    } else if (groups.string) {
-      nodes.push(
-        <span key={`string-${keyIdx++}`} className="token string">
-          {groups.string}
-        </span>,
-      );
-    } else if (groups.keyword) {
-      nodes.push(
-        <span key={`keyword-${keyIdx++}`} className="token keyword">
-          {groups.keyword}
-        </span>,
-      );
-    } else if (groups.number) {
-      nodes.push(
-        <span key={`number-${keyIdx++}`} className="token number">
-          {groups.number}
-        </span>,
-      );
-    } else if (groups.fn) {
-      nodes.push(
-        <span key={`fn-${keyIdx++}`} className="token function">
-          {groups.fn}
-        </span>,
-      );
-    } else if (groups.operator) {
-      nodes.push(
-        <span key={`operator-${keyIdx++}`} className="token operator">
-          {groups.operator}
-        </span>,
-      );
-    } else {
-      nodes.push(match[0]);
-    }
-
-    lastIndex = tokenRegex.lastIndex;
+  let children: React.ReactNode;
+  if (Array.isArray(content)) {
+    children = content.map((child, idx) => renderToken(child, `${key}-${idx}`));
+  } else if (typeof content === 'object') {
+    children = renderToken(content, `${key}-sub`);
+  } else {
+    children = content;
   }
 
-  if (lastIndex < code.length) {
-    nodes.push(code.substring(lastIndex));
+  const alias = Array.isArray(token.alias) ? token.alias.join(' ') : token.alias || '';
+  const className = `token ${type} ${alias}`;
+  return (
+    <span key={key} className={className.trim()}>
+      {children}
+    </span>
+  );
+}
+
+/** Generates React nodes with syntax highlight classes for the provided code block using PrismJS. */
+function highlightCode(code: string, lang = ''): React.ReactNode {
+  const language = lang.toLowerCase();
+  let grammar = Prism.languages.clike; // default fallback
+
+  if (language === 'typescript' || language === 'ts') {
+    grammar = Prism.languages.typescript || Prism.languages.javascript;
+  } else if (language === 'javascript' || language === 'js') {
+    grammar = Prism.languages.javascript;
+  } else if (language === 'python' || language === 'py') {
+    grammar = Prism.languages.python;
+  } else if (language === 'bash' || language === 'sh' || language === 'shell') {
+    grammar = Prism.languages.bash;
+  } else if (language === 'json') {
+    grammar = Prism.languages.json;
+  } else if (language === 'css') {
+    grammar = Prism.languages.css;
+  } else if (language === 'go') {
+    grammar = Prism.languages.go;
+  } else if (language === 'rust') {
+    grammar = Prism.languages.rust;
+  } else if (language === 'html' || language === 'xml' || language === 'svg') {
+    grammar = Prism.languages.markup;
   }
 
-  return nodes.length > 0 ? nodes : code;
+  const tokens = Prism.tokenize(code, grammar);
+  return tokens.map((token, idx) => renderToken(token, `prism-${idx}`));
+}
+
+interface CodeBlockProps {
+  /** The language of the code block (e.g., 'typescript', 'bash'). */
+  lang: string;
+  /** The raw code content. */
+  code: string;
+}
+
+/** Renders a syntax-highlighted code block with an independent copy button and tooltip feedback. */
+function CodeBlock({ lang, code }: CodeBlockProps) {
+  const [copied, setCopied] = React.useState(false);
+
+  React.useEffect(() => {
+    if (copied) {
+      const timer = setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [copied]);
+
+  const highlighted = React.useMemo(() => highlightCode(code, lang), [code, lang]);
+
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(code);
+    setCopied(true);
+  };
+
+  return (
+    <div className="code-block-container">
+      <div className="code-block-header">
+        <span className="code-lang">{lang || 'code'}</span>
+        <IconButton
+          name={copied ? '$(check)' : '$(copy)'}
+          onClick={handleCopy}
+          title={copied ? 'Copied!' : 'Copy Code'}
+          size="small"
+          className="copy-code-btn"
+        />
+      </div>
+      <pre className="code-block">
+        <code>{highlighted}</code>
+      </pre>
+    </div>
+  );
 }
 
 /** Parses inline markdown markup (bold, italic, inline code, and links). */
@@ -180,25 +216,7 @@ export function Markdown({ text }: MarkdownProps) {
       if (currentCodeBlock) {
         const code = currentCodeBlock.lines.join('\n');
         const lang = currentCodeBlock.lang;
-        elements.push(
-          <div key={`code-${elements.length}`} className="code-block-container">
-            <div className="code-block-header">
-              <span className="code-lang">{lang || 'code'}</span>
-              <button
-                className="copy-code-btn"
-                onClick={() => {
-                  void navigator.clipboard.writeText(code);
-                }}
-                data-custom-title="Copy Code"
-              >
-                Copy
-              </button>
-            </div>
-            <pre className="code-block">
-              <code>{highlightCode(code)}</code>
-            </pre>
-          </div>,
-        );
+        elements.push(<CodeBlock key={`code-${elements.length}`} lang={lang} code={code} />);
         currentCodeBlock = null;
       } else {
         flushParagraph();
@@ -261,24 +279,7 @@ export function Markdown({ text }: MarkdownProps) {
   if (currentCodeBlock) {
     const code = currentCodeBlock.lines.join('\n');
     const lang = currentCodeBlock.lang;
-    elements.push(
-      <div key={`code-${elements.length}`} className="code-block-container">
-        <div className="code-block-header">
-          <span className="code-lang">{lang || 'code'}</span>
-          <button
-            className="copy-code-btn"
-            onClick={() => {
-              void navigator.clipboard.writeText(code);
-            }}
-          >
-            Copy
-          </button>
-        </div>
-        <pre className="code-block">
-          <code>{highlightCode(code)}</code>
-        </pre>
-      </div>,
-    );
+    elements.push(<CodeBlock key={`code-${elements.length}`} lang={lang} code={code} />);
   }
 
   flushParagraph();
