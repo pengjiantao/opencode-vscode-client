@@ -47,11 +47,6 @@
   border: none;
 }
 
-.streaming {
-  opacity: 0.6;
-  font-style: italic;
-}
-
 /* Action button row below assistant message */
 .message-actions {
   display: flex;

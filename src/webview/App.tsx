@@ -3,8 +3,8 @@
  * Manages IPC message routing, session state, and renders the complete UI.
  */
 
-import type { Event, Message, Part, Permission, Session, SessionStatus } from '@opencode-ai/sdk';
-import { useCallback, useEffect, useState } from 'react';
+import type { Session } from '@opencode-ai/sdk';
+import { useEffect, useState } from 'react';
 import type { ExtToWebview } from '../shared/types';
 import { ChatView } from './components/ChatView';
 import { PromptInput } from './components/PromptInput';
@@ -55,88 +55,11 @@ export function App() {
   const addSession = useSessionStore((s) => s.addSession);
   const removeSession = useSessionStore((s) => s.removeSession);
   const updateSession = useSessionStore((s) => s.updateSession);
-  const addMessage = useSessionStore((s) => s.addMessage);
-  const updatePart = useSessionStore((s) => s.updatePart);
-  const updatePartDelta = useSessionStore((s) => s.updatePartDelta);
-  const setSessionStatus = useSessionStore((s) => s.setSessionStatus);
-  const setPendingPermission = useSessionStore((s) => s.setPendingPermission);
   const setSessionMessagesAndParts = useSessionStore((s) => s.setSessionMessagesAndParts);
 
   const { send } = useIPC(() => {});
   useEvents();
   useKeyboardShortcuts();
-
-  /** Dispatches SSE server events to the appropriate store actions. */
-  const handleServerEvent = useCallback(
-    (event: Event) => {
-      const props = event.properties as {
-        sessionID?: string;
-        info?: Session | Message | Part | SessionStatus;
-        part?: Part;
-        permission?: Permission;
-      };
-
-      switch (event.type as string) {
-        case 'session.created':
-          addSession((props as { info: Session }).info);
-          break;
-        case 'session.updated':
-          updateSession((props as { info: Session }).info);
-          break;
-        case 'session.deleted':
-          removeSession((props as { info: Session }).info.id);
-          break;
-        case 'message.updated':
-          addMessage(
-            (props as { info: Message }).info.sessionID,
-            (props as { info: Message }).info,
-          );
-          break;
-        case 'message.part.updated':
-          updatePart((props as { part: Part }).part);
-          break;
-        /** Appends streaming delta to an existing part's field. */
-        case 'message.part.delta': {
-          const deltaProps = (
-            event as unknown as {
-              properties: {
-                messageID: string;
-                partID: string;
-                field: string;
-                delta: string;
-              };
-            }
-          ).properties;
-          updatePartDelta(
-            deltaProps.messageID,
-            deltaProps.partID,
-            deltaProps.field,
-            deltaProps.delta,
-          );
-          break;
-        }
-        case 'session.status':
-          setSessionStatus(
-            (props as { sessionID: string }).sessionID,
-            (props as { status: SessionStatus }).status,
-          );
-          break;
-        case 'permission.updated':
-          setPendingPermission((props as { permission: Permission }).permission);
-          break;
-      }
-    },
-    [
-      addSession,
-      updateSession,
-      removeSession,
-      addMessage,
-      updatePart,
-      updatePartDelta,
-      setSessionStatus,
-      setPendingPermission,
-    ],
-  );
 
   useEffect(() => {
     const handler = (event: MessageEvent<ExtToWebview>) => {
@@ -157,9 +80,6 @@ export function App() {
           break;
         case 'session:deleted':
           removeSession(message.sessionID);
-          break;
-        case 'event:received':
-          handleServerEvent(message.event);
           break;
         case 'models:list':
           setModels(message.models);
@@ -195,7 +115,6 @@ export function App() {
     setActiveSession,
     removeSession,
     updateSession,
-    handleServerEvent,
     setSessionMessagesAndParts,
     setSessions,
   ]);

@@ -3,7 +3,7 @@
  * Provides a single interface for session CRUD, prompt submission, and event handling.
  */
 
-import type { Event, Message, Part, Session, SessionStatus } from '@opencode-ai/sdk';
+import type { Event, Message, Part, Permission, Session, SessionStatus } from '@opencode-ai/sdk';
 import { useCallback } from 'react';
 import { useSessionStore } from '../store/sessionStore';
 import { useIPC } from './useIPC';
@@ -26,6 +26,7 @@ export function useSession() {
   const updatePart = useSessionStore((s) => s.updatePart);
   const updatePartDelta = useSessionStore((s) => s.updatePartDelta);
   const setSessionStatus = useSessionStore((s) => s.setSessionStatus);
+  const setPendingPermission = useSessionStore((s) => s.setPendingPermission);
 
   const createSession = useCallback(() => {
     send({ type: 'session:create' });
@@ -84,6 +85,7 @@ export function useSession() {
         sessionID?: string;
         info?: Session | Message | Part | SessionStatus;
         part?: Part;
+        permission?: Permission;
       };
 
       switch (event.type as string) {
@@ -131,6 +133,9 @@ export function useSession() {
             (props as { status: SessionStatus }).status,
           );
           break;
+        case 'permission.updated':
+          setPendingPermission((props as { permission: Permission }).permission);
+          break;
         default:
           break;
       }
@@ -143,6 +148,7 @@ export function useSession() {
       updatePart,
       updatePartDelta,
       setSessionStatus,
+      setPendingPermission,
     ],
   );
 
