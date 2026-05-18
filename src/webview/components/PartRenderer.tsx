@@ -12,13 +12,14 @@ import { ToolPart } from './parts/ToolPart';
 
 interface PartRendererProps {
   part: Part;
+  isAssistant?: boolean;
 }
 
 /** Routes a Part to its type-specific renderer component. */
-export function PartRenderer({ part }: PartRendererProps) {
+export function PartRenderer({ part, isAssistant = false }: PartRendererProps) {
   switch (part.type) {
     case 'text':
-      return <TextPart text={part.text} streaming={!part.time?.end} />;
+      return <TextPart text={part.text} streaming={isAssistant && !part.time?.end} />;
 
     case 'tool': {
       const state = part.state;
@@ -48,7 +49,7 @@ export function PartRenderer({ part }: PartRendererProps) {
     }
 
     case 'reasoning':
-      return <ReasoningPart text={part.text} metadata={part.metadata} />;
+      return <ReasoningPart text={part.text} time={part.time} metadata={part.metadata} />;
 
     case 'file':
       return <FilePart filename={part.filename} mime={part.mime} url={part.url} />;
@@ -64,18 +65,8 @@ export function PartRenderer({ part }: PartRendererProps) {
       );
 
     case 'step-start':
-      return (
-        <div className="part step-start">
-          <span className="step-indicator">Step started</span>
-        </div>
-      );
-
     case 'step-finish':
-      return (
-        <div className="part step-finish">
-          <span className="step-indicator">Step completed</span>
-        </div>
-      );
+      return null;
 
     default:
       return (

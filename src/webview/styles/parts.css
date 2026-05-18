@@ -3,110 +3,297 @@
   margin: 8px 0;
 }
 
+.collapsible-wrapper {
+  transition:
+    max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.25s ease;
+}
+
 .text-part .markdown-content {
   white-space: pre-wrap;
   word-break: break-word;
 }
 
+/* Borderless interactive Tool block */
 .tool-part {
-  border: 1px solid var(--vscode-border-color);
+  border: none;
   border-radius: 6px;
+  background-color: color-mix(in srgb, var(--vscode-editor-foreground) 5%, transparent);
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  margin: 6px 0;
+  padding: 4px 0;
+}
+
+.tool-part.collapsed:hover,
+.tool-part:has(.tool-header:hover) {
+  background-color: color-mix(in srgb, var(--vscode-editor-foreground) 10%, transparent);
 }
 
 .tool-part .tool-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  background-color: color-mix(in srgb, var(--vscode-editor-widget-background) 80%, transparent);
-  border-bottom: 1px solid var(--vscode-border-color);
-}
-
-.tool-part .tool-icon {
-  font-size: 14px;
+  padding: 6px 12px;
+  user-select: none;
+  cursor: pointer;
 }
 
 .tool-part .tool-name {
-  font-weight: 600;
-  font-family: monospace;
+  font-weight: 500;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  color: var(--vscode-editor-foreground);
+  opacity: 0.95;
 }
 
-.tool-part .tool-title {
-  opacity: 0.7;
-  font-size: 12px;
+/* Inward indentation for expanded content */
+.tool-part .tool-content {
+  padding: 8px 12px 8px 24px;
+  margin-left: 12px;
+  margin-bottom: 4px;
+  border-left: 2px solid color-mix(in srgb, var(--vscode-editor-foreground) 10%, transparent);
 }
 
 .tool-part .tool-input,
 .tool-part .tool-output {
-  padding: 8px 12px;
-  border-top: 1px solid var(--vscode-border-color);
+  margin-top: 8px;
+}
+
+.tool-part .section-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+  margin-bottom: 4px;
 }
 
 .tool-part .tool-output pre,
 .tool-part .tool-input pre {
   margin: 0;
-  font-family: monospace;
+  font-family: var(--vscode-editor-font-family, monospace);
   font-size: 12px;
   white-space: pre-wrap;
-}
-
-.tool-part.status-pending .tool-header {
-  opacity: 0.6;
-}
-
-.tool-part.status-running .tool-header {
-  color: var(--vscode-textLink-foreground);
-}
-
-.tool-part.status-error {
-  border-color: var(--vscode-error-foreground);
-}
-
-.tool-part.status-error .tool-error {
-  padding: 8px 12px;
-  color: var(--vscode-error-foreground);
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-.reasoning-part {
+  background-color: color-mix(in srgb, var(--vscode-editor-background) 70%, transparent);
+  padding: 8px;
+  border-radius: 4px;
   border: 1px solid var(--vscode-border-color);
+  max-height: 250px;
+  overflow: auto;
+}
+
+.tool-part.status-error.collapsed:hover,
+.tool-part.status-error:has(.tool-header:hover) {
+  background-color: color-mix(in srgb, var(--vscode-error-foreground) 10%, transparent);
+}
+
+.tool-part .tool-error {
+  margin-top: 8px;
+  color: var(--vscode-error-foreground);
+}
+
+.tool-part .error-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.tool-part .tool-error pre {
+  margin: 0;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+  white-space: pre-wrap;
+  background-color: color-mix(in srgb, var(--vscode-editor-background) 70%, transparent);
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-error-foreground);
+  color: var(--vscode-error-foreground);
+  max-height: 250px;
+  overflow: auto;
+}
+
+/* Borderless interactive Reasoning block */
+.reasoning-part {
+  border: none;
   border-radius: 6px;
+  background-color: color-mix(in srgb, var(--vscode-editor-foreground) 5%, transparent);
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  margin: 6px 0;
+  padding: 4px 0;
+}
+
+.reasoning-part.collapsed:hover,
+.reasoning-part:has(.reasoning-header:hover) {
+  background-color: color-mix(in srgb, var(--vscode-editor-foreground) 10%, transparent);
 }
 
 .reasoning-part .reasoning-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  background-color: color-mix(in srgb, var(--vscode-editor-widget-background) 80%, transparent);
-  cursor: pointer;
+  padding: 6px 12px;
   user-select: none;
+  cursor: pointer;
 }
 
 .reasoning-part .reasoning-label {
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--vscode-editor-foreground);
-  opacity: 0.7;
+  font-weight: 500;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  color: var(--vscode-textLink-foreground);
 }
 
+/* Inward indentation for expanded content */
 .reasoning-part .reasoning-content {
-  padding: 12px;
-  border-top: 1px solid var(--vscode-border-color);
+  padding: 8px 12px 8px 24px;
+  margin-left: 12px;
+  margin-bottom: 4px;
+  border-left: 2px solid color-mix(in srgb, var(--vscode-editor-foreground) 10%, transparent);
+  max-height: 300px;
+  overflow-y: auto;
 }
 
-.reasoning-part .reasoning-content pre {
-  margin: 0;
-  font-family: monospace;
-  font-size: 12px;
-  white-space: pre-wrap;
+/* Markdown document styling inside chat */
+.markdown-body p {
+  margin: 4px 0 8px 0;
+  line-height: 1.5;
+}
+
+.markdown-body p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 4px 0 8px 0;
+  padding-left: 20px;
+}
+
+.markdown-body li {
+  margin-bottom: 4px;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  margin: 12px 0 6px 0;
+  font-weight: 600;
+}
+
+.markdown-body h1 {
+  font-size: 1.4em;
+}
+.markdown-body h2 {
+  font-size: 1.25em;
+}
+.markdown-body h3 {
+  font-size: 1.15em;
+}
+
+.markdown-body code {
+  font-family: var(--vscode-editor-font-family, monospace);
+  background-color: var(
+    --vscode-textCodeBlock-background,
+    color-mix(in srgb, var(--vscode-editor-foreground) 8%, transparent)
+  );
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* Code block markdown rendering container */
+.code-block-container {
+  margin: 12px 0;
+  border: 1px solid var(--vscode-border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: var(--vscode-editor-background);
+}
+
+.code-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background-color: color-mix(in srgb, var(--vscode-editor-widget-background) 80%, transparent);
+  border-bottom: 1px solid var(--vscode-border-color);
+}
+
+.code-lang {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.7;
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.copy-code-btn {
+  background: transparent;
+  border: 1px solid var(--vscode-border-color);
+  color: var(--vscode-editor-foreground);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
   opacity: 0.8;
+  transition:
+    background-color 0.2s ease,
+    opacity 0.2s ease;
 }
 
+.copy-code-btn:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+  opacity: 1;
+}
+
+pre.code-block {
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+  background-color: var(--vscode-editor-background);
+  line-height: 1.5;
+}
+
+/* VS Code dynamic theme syntax highlighting tokens */
+.token.comment {
+  color: var(--vscode-editor-comment-foreground, #6a9955);
+  font-style: italic;
+}
+
+.token.keyword {
+  color: var(--vscode-symbolIcon-keywordForeground, #569cd6);
+  font-weight: 600;
+}
+
+.token.string {
+  color: var(--vscode-debugConsole-stringForeground, #ce9178);
+}
+
+.token.number {
+  color: var(--vscode-editor-number-foreground, #b5cea8);
+}
+
+.token.function {
+  color: var(--vscode-editor-function-foreground, #dcdcaa);
+}
+
+.token.operator {
+  color: var(--vscode-editor-foreground, #d4d4d4);
+  opacity: 0.9;
+}
+
+/* File part, agent part styling */
 .file-part {
   display: flex;
   align-items: center;

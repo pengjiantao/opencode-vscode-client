@@ -27,7 +27,7 @@ describe('ChatView', () => {
     const assistantMsg = createMockAssistantMessage();
     const messages = [userMsg, assistantMsg];
 
-    render(
+    const { container } = render(
       <ChatView
         sessionID="session-1"
         messages={messages}
@@ -36,8 +36,8 @@ describe('ChatView', () => {
       />,
     );
 
-    expect(screen.getByText('You')).toBeInTheDocument();
-    expect(screen.getByText('Assistant')).toBeInTheDocument();
+    expect(container.querySelector('.user-message')).toBeInTheDocument();
+    expect(container.querySelector('.assistant-message')).toBeInTheDocument();
   });
 
   it('renders empty state when no messages', () => {

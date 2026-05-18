@@ -6,7 +6,7 @@
  */
 
 import type { CSSProperties } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 /**
  * Reusable global Tooltip component.
@@ -17,21 +17,39 @@ export function Tooltip() {
   const [content, setContent] = useState<string>('');
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const [style, setStyle] = useState<CSSProperties>({
-    left: '0px',
-    top: '0px',
+    left: '-9999px',
+    top: '-9999px',
     opacity: 0,
   });
 
+  const [activeTarget, setActiveTarget] = useState<HTMLElement | null>(null);
+
+  const isVisibleRef = useRef<boolean>(false);
+  const contentRef = useRef<string>('');
+  const activeTargetRef = useRef<HTMLElement | null>(null);
+
+  // Keep refs updated dynamically to avoid stale closures in global event handlers without re-binding them
+  useEffect(() => {
+    isVisibleRef.current = isVisible;
+  }, [isVisible]);
+
+  useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
+
+  useEffect(() => {
+    activeTargetRef.current = activeTarget;
+  }, [activeTarget]);
+
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const targetRef = useRef<HTMLElement | null>(null);
   const showTimerRef = useRef<number | null>(null);
   const hideTimerRef = useRef<number | null>(null);
 
   /** Updates the tooltip positioning coordinates relative to the active target element. */
-  const updatePosition = () => {
-    if (!targetRef.current || !tooltipRef.current) return;
+  const updatePosition = useCallback(() => {
+    if (!activeTarget || !tooltipRef.current) return;
 
-    const triggerRect = targetRef.current.getBoundingClientRect();
+    const triggerRect = activeTarget.getBoundingClientRect();
     const tooltipRect = tooltipRef.current.getBoundingClientRect();
 
     // Standard behavior: center horizontally, align 8px above target element
@@ -56,7 +74,7 @@ export function Tooltip() {
       left: `${left}px`,
       top: `${top}px`,
     });
-  };
+  }, [activeTarget]);
 
   /** Clears all pending show and hide timeout triggers. */
   const clearTimers = () => {
@@ -78,8 +96,8 @@ export function Tooltip() {
     hideTimerRef.current = window.setTimeout(() => {
       setIsVisible(false);
       setContent('');
-      targetRef.current = null;
-    }, 250); // 250ms hide delay
+      setActiveTarget(null);
+    }, 150); // 150ms hide delay
   };
 
   // Set up global mouse listener to capture elements using data-custom-title
@@ -91,43 +109,55 @@ export function Tooltip() {
       const titleText = target.getAttribute('data-custom-title');
       if (!titleText) return;
 
-      // Cancel pending hide timeouts if cursor moves back to target
+      // Cancel pending hide timeouts since the cursor returned or moved to another tooltip target
       if (hideTimerRef.current) {
         window.clearTimeout(hideTimerRef.current);
         hideTimerRef.current = null;
       }
 
-      // If we are already displaying/preparing for this target, do nothing
-      if (targetRef.current === target) {
+      // If hover cursor is still on the same target, dynamically update text if the title has changed (e.g., from 'Copy' to 'Copied!')
+      if (activeTargetRef.current === target) {
+        if (titleText !== contentRef.current) {
+          setContent(titleText);
+        }
         return;
       }
 
-      // Clear any pending triggers for other elements
+      // Clear any pending triggers for other elements to prevent multiple active show timers
       if (showTimerRef.current) {
         window.clearTimeout(showTimerRef.current);
         showTimerRef.current = null;
       }
 
-      targetRef.current = target as HTMLElement;
+      setActiveTarget(target as HTMLElement);
 
-      // Start the show timer (400ms display delay)
-      showTimerRef.current = window.setTimeout(() => {
+      if (isVisibleRef.current) {
+        // If a tooltip is already open, instantly switch to the new target to optimize responsiveness
         setContent(titleText);
-        setIsVisible(true);
-      }, 400);
+      } else {
+        // Delay showing the initial tooltip by 400ms to avoid unnecessary flashing on fast mouse sweeps
+        showTimerRef.current = window.setTimeout(() => {
+          setContent(titleText);
+          setIsVisible(true);
+        }, 400);
+      }
     };
 
     const handleMouseOut = (e: MouseEvent) => {
-      const target = (e.target as HTMLElement).closest('[data-custom-title]');
-      if (!target || targetRef.current !== target) return;
+      if (!activeTargetRef.current) return;
 
-      // Clear show timer in case mouse leaves quickly before delay threshold
-      if (showTimerRef.current) {
-        window.clearTimeout(showTimerRef.current);
-        showTimerRef.current = null;
+      const related = e.relatedTarget as HTMLElement | null;
+      // If the mouse has moved to an element that is NOT a descendant of the active target, trigger hide delay.
+      // This is extremely robust against children being unmounted or replaced on click events.
+      if (!related || !activeTargetRef.current.contains(related)) {
+        // Clear show timer to avoid showing the tooltip if the cursor left before the display delay threshold
+        if (showTimerRef.current) {
+          window.clearTimeout(showTimerRef.current);
+          showTimerRef.current = null;
+        }
+
+        startHideTimer();
       }
-
-      startHideTimer();
     };
 
     document.body.addEventListener('mouseover', handleMouseOver);
@@ -140,12 +170,15 @@ export function Tooltip() {
     };
   }, []);
 
-  // Update layout positions on rendering, scroll events, or resize changes
-  useEffect(() => {
-    if (!isVisible) return;
-
-    // Perform an initial positioning calculation
+  // Calculate and apply layout coordinates synchronously before browser paints to prevent flashes at (0,0)
+  useLayoutEffect(() => {
+    if (!isVisible || !activeTarget) return;
     updatePosition();
+  }, [isVisible, content, activeTarget, updatePosition]);
+
+  // Handle scrolling and resizing asynchronously to keep tooltip aligned
+  useEffect(() => {
+    if (!isVisible || !activeTarget) return;
 
     const handleScrollOrResize = () => {
       updatePosition();
@@ -159,24 +192,22 @@ export function Tooltip() {
       window.removeEventListener('scroll', handleScrollOrResize, { capture: true });
       window.removeEventListener('resize', handleScrollOrResize);
     };
-  }, [isVisible, content]);
+  }, [isVisible, activeTarget, updatePosition]);
 
   // Monitor DOM state: immediately dismiss tooltip if the target is unmounted or hidden
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible || !activeTarget) return;
 
     const interval = window.setInterval(() => {
-      if (!targetRef.current) return;
-
-      const isAttached = document.body.contains(targetRef.current);
-      const rect = targetRef.current.getBoundingClientRect();
+      const isAttached = document.body.contains(activeTarget);
+      const rect = activeTarget.getBoundingClientRect();
       const isVisibleLayout = rect.width > 0 && rect.height > 0;
 
       // If the parent trigger unmounts or becomes hidden, close the tooltip instantly
       if (!isAttached || !isVisibleLayout) {
         setIsVisible(false);
         setContent('');
-        targetRef.current = null;
+        setActiveTarget(null);
         clearTimers();
       }
     }, 100);
@@ -184,7 +215,7 @@ export function Tooltip() {
     return () => {
       window.clearInterval(interval);
     };
-  }, [isVisible]);
+  }, [isVisible, activeTarget]);
 
   // Event handlers to preserve tooltip when mouse enters it directly (copy-friendly)
   const handleTooltipMouseEnter = () => {

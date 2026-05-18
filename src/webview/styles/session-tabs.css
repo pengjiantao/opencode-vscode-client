@@ -59,6 +59,7 @@
   position: relative;
   border-radius: 0;
   gap: 4px;
+  box-sizing: border-box;
 }
 
 .tab:hover {
@@ -72,13 +73,14 @@
 .tab.active {
   background-color: var(--vscode-tab-activeBackground, var(--vscode-editor-background, #1e1e1e));
   color: var(--vscode-tab-activeForeground, #ffffff);
-  border-top-color: var(
-    --vscode-tab-activeBorderTop,
+  border-top: 2px solid
     var(
-      --vscode-tab-activeBorder,
-      var(--vscode-focusBorder, var(--vscode-button-background, #0e639c))
-    )
-  );
+      --vscode-tab-activeBorderTop,
+      var(
+        --vscode-tab-activeBorder,
+        var(--vscode-focusBorder, var(--vscode-button-background, #0e639c))
+      )
+    );
 }
 
 .tab.active::after {

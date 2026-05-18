@@ -123,15 +123,15 @@ describe('Tooltip Component', () => {
     // Trigger leave
     fireEvent.mouseOut(btn);
 
-    // Still visible before 250ms
+    // Still visible before 150ms hide delay
     act(() => {
-      vi.advanceTimersByTime(150);
+      vi.advanceTimersByTime(100);
     });
     expect(screen.getByTestId('custom-tooltip')).toBeInTheDocument();
 
-    // Past 250ms
+    // Past 150ms - tooltip should be hidden
     act(() => {
-      vi.advanceTimersByTime(100);
+      vi.advanceTimersByTime(50);
     });
     expect(screen.queryByTestId('custom-tooltip')).toBeNull();
   });
@@ -283,5 +283,204 @@ describe('Tooltip Component', () => {
 
     // The tooltip should have been removed instantly
     expect(screen.queryByTestId('custom-tooltip')).toBeNull();
+  });
+
+  it('should dynamically update the tooltip text if data-custom-title changes while hovered', () => {
+    const { rerender } = render(
+      <div>
+        <Tooltip />
+        <button data-testid="btn" data-custom-title="Initial Title">
+          Button
+        </button>
+      </div>,
+    );
+
+    const btn = screen.getByTestId('btn');
+
+    // Show tooltip
+    fireEvent.mouseOver(btn);
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    const tooltip = screen.getByTestId('custom-tooltip');
+    expect(tooltip).toBeInTheDocument();
+    expect(tooltip.textContent).toBe('Initial Title');
+
+    // Dynamically change data-custom-title (re-render)
+    rerender(
+      <div>
+        <Tooltip />
+        <button data-testid="btn" data-custom-title="Updated Title">
+          Button
+        </button>
+      </div>,
+    );
+
+    // Trigger another mouseover on the same button to notify tooltip
+    const updatedBtn = screen.getByTestId('btn');
+    fireEvent.mouseOver(updatedBtn);
+
+    // The text should update instantly in the tooltip without waiting for a timer
+    expect(screen.getByTestId('custom-tooltip').textContent).toBe('Updated Title');
+  });
+
+  it('should switch between tooltips immediately when one is already visible', () => {
+    render(
+      <div>
+        <Tooltip />
+        <button data-testid="btn-a" data-custom-title="Title A">
+          Button A
+        </button>
+        <button data-testid="btn-b" data-custom-title="Title B">
+          Button B
+        </button>
+      </div>,
+    );
+
+    const btnA = screen.getByTestId('btn-a');
+    const btnB = screen.getByTestId('btn-b');
+
+    // Hover over A and show tooltip
+    fireEvent.mouseOver(btnA);
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(screen.getByTestId('custom-tooltip').textContent).toBe('Title A');
+
+    // Move to B immediately (mouseout of A, mouseover of B)
+    fireEvent.mouseOut(btnA);
+    fireEvent.mouseOver(btnB);
+
+    // The tooltip should instantly update to B's title (no 400ms delay required!)
+    const tooltip = screen.getByTestId('custom-tooltip');
+    expect(tooltip.textContent).toBe('Title B');
+
+    // And moving off B should start the hide delay
+    fireEvent.mouseOut(btnB);
+
+    // Still visible before 150ms hide delay
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(screen.getByTestId('custom-tooltip')).toBeInTheDocument();
+
+    // Gone after 150ms
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(screen.queryByTestId('custom-tooltip')).toBeNull();
+  });
+
+  it('should robustly hide the tooltip on mouseOut even if the target button children are unmounted/replaced on click', () => {
+    const { rerender } = render(
+      <div>
+        <Tooltip />
+        <button data-testid="btn" data-custom-title="Copy Text">
+          <span data-testid="child-icon">Icon</span>
+        </button>
+      </div>,
+    );
+
+    const child = screen.getByTestId('child-icon');
+
+    // 1. Hover over the child icon inside the button and show the tooltip
+    fireEvent.mouseOver(child);
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(screen.getByTestId('custom-tooltip').textContent).toBe('Copy Text');
+
+    // 2. Click is handled, dynamically changing children (the old span is unmounted/replaced)
+    rerender(
+      <div>
+        <Tooltip />
+        <button data-testid="btn" data-custom-title="Copied!">
+          <span data-testid="new-child-icon">Checkmark</span>
+        </button>
+      </div>,
+    );
+
+    // Notify of mouseOver change for dynamic text
+    const updatedBtn = screen.getByTestId('btn');
+    fireEvent.mouseOver(updatedBtn);
+    expect(screen.getByTestId('custom-tooltip').textContent).toBe('Copied!');
+
+    // 3. Move mouse out to a blank area (the mouseout fires, relatedTarget is document.body or null)
+    fireEvent.mouseOut(updatedBtn, { relatedTarget: document.body });
+
+    // 4. Advance time past the 250ms hide delay threshold. The tooltip should close!
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+    expect(screen.queryByTestId('custom-tooltip')).toBeNull();
+  });
+
+  it('should instantly reposition the tooltip when switching between different targets sharing the same custom title text', () => {
+    render(
+      <div>
+        <Tooltip />
+        <button data-testid="btn-a" data-custom-title="Same Title">
+          Button A
+        </button>
+        <button data-testid="btn-b" data-custom-title="Same Title">
+          Button B
+        </button>
+      </div>,
+    );
+
+    const btnA = screen.getByTestId('btn-a');
+    const btnB = screen.getByTestId('btn-b');
+
+    // Mock different bounding rects for btnA and btnB
+    btnA.getBoundingClientRect = () =>
+      ({
+        left: 100,
+        top: 100,
+        width: 50,
+        height: 20,
+      }) as DOMRect;
+
+    btnB.getBoundingClientRect = () =>
+      ({
+        left: 200,
+        top: 200,
+        width: 50,
+        height: 20,
+      }) as DOMRect;
+
+    // Hover over A and show tooltip
+    fireEvent.mouseOver(btnA);
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    const tooltip = screen.getByTestId('custom-tooltip');
+    expect(tooltip).toBeInTheDocument();
+    expect(tooltip.textContent).toBe('Same Title');
+
+    // Mock tooltip size
+    tooltip.getBoundingClientRect = () =>
+      ({
+        width: 60,
+        height: 30,
+      }) as DOMRect;
+
+    // Trigger initial positioning update
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    // Check position is above A (x center: 100 + (50 - 60)/2 = 95, top: 100 - 30 - 8 = 62)
+    expect(tooltip.style.left).toBe('95px');
+    expect(tooltip.style.top).toBe('62px');
+
+    // Move directly from A to B
+    fireEvent.mouseOut(btnA, { relatedTarget: btnB });
+    fireEvent.mouseOver(btnB);
+
+    // The tooltip should instantly update position to B (x center: 200 + (50 - 60)/2 = 195, top: 200 - 30 - 8 = 162)
+    // because activeTarget state change triggers re-positioning layout effect
+    expect(tooltip.style.left).toBe('195px');
+    expect(tooltip.style.top).toBe('162px');
   });
 });
