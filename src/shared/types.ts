@@ -62,6 +62,16 @@ export type ExtToWebview =
       isWorkspace: boolean;
     }
   | {
+      type: 'workspace:search-files-response';
+      query: string;
+      results: Array<{
+        name: string;
+        relativePath: string;
+        type: 'file' | 'dir';
+        fsPath: string;
+      }>;
+    }
+  | {
       type: 'metadata:sync';
       workspaceName: string | null;
       lspServers: LspServerInfo[];
@@ -87,5 +97,6 @@ export type WebviewToExt =
   | { type: 'sessions:select-history' }
   | { type: 'file:open'; path: string }
   | { type: 'file:query'; path: string }
+  | { type: 'workspace:search-files'; query: string }
   | { type: 'init' }
   | { type: 'pong' };

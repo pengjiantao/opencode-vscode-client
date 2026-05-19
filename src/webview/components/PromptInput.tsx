@@ -6,11 +6,13 @@
 import type { Part, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import React from 'react';
 import { useIPC } from '../hooks/useIPC';
+import { usePromptEditor } from '../hooks/usePromptEditor';
 import { useSessionStore } from '../store/sessionStore';
 import '../styles/footer.css';
 import { getIconClass, getPromptData, getTooltipHtml } from '../utils/chipUtils';
 import { AgentSelector } from './AgentSelector';
 import { IconButton } from './IconButton';
+import { MentionPopover } from './MentionPopover';
 import { ModelSelector } from './ModelSelector';
 import { PromptInputFooter } from './PromptInputFooter';
 
@@ -62,7 +64,6 @@ export function PromptInput({
   const [hasContent, setHasContent] = React.useState(false);
 
   const fileInfos = useSessionStore((s) => s.fileInfos);
-  const { send } = useIPC(() => {});
 
   const [localModel, setLocalModel] = React.useState('');
   const [localAgent, setLocalAgent] = React.useState('');
@@ -77,6 +78,53 @@ export function PromptInput({
   const activeAgent = selectedAgent || (agents.length > 0 ? agents[0].id : '');
 
   const activeSessionID = useSessionStore((s) => s.activeSessionID);
+
+  const [mentionState, setMentionState] = React.useState<{
+    show: boolean;
+    query: string;
+    startOffset: number;
+    textNode: Node | null;
+  }>({
+    show: false,
+    query: '',
+    startOffset: -1,
+    textNode: null,
+  });
+
+  const [mentionResults, setMentionResults] = React.useState<
+    Array<{
+      name: string;
+      relativePath: string;
+      type: 'file' | 'dir';
+      fsPath: string;
+    }>
+  >([]);
+  const [selectedIndex, setSelectedIndex] = React.useState(0);
+
+  const closeMentionList = React.useCallback(() => {
+    setMentionState({ show: false, query: '', startOffset: -1, textNode: null });
+    setMentionResults([]);
+    setSelectedIndex(0);
+  }, []);
+
+  const { send } = useIPC((message) => {
+    if (message.type === 'workspace:search-files-response') {
+      setMentionResults(message.results);
+      setSelectedIndex(0);
+    }
+  });
+
+  const handleInput = React.useCallback(() => {
+    const { text } = getPromptData(editorRef.current, activeSessionID, fileInfos);
+    setHasContent(text.trim().length > 0);
+  }, [activeSessionID, fileInfos]);
+
+  const { handlePaste } = usePromptEditor({
+    editorRef,
+    fileInfos,
+    send,
+    onInput: handleInput,
+  });
 
   React.useEffect(() => {
     if (models.length > 0 && !selectedModel) {
@@ -116,58 +164,102 @@ export function PromptInput({
     }
   }, [fileInfos]);
 
-  const handleInput = React.useCallback(() => {
-    const { text } = getPromptData(editorRef.current, activeSessionID, fileInfos);
-    setHasContent(text.trim().length > 0);
-  }, [activeSessionID, fileInfos]);
+  // Trigger file/directory search query when mention autocomplete becomes active
+  React.useEffect(() => {
+    if (mentionState.show) {
+      send({ type: 'workspace:search-files', query: mentionState.query });
+    }
+  }, [mentionState.show, mentionState.query, send]);
 
-  const insertChip = React.useCallback(
-    (chip: {
-      id: string;
-      type: 'file' | 'image' | 'text';
-      filename?: string;
-      path?: string;
-      text?: string;
-      size?: number;
-      mime?: string;
-      isWorkspace?: boolean;
-      dataUrl?: string;
-      linesCount?: number;
-    }) => {
+  const updateMentionState = React.useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      closeMentionList();
+      return;
+    }
+    const range = selection.getRangeAt(0);
+    const textNode = range.startContainer;
+
+    if (textNode.nodeType !== Node.TEXT_NODE) {
+      closeMentionList();
+      return;
+    }
+
+    const text = textNode.textContent || '';
+    const offset = range.startOffset;
+
+    let atIndex = -1;
+    for (let i = offset - 1; i >= 0; i--) {
+      if (text[i] === '@') {
+        if (i === 0 || /\s/.test(text[i - 1])) {
+          atIndex = i;
+          break;
+        }
+      }
+      if (/\s/.test(text[i])) {
+        break;
+      }
+    }
+
+    if (atIndex !== -1) {
+      const query = text.substring(atIndex + 1, offset);
+      setMentionState({
+        show: true,
+        query,
+        startOffset: atIndex,
+        textNode,
+      });
+    } else {
+      closeMentionList();
+    }
+  }, [closeMentionList]);
+
+  const insertMentionChip = React.useCallback(
+    (item: { name: string; relativePath: string; type: 'file' | 'dir'; fsPath: string }) => {
+      if (!mentionState.textNode) return;
+
       const selection = window.getSelection();
-      let range: Range | null = null;
-      if (selection && selection.rangeCount > 0) {
-        const potentialRange = selection.getRangeAt(0);
-        if (
-          editorRef.current &&
-          editorRef.current.contains(potentialRange.commonAncestorContainer)
-        ) {
-          range = potentialRange;
+      if (!selection) return;
+
+      const range = document.createRange();
+      try {
+        range.setStart(mentionState.textNode, mentionState.startOffset);
+        const currentRange = selection.getRangeAt(0);
+        range.setEnd(mentionState.textNode, currentRange.startOffset);
+      } catch (e) {
+        console.error('Failed to set range for mention insertion:', e);
+        return;
+      }
+
+      const chipId = `file-${Math.random().toString(36).substring(7)}`;
+      const chipType = 'file';
+      let mime = 'text/plain';
+      if (item.type === 'dir') {
+        mime = 'directory';
+      } else {
+        const ext = item.name.split('.').pop()?.toLowerCase();
+        if (ext === 'png' || ext === 'jpg' || ext === 'jpeg' || ext === 'gif' || ext === 'webp') {
+          mime = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+        } else if (ext === 'pdf') {
+          mime = 'application/pdf';
         }
       }
 
       const chipNode = document.createElement('span');
-      chipNode.className = `opencode-chip ${chip.type}-chip inline-chip`;
+      chipNode.className = `opencode-chip file-chip inline-chip`;
       chipNode.contentEditable = 'false';
-      chipNode.setAttribute('data-chip-id', chip.id);
-      chipNode.setAttribute('data-chip-type', chip.type);
-      if (chip.filename) chipNode.setAttribute('data-chip-filename', chip.filename);
-      if (chip.path) chipNode.setAttribute('data-chip-path', chip.path);
-      if (chip.text) chipNode.setAttribute('data-chip-text', chip.text);
-      if (chip.size) chipNode.setAttribute('data-chip-size', String(chip.size));
-      if (chip.mime) chipNode.setAttribute('data-chip-mime', chip.mime);
-      if (chip.isWorkspace) chipNode.setAttribute('data-chip-is-workspace', 'true');
-      if (chip.dataUrl) chipNode.setAttribute('data-chip-data-url', chip.dataUrl);
-      if (chip.linesCount) chipNode.setAttribute('data-chip-lines-count', String(chip.linesCount));
+      chipNode.setAttribute('data-chip-id', chipId);
+      chipNode.setAttribute('data-chip-type', chipType);
+      chipNode.setAttribute('data-chip-filename', item.name);
+      chipNode.setAttribute('data-chip-path', item.fsPath);
+      chipNode.setAttribute('data-chip-mime', mime);
+      chipNode.setAttribute('data-chip-is-workspace', 'true');
 
-      if (chip.type === 'file' && chip.path) {
-        send({ type: 'file:query', path: chip.path });
+      if (item.type === 'file') {
+        send({ type: 'file:query', path: item.fsPath });
       }
 
-      const iconClass = getIconClass(chip.type, chip.mime);
-      const displayLabel =
-        chip.type === 'text' ? `Pasted ${chip.linesCount} Lines` : chip.filename || 'file';
-
+      const iconClass = getIconClass(chipType, mime);
       const iconSpan = document.createElement('span');
       iconSpan.className = 'chip-icon';
       const iconI = document.createElement('i');
@@ -177,7 +269,7 @@ export function PromptInput({
 
       const labelSpan = document.createElement('span');
       labelSpan.className = 'chip-label';
-      labelSpan.textContent = displayLabel;
+      labelSpan.textContent = item.name;
       chipNode.appendChild(labelSpan);
 
       const removeBtn = document.createElement('button');
@@ -188,7 +280,16 @@ export function PromptInput({
       removeBtn.appendChild(closeI);
       chipNode.appendChild(removeBtn);
 
-      const tooltipHtml = getTooltipHtml(chip, fileInfos);
+      const tooltipHtml = getTooltipHtml(
+        {
+          type: chipType,
+          filename: item.name,
+          path: item.fsPath,
+          mime,
+          isWorkspace: true,
+        },
+        fileInfos,
+      );
       chipNode.setAttribute('data-custom-title', tooltipHtml);
 
       removeBtn.addEventListener('click', (e) => {
@@ -197,37 +298,22 @@ export function PromptInput({
         handleInput();
       });
 
-      if (editorRef.current) {
-        editorRef.current.focus();
-      }
+      range.deleteContents();
+      range.insertNode(chipNode);
 
-      if (range) {
-        range.deleteContents();
-        range.insertNode(chipNode);
+      const spaceNode = document.createTextNode(' ');
+      chipNode.parentNode?.insertBefore(spaceNode, chipNode.nextSibling);
 
-        const spaceNode = document.createTextNode(' ');
-        chipNode.parentNode?.insertBefore(spaceNode, chipNode.nextSibling);
+      const newRange = document.createRange();
+      newRange.setStart(spaceNode, 1);
+      newRange.setEnd(spaceNode, 1);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
 
-        const newRange = document.createRange();
-        newRange.setStart(spaceNode, 1);
-        newRange.setEnd(spaceNode, 1);
-        selection?.removeAllRanges();
-        selection?.addRange(newRange);
-      } else if (editorRef.current) {
-        editorRef.current.appendChild(chipNode);
-        const spaceNode = document.createTextNode(' ');
-        editorRef.current.appendChild(spaceNode);
-
-        const newRange = document.createRange();
-        newRange.setStart(spaceNode, 1);
-        newRange.setEnd(spaceNode, 1);
-        selection?.removeAllRanges();
-        selection?.addRange(newRange);
-      }
-
+      closeMentionList();
       handleInput();
     },
-    [fileInfos, send, handleInput],
+    [mentionState, fileInfos, send, handleInput, closeMentionList],
   );
 
   const handleSubmit = () => {
@@ -263,140 +349,32 @@ export function PromptInput({
     }
   };
 
-  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
-    const pastedText = e.clipboardData.getData('text/plain')?.trim();
-    const pathPattern = /^(file:\/\/|\/|[a-zA-Z]:\\).+/;
-    const isPastedPath = pastedText && pathPattern.test(pastedText);
-
-    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
-      const files = Array.from(e.clipboardData.files);
-      let handled = false;
-
-      for (const file of files) {
-        if (file.type.startsWith('image/')) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (mentionState.show) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeMentionList();
+        return;
+      }
+      if (mentionResults.length > 0) {
+        if (e.key === 'ArrowDown') {
           e.preventDefault();
-          handled = true;
-          const reader = new FileReader();
-          reader.onload = () => {
-            const dataUrl = reader.result as string;
-            insertChip({
-              id: `img-${Math.random().toString(36).substring(7)}`,
-              type: 'image',
-              filename: file.name || 'Pasted Image',
-              size: file.size,
-              mime: file.type,
-              dataUrl,
-            });
-          };
-          reader.readAsDataURL(file);
-        } else {
-          const resolvedPath =
-            (file as unknown as { path?: string }).path || (isPastedPath ? pastedText : undefined);
-          if (resolvedPath) {
-            e.preventDefault();
-            handled = true;
-            const isImage =
-              file.type?.startsWith('image/') ||
-              resolvedPath.toLowerCase().endsWith('.png') ||
-              resolvedPath.toLowerCase().endsWith('.jpg') ||
-              resolvedPath.toLowerCase().endsWith('.jpeg') ||
-              resolvedPath.toLowerCase().endsWith('.gif') ||
-              resolvedPath.toLowerCase().endsWith('.webp');
-            const isPdf =
-              file.type === 'application/pdf' || resolvedPath.toLowerCase().endsWith('.pdf');
-            const resolvedMime = isImage
-              ? file.type || 'image/png'
-              : isPdf
-                ? 'application/pdf'
-                : 'text/plain';
-            insertChip({
-              id: `file-path-${Math.random().toString(36).substring(7)}`,
-              type: 'file',
-              path: resolvedPath,
-              filename: file.name || resolvedPath.split(/[\\/]/).pop() || 'file',
-              size: file.size,
-              mime: resolvedMime,
-            });
-          } else {
-            e.preventDefault();
-            handled = true;
-            const reader = new FileReader();
-            reader.onload = () => {
-              const textContent = reader.result as string;
-              const linesCount = textContent.split('\n').length;
-              const isImage =
-                file.type?.startsWith('image/') ||
-                file.name.toLowerCase().endsWith('.png') ||
-                file.name.toLowerCase().endsWith('.jpg') ||
-                file.name.toLowerCase().endsWith('.jpeg') ||
-                file.name.toLowerCase().endsWith('.gif') ||
-                file.name.toLowerCase().endsWith('.webp');
-              const isPdf =
-                file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-              const resolvedMime = isImage
-                ? file.type || 'image/png'
-                : isPdf
-                  ? 'application/pdf'
-                  : 'text/plain';
-              insertChip({
-                id: `file-${Math.random().toString(36).substring(7)}`,
-                type: 'file',
-                filename: file.name,
-                size: file.size,
-                mime: resolvedMime,
-                text: textContent,
-                linesCount,
-              });
-            };
-            reader.readAsText(file);
-          }
+          setSelectedIndex((prev) => (prev + 1) % mentionResults.length);
+          return;
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev - 1 + mentionResults.length) % mentionResults.length);
+          return;
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          insertMentionChip(mentionResults[selectedIndex]);
+          return;
         }
       }
-
-      if (handled) return;
     }
 
-    if (pastedText) {
-      if (isPastedPath) {
-        e.preventDefault();
-        const isImage =
-          pastedText.toLowerCase().endsWith('.png') ||
-          pastedText.toLowerCase().endsWith('.jpg') ||
-          pastedText.toLowerCase().endsWith('.jpeg') ||
-          pastedText.toLowerCase().endsWith('.gif') ||
-          pastedText.toLowerCase().endsWith('.webp');
-        const isPdf = pastedText.toLowerCase().endsWith('.pdf');
-        const resolvedMime = isImage ? 'image/png' : isPdf ? 'application/pdf' : 'text/plain';
-        insertChip({
-          id: `file-path-${Math.random().toString(36).substring(7)}`,
-          type: 'file',
-          path: pastedText,
-          filename: pastedText.split(/[\\/]/).pop() || 'file',
-          mime: resolvedMime,
-        });
-        return;
-      }
-
-      if (pastedText.includes('\n') || pastedText.includes('\r')) {
-        e.preventDefault();
-        const linesCount = pastedText.split(/\r?\n/).length;
-        insertChip({
-          id: `text-${Math.random().toString(36).substring(7)}`,
-          type: 'text',
-          filename: `Pasted ${linesCount} Lines`,
-          text: pastedText,
-          linesCount,
-        });
-        return;
-      }
-
-      e.preventDefault();
-      document.execCommand('insertText', false, pastedText);
-      handleInput();
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -405,6 +383,13 @@ export function PromptInput({
 
   return (
     <div className="prompt-input">
+      <MentionPopover
+        show={mentionState.show}
+        results={mentionResults}
+        selectedIndex={selectedIndex}
+        onSelect={insertMentionChip}
+      />
+
       <div className={`prompt-input-container ${isFocused ? 'focused' : ''}`}>
         <div
           ref={editorRef}
@@ -412,9 +397,17 @@ export function PromptInput({
           contentEditable={!disabled}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
+          onKeyUp={updateMentionState}
+          onMouseUp={updateMentionState}
           onPaste={handlePaste}
           onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onBlur={() => {
+            setIsFocused(false);
+            // Hide list after a short timeout so clicks on results are registered first
+            setTimeout(() => {
+              closeMentionList();
+            }, 200);
+          }}
           {...{ placeholder: 'Type a message... (Shift+Enter for new line)' }}
           data-testid="prompt-editor"
         />

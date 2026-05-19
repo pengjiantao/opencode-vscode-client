@@ -36,6 +36,7 @@ npm run lint          # run lint check
 - SSE events routed by `sessionID` in `event.properties`
 - Extension host manages SSE subscription; webview receives via IPC (`event:received`)
 - `src/shared/types.ts` contains IPC message types used by both sides
+- `src/extension/utils/config.ts` provides strongly-typed configuration settings retrieval
 
 ## External Source Code References
 

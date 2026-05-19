@@ -1,5 +1,6 @@
 /* Prompt input area, textarea, custom select dropdowns, and popover animations */
 .prompt-input {
+  position: relative;
   padding: 12px;
   border-top: 1px solid
     var(
@@ -255,4 +256,103 @@
 .popover-option .check-icon {
   font-size: 11px;
   font-weight: bold;
+}
+
+/* Mention popover and autocomplete styles */
+.mention-list-popover {
+  position: absolute;
+  bottom: 100%;
+  left: 12px;
+  right: 12px;
+  z-index: 10005;
+  background-color: var(
+    --vscode-dropdown-background,
+    var(--vscode-editor-widget-background, #252526)
+  );
+  border: 1px solid var(--vscode-widget-border, var(--vscode-border-color, #454545));
+  border-radius: 6px;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: selectPopoverFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mention-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-dropdown-foreground, var(--vscode-input-foreground, #cccccc));
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.1s ease;
+}
+
+.mention-item:hover,
+.mention-item.selected {
+  background-color: var(--vscode-list-focusBackground, var(--vscode-list-hoverBackground, #2a2d2e));
+  color: var(--vscode-list-hoverForeground, var(--webview-foreground, #ffffff));
+}
+
+.mention-item .item-icon {
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vscode-descriptionForeground, #888888);
+}
+
+.mention-item:hover .item-icon,
+.mention-item.selected .item-icon {
+  color: inherit;
+}
+
+.mention-item .item-info {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.mention-item .item-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mention-item .item-path {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground, #888888);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  flex-shrink: 0;
+  max-width: 50%;
+}
+
+.mention-item:hover .item-path,
+.mention-item.selected .item-path {
+  color: color-mix(
+    in srgb,
+    var(--vscode-list-hoverForeground, var(--webview-foreground, #ffffff)) 70%,
+    transparent
+  );
+}
+
+.mention-no-results {
+  padding: 12px;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-descriptionForeground, #888888);
+  text-align: center;
+  user-select: none;
 }

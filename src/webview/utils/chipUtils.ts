@@ -29,6 +29,7 @@ export function escapeHtml(str: string): string {
 export const getIconClass = (type: string, mime?: string): string => {
   if (type === 'image') return 'file-media';
   if (type === 'text') return 'note';
+  if (mime === 'directory') return 'folder';
   if (mime?.startsWith('image/')) return 'file-media';
   if (mime?.startsWith('text/')) return 'file-text';
   if (mime === 'application/pdf') return 'file-pdf';
@@ -59,7 +60,16 @@ export const getTooltipHtml = (
     { exists: boolean; size: number; content?: string; isWorkspace: boolean }
   >,
 ): string => {
-  const { type, filename, path, text, size, dataUrl, linesCount } = chip;
+  const { type, filename, path, text, size, dataUrl, linesCount, mime } = chip;
+  if (mime === 'directory') {
+    const displayPath = path || '';
+    return `<div class="tooltip-container">
+      <strong>${escapeHtml(filename || 'Directory')}</strong><br/>
+      ${path ? `<span class="tooltip-meta">Directory Path: ${escapeHtml(displayPath)}</span><br/>` : ''}
+      <div class="tooltip-meta">Workspace Folder</div>
+    </div>`;
+  }
+
   if (type === 'image') {
     const src = dataUrl || path || '';
     return `<div class="tooltip-container">

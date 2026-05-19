@@ -301,7 +301,8 @@ describe('Extension Status Bar Activation', () => {
     vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from('File content'));
 
     if (queryHandler) {
-      await queryHandler({ path: '/some/file.txt' });
+      void queryHandler({ path: '/some/file.txt' });
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
 
     expect(fs.promises.stat).toHaveBeenCalledWith('/some/file.txt');

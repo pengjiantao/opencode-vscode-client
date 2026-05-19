@@ -63,6 +63,12 @@ export const mockVscode = {
       scheme: 'file',
     })),
   },
+  RelativePattern: class {
+    constructor(
+      public readonly base: unknown,
+      public readonly pattern: string,
+    ) {}
+  },
   workspace: {
     getConfiguration: vi.fn(() => ({
       get: vi.fn(() => null),
@@ -71,6 +77,7 @@ export const mockVscode = {
     openTextDocument: vi.fn(),
     getWorkspaceFolder: vi.fn(() => undefined),
     workspaceFolders: [],
+    findFiles: vi.fn().mockResolvedValue([]),
   },
   env: {
     clipboard: {
