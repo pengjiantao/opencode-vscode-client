@@ -383,11 +383,11 @@ export function Markdown({ text }: MarkdownProps) {
       continue;
     }
 
-    // Empty line ends list, paragraph, or table
+    // Empty line ends paragraph or table, but we do not call flushList() here because
+    // list items separated by empty lines (loose lists) should belong to the same list.
     if (line.trim() === '') {
       flushTable();
       flushParagraph();
-      flushList();
       continue;
     }
 

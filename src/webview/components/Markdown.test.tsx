@@ -211,4 +211,42 @@ describe('Markdown Component', () => {
     expect(cell?.querySelector('em')?.textContent).toBe('italic');
     expect(cell?.querySelector('a')?.getAttribute('href')).toBe('http://test');
   });
+
+  it('renders ordered lists separated by empty lines in a single list (loose lists)', () => {
+    const { container } = render(
+      <Markdown text={['1. First', '', '2. Second', '', '3. Third'].join('\n')} />,
+    );
+    const ol = container.querySelector('ol');
+    expect(ol).toBeInTheDocument();
+    const items = ol?.querySelectorAll('li');
+    expect(items).toHaveLength(3);
+    expect(items?.[0].textContent).toBe('First');
+    expect(items?.[1].textContent).toBe('Second');
+    expect(items?.[2].textContent).toBe('Third');
+    expect(container.querySelectorAll('ol')).toHaveLength(1);
+  });
+
+  it('renders unordered lists separated by empty lines in a single list', () => {
+    const { container } = render(
+      <Markdown text={['- Item A', '', '- Item B', '', '- Item C'].join('\n')} />,
+    );
+    const ul = container.querySelector('ul');
+    expect(ul).toBeInTheDocument();
+    const items = ul?.querySelectorAll('li');
+    expect(items).toHaveLength(3);
+    expect(items?.[0].textContent).toBe('Item A');
+    expect(items?.[1].textContent).toBe('Item B');
+    expect(items?.[2].textContent).toBe('Item C');
+    expect(container.querySelectorAll('ul')).toHaveLength(1);
+  });
+
+  it('correctly splits lists when changing type across an empty line', () => {
+    const { container } = render(
+      <Markdown text={['1. Ordered Item', '', '- Unordered Item'].join('\n')} />,
+    );
+    expect(container.querySelectorAll('ol')).toHaveLength(1);
+    expect(container.querySelectorAll('ul')).toHaveLength(1);
+    expect(container.querySelector('ol')?.textContent).toBe('Ordered Item');
+    expect(container.querySelector('ul')?.textContent).toBe('Unordered Item');
+  });
 });
