@@ -2,7 +2,7 @@
  * @file Unit tests for ChatView — message rendering and empty state.
  */
 
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockAssistantMessage, createMockUserMessage } from '../../test/mocks/sdk';
 import { useSessionStore } from '../store/sessionStore';
@@ -17,9 +17,14 @@ vi.mock('@vscode/webview-ui-toolkit/react', () => ({
 describe('ChatView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => cb(performance.now()));
     useSessionStore.setState({
       pendingPermission: null,
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('renders messages', () => {
@@ -67,5 +72,69 @@ describe('ChatView', () => {
     );
 
     expect(screen.getByText('Start a conversation by typing a message below.')).toBeInTheDocument();
+  });
+
+  it('enables auto-scroll when scrolled to bottom', () => {
+    const { container, rerender } = render(
+      <ChatView sessionID="session-1" messages={[]} parts={{}} onPermissionReply={() => {}} />,
+    );
+
+    const chatView = container.querySelector('.chat-view') as HTMLDivElement;
+
+    // Mock the scroll properties
+    Object.defineProperty(chatView, 'scrollHeight', { configurable: true, value: 500 });
+    Object.defineProperty(chatView, 'clientHeight', { configurable: true, value: 200 });
+    Object.defineProperty(chatView, 'scrollTop', { configurable: true, writable: true, value: 0 });
+
+    // Simulate scroll to bottom
+    act(() => {
+      chatView.scrollTop = 300;
+      chatView.dispatchEvent(new Event('scroll'));
+    });
+
+    // Verify auto-scroll on new message
+    const userMsg = createMockUserMessage();
+    rerender(
+      <ChatView
+        sessionID="session-1"
+        messages={[userMsg]}
+        parts={{}}
+        onPermissionReply={() => {}}
+      />,
+    );
+
+    expect(chatView.scrollTop).toBe(500);
+  });
+
+  it('disables auto-scroll when user scrolls up', () => {
+    const { container, rerender } = render(
+      <ChatView sessionID="session-1" messages={[]} parts={{}} onPermissionReply={() => {}} />,
+    );
+
+    const chatView = container.querySelector('.chat-view') as HTMLDivElement;
+
+    // Mock the scroll properties
+    Object.defineProperty(chatView, 'scrollHeight', { configurable: true, value: 500 });
+    Object.defineProperty(chatView, 'clientHeight', { configurable: true, value: 200 });
+    Object.defineProperty(chatView, 'scrollTop', { configurable: true, writable: true, value: 0 });
+
+    // Simulate scroll up (not at bottom)
+    act(() => {
+      chatView.scrollTop = 100;
+      chatView.dispatchEvent(new Event('scroll'));
+    });
+
+    // Verify auto-scroll remains disabled on new message
+    const userMsg = createMockUserMessage();
+    rerender(
+      <ChatView
+        sessionID="session-1"
+        messages={[userMsg]}
+        parts={{}}
+        onPermissionReply={() => {}}
+      />,
+    );
+
+    expect(chatView.scrollTop).toBe(100);
   });
 });

@@ -4,7 +4,7 @@
  */
 
 import type { Message, Part } from '@opencode-ai/sdk/v2/client';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSessionStore } from '../store/sessionStore';
 import { MessageTurn } from './MessageTurn';
 import { PermissionCard } from './PermissionCard';
@@ -23,6 +23,9 @@ export function ChatView({ sessionID, messages, parts, onPermissionReply }: Chat
   const sessionStatus = useSessionStore((s) => s.sessionStatus);
 
   const activeSessionStatus = sessionID ? sessionStatus[sessionID] : undefined;
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
 
   /** Groups sequential messages into user→assistant turn pairs with support for multiple assistant responses. */
   const turns = useMemo(() => {
@@ -52,8 +55,31 @@ export function ChatView({ sessionID, messages, parts, onPermissionReply }: Chat
     setPendingPermission(null);
   };
 
+  const handleScroll = () => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    // A threshold to account for fractional pixels and subpixel rendering
+    const threshold = 10;
+    const isAtBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
+
+    setIsAutoScrollEnabled(isAtBottom);
+  };
+
+  useEffect(() => {
+    if (isAutoScrollEnabled && scrollRef.current) {
+      // Use requestAnimationFrame to ensure the scroll happens after DOM layout updates
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      });
+    }
+  }, [turns, activeSessionStatus, isAutoScrollEnabled, parts, pendingPermission]);
+
   return (
-    <div className="chat-view">
+    <div className="chat-view" ref={scrollRef} onScroll={handleScroll}>
       {pendingPermission && (
         <PermissionCard
           id={pendingPermission.id}
