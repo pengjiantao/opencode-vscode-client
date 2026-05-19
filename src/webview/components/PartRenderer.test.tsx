@@ -81,7 +81,7 @@ describe('PartRenderer', () => {
       sessionID: 'session-1',
       messageID: 'msg-1',
     };
-    render(<PartRenderer part={part as unknown as import('@opencode-ai/sdk').Part} />);
+    render(<PartRenderer part={part as unknown as import('@opencode-ai/sdk/v2/client').Part} />);
     expect(screen.getByText(/Unknown part type/)).toBeInTheDocument();
   });
 
@@ -93,7 +93,7 @@ describe('PartRenderer', () => {
       messageID: 'msg-1',
     };
     const { container } = render(
-      <PartRenderer part={part as unknown as import('@opencode-ai/sdk').Part} />,
+      <PartRenderer part={part as unknown as import('@opencode-ai/sdk/v2/client').Part} />,
     );
     expect(container.firstChild).toBeNull();
   });
@@ -106,7 +106,7 @@ describe('PartRenderer', () => {
       messageID: 'msg-1',
     };
     const { container } = render(
-      <PartRenderer part={part as unknown as import('@opencode-ai/sdk').Part} />,
+      <PartRenderer part={part as unknown as import('@opencode-ai/sdk/v2/client').Part} />,
     );
     expect(container.firstChild).toBeNull();
   });

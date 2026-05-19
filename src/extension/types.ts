@@ -3,7 +3,10 @@
  * These types are specific to the extension host; shared types live in src/shared/types.ts.
  */
 
-import type { Event, Message, Part, Session } from '@opencode-ai/sdk';
+import type { Event, Message, Part, Session } from '@opencode-ai/sdk/v2/client';
+import type { LspServerInfo, McpServerInfo, SkillInfo } from '../shared/types';
+
+export type { LspServerInfo, McpServerInfo, SkillInfo };
 
 /** Messages sent from the extension host to the webview. */
 export type ExtToWebview =
@@ -24,13 +27,23 @@ export type ExtToWebview =
         providerId?: string;
         providerName?: string;
         isConnected?: boolean;
+        contextLimit?: number;
       }>;
     }
   | {
       type: 'agents:list';
       agents: Array<{ id: string; name: string; mode?: string; hidden?: boolean }>;
     }
-  | { type: 'messages:list'; sessionID: string; messages: Message[]; parts: Part[] };
+  | { type: 'messages:list'; sessionID: string; messages: Message[]; parts: Part[] }
+  | {
+      type: 'metadata:sync';
+      workspaceName: string | null;
+      lspServers: LspServerInfo[];
+      mcpServers: McpServerInfo[];
+      skills: SkillInfo[];
+      plugins: string[];
+      extensionVersion: string;
+    };
 
 /** Messages sent from the webview to the extension host. */
 export type WebviewToExt =

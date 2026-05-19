@@ -3,7 +3,7 @@
  * Manages IPC message routing, session state, and renders the complete UI.
  */
 
-import type { Session } from '@opencode-ai/sdk';
+import type { Session } from '@opencode-ai/sdk/v2/client';
 import { useEffect, useState } from 'react';
 import type { ExtToWebview } from '../shared/types';
 import { ChatView } from './components/ChatView';
@@ -57,6 +57,13 @@ export function App() {
   const updateSession = useSessionStore((s) => s.updateSession);
   const setSessionMessagesAndParts = useSessionStore((s) => s.setSessionMessagesAndParts);
 
+  const setWorkspaceName = useSessionStore((s) => s.setWorkspaceName);
+  const setLspServers = useSessionStore((s) => s.setLspServers);
+  const setMcpServers = useSessionStore((s) => s.setMcpServers);
+  const setSkills = useSessionStore((s) => s.setSkills);
+  const setPlugins = useSessionStore((s) => s.setPlugins);
+  const setExtensionVersion = useSessionStore((s) => s.setExtensionVersion);
+
   const { send } = useIPC(() => {});
   useEvents();
   useKeyboardShortcuts();
@@ -93,6 +100,14 @@ export function App() {
         case 'settings:open':
           setShowSettings(true);
           break;
+        case 'metadata:sync':
+          setWorkspaceName(message.workspaceName);
+          setLspServers(message.lspServers);
+          setMcpServers(message.mcpServers);
+          setSkills(message.skills);
+          setPlugins(message.plugins);
+          setExtensionVersion(message.extensionVersion);
+          break;
         case 'error':
           console.error('Server error:', message.message);
           break;
@@ -117,6 +132,12 @@ export function App() {
     updateSession,
     setSessionMessagesAndParts,
     setSessions,
+    setWorkspaceName,
+    setLspServers,
+    setMcpServers,
+    setSkills,
+    setPlugins,
+    setExtensionVersion,
   ]);
 
   const handleCreateSession = () => {

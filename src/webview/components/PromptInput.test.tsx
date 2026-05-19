@@ -52,6 +52,37 @@ vi.mock('@vscode/webview-ui-toolkit/react', () => ({
   ),
 }));
 
+vi.mock('../store/sessionStore', () => ({
+  useSessionStore: vi.fn(<T,>(selector: (state: Record<string, unknown>) => T): T => {
+    const state = {
+      workspaceName: 'TestWorkspace',
+      lspServers: [{ name: 'typescript-lsp', status: 'running' }],
+      mcpServers: [{ name: 'git-mcp', status: 'connected' }],
+      skills: [{ name: 'customize-opencode', description: 'desc' }],
+      plugins: ['plugin-1'],
+      extensionVersion: '0.1.2',
+      activeSessionID: 'session-123',
+      messages: {
+        'session-123': [
+          {
+            role: 'assistant',
+            cost: 0.05,
+            tokens: {
+              input: 1000,
+              output: 500,
+              reasoning: 200,
+              cache: { read: 100, write: 50 },
+            },
+            providerID: 'openai',
+            modelID: 'gpt-4',
+          },
+        ],
+      },
+    };
+    return selector(state);
+  }),
+}));
+
 const mockOnSubmit = vi.fn();
 const mockOnModelChange = vi.fn();
 const mockOnAgentChange = vi.fn();
@@ -281,5 +312,30 @@ describe('PromptInput', () => {
     expect(screen.getByRole('combobox', { name: /select agent/i })).toHaveTextContent(
       'Build Agent',
     );
+  });
+
+  /** Regression: footer row displays Workspace, LSP count, MCP count, Skills, extension version, context percentage, and cumulative cost. */
+  it('regression: status footer row renders correct Workspace, LSP, MCP, Skills, version, context tokens, and cost', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[{ id: 'openai/gpt-4', name: 'GPT-4', contextLimit: 100000 }]}
+        agents={[{ id: 'agent-1', name: 'Agent 1' }]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    // Verify footer items are present in the DOM
+    expect(screen.getByTestId('footer-workspace')).toHaveTextContent('TestWorkspace');
+    expect(screen.getByTestId('footer-lsp')).toHaveTextContent('LSP: 1');
+    expect(screen.getByTestId('footer-mcp')).toHaveTextContent('MCP: 1');
+    expect(screen.getByTestId('footer-skills')).toHaveTextContent('Skills: 1');
+    expect(screen.getByTestId('footer-version')).toHaveTextContent('v0.1.2');
+
+    // Context Total: 1000 + 500 + 200 + 100 + 50 = 1850. Limit: 100000. Usage: Math.round(1850 / 100000 * 100) = 2%
+    expect(screen.getByTestId('footer-context')).toHaveTextContent('1,850 / 100,000 (2%)');
+    // Total Cost: 0.05
+    expect(screen.getByTestId('footer-cost')).toHaveTextContent('$0.050');
   });
 });

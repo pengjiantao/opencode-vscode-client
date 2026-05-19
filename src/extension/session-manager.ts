@@ -3,7 +3,7 @@
  * Handles creation, switching, archiving, and prompt operations with state tracking.
  */
 
-import type { Message, Part, Session } from '@opencode-ai/sdk';
+import type { Message, Part, Session } from '@opencode-ai/sdk/v2/client';
 import type { SDKClient } from './sdk-client';
 
 /** Current state of the session manager. */
@@ -96,7 +96,7 @@ export class SessionManager {
 
     await this.sdk.session.update(id, {
       time: { ...session.time, archived: Date.now() },
-    } as Partial<Session>);
+    });
 
     const remaining = this.state.sessions.filter((s) => s.id !== id);
     this.setState({

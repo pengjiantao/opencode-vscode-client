@@ -3,7 +3,14 @@
  * Abstracts the OpenCode SDK operations for testability and decoupling.
  */
 
-import type { Message, Part, Session } from '@opencode-ai/sdk';
+import type {
+  Config,
+  LspStatus,
+  McpStatus,
+  Message,
+  Part,
+  Session,
+} from '@opencode-ai/sdk/v2/client';
 
 /** Handle for a managed OpenCode server instance. */
 export interface ServerHandle {
@@ -29,6 +36,18 @@ export interface SDKClient {
     promptAsync(id: string, parts: Part[], model?: string, agent?: string): Promise<void>;
     abort(id: string): Promise<void>;
   };
+  lsp: {
+    status(): Promise<LspStatus[]>;
+  };
+  mcp: {
+    status(): Promise<Record<string, McpStatus>>;
+  };
+  config: {
+    get(): Promise<Config>;
+  };
+  permission: {
+    reply(requestID: string, allow: boolean): Promise<void>;
+  };
   /** Subscribes to SSE events from the server. Returns an unsubscribe function. */
   subscribeEvents(handler: (event: unknown) => void): () => void;
   /** Retrieves the list of available models from connected providers. */
@@ -39,8 +58,13 @@ export interface SDKClient {
       providerId?: string;
       providerName?: string;
       isConnected?: boolean;
+      contextLimit?: number;
     }>
   >;
   /** Retrieves the list of available agent configurations. */
   getAgents(): Promise<Array<{ id: string; name: string; mode?: string; hidden?: boolean }>>;
+  /** Retrieves the list of available skills. */
+  getSkills(): Promise<
+    Array<{ name: string; description?: string; location: string; content?: string }>
+  >;
 }

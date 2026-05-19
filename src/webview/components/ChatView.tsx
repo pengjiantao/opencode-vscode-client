@@ -3,7 +3,7 @@
  * Groups messages into user/assistant turns and renders permission prompts.
  */
 
-import type { Message, Part } from '@opencode-ai/sdk';
+import type { Message, Part } from '@opencode-ai/sdk/v2/client';
 import { useMemo } from 'react';
 import { useSessionStore } from '../store/sessionStore';
 import { MessageTurn } from './MessageTurn';
@@ -57,8 +57,8 @@ export function ChatView({ sessionID, messages, parts, onPermissionReply }: Chat
       {pendingPermission && (
         <PermissionCard
           id={pendingPermission.id}
-          type={pendingPermission.type}
-          title={pendingPermission.title}
+          type={pendingPermission.permission}
+          title={pendingPermission.permission}
           metadata={pendingPermission.metadata}
           onReply={handlePermissionReply}
         />

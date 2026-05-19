@@ -3,8 +3,15 @@
  * Central state hub for the webview React application.
  */
 
-import type { Message, Part, Permission, Session, SessionStatus } from '@opencode-ai/sdk';
+import type {
+  Message,
+  Part,
+  PermissionRequest,
+  Session,
+  SessionStatus,
+} from '@opencode-ai/sdk/v2/client';
 import { create } from 'zustand';
+import type { LspServerInfo, McpServerInfo, SkillInfo } from '../../shared/types';
 
 /** Full shape of the session store's state and actions. */
 interface SessionStore {
@@ -19,7 +26,14 @@ interface SessionStore {
   /** Session statuses keyed by session ID. */
   sessionStatus: Record<string, SessionStatus>;
   /** Currently displayed permission request (null when dismissed). */
-  pendingPermission: Permission | null;
+  pendingPermission: PermissionRequest | null;
+
+  workspaceName: string | null;
+  lspServers: LspServerInfo[];
+  mcpServers: McpServerInfo[];
+  skills: SkillInfo[];
+  plugins: string[];
+  extensionVersion: string;
 
   setActiveSession: (id: string) => void;
   setSessions: (sessions: Session[]) => void;
@@ -32,8 +46,15 @@ interface SessionStore {
   updatePart: (part: Part) => void;
   updatePartDelta: (messageID: string, partID: string, field: string, delta: string) => void;
   setSessionStatus: (sessionID: string, status: SessionStatus) => void;
-  setPendingPermission: (permission: Permission | null) => void;
+  setPendingPermission: (permission: PermissionRequest | null) => void;
   setSessionMessagesAndParts: (sessionID: string, messages: Message[], parts: Part[]) => void;
+
+  setWorkspaceName: (name: string | null) => void;
+  setLspServers: (lsp: LspServerInfo[]) => void;
+  setMcpServers: (mcp: McpServerInfo[]) => void;
+  setSkills: (skills: SkillInfo[]) => void;
+  setPlugins: (plugins: string[]) => void;
+  setExtensionVersion: (version: string) => void;
 }
 
 /** Zustand store for all session-related state in the webview. */
@@ -207,4 +228,18 @@ export const useSessionStore = create<SessionStore>((set) => ({
 
   /** Sets or clears the pending permission request shown to the user. */
   setPendingPermission: (permission) => set({ pendingPermission: permission }),
+
+  workspaceName: null,
+  lspServers: [],
+  mcpServers: [],
+  skills: [],
+  plugins: [],
+  extensionVersion: 'unknown',
+
+  setWorkspaceName: (workspaceName) => set({ workspaceName }),
+  setLspServers: (lspServers) => set({ lspServers }),
+  setMcpServers: (mcpServers) => set({ mcpServers }),
+  setSkills: (skills) => set({ skills }),
+  setPlugins: (plugins) => set({ plugins }),
+  setExtensionVersion: (extensionVersion) => set({ extensionVersion }),
 }));

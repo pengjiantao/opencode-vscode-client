@@ -4,8 +4,20 @@
  * and wraps the @opencode-ai/sdk library operations.
  */
 
-import type { Message, Part, Session } from '@opencode-ai/sdk';
-import { createOpencodeClient, createOpencodeServer } from '@opencode-ai/sdk';
+import { createOpencodeServer } from '@opencode-ai/sdk';
+import type {
+  AgentPartInput,
+  Config,
+  FilePartInput,
+  LspStatus,
+  McpStatus,
+  Message,
+  Part,
+  Session,
+  SubtaskPartInput,
+  TextPartInput,
+} from '@opencode-ai/sdk/v2/client';
+import { createOpencodeClient } from '@opencode-ai/sdk/v2/client';
 import type { SDKClient, ServerHandle } from './sdk-client';
 
 /** Creates a configured SDK client, attempting to reuse an existing server on localhost:4096. */
@@ -55,61 +67,88 @@ export function createSDKClient(directory?: string): SDKClient {
         return result.data ?? [];
       },
       get: async (id: string): Promise<Session> => {
-        const result = await client.session.get({ path: { id } });
+        const result = await client.session.get({ sessionID: id });
         if (!result.data) throw new Error('Failed to get session');
         return result.data;
       },
       update: async (id: string, patch: Partial<Session>): Promise<Session> => {
-        const result = await client.session.update({ path: { id }, body: patch });
+        const result = await client.session.update({
+          sessionID: id,
+          title: patch.title,
+          permission: patch.permission,
+          time: patch.time ? { archived: patch.time.archived } : undefined,
+        });
         if (!result.data) throw new Error('Failed to update session');
         return result.data;
       },
       delete: async (id: string) => {
-        await client.session.delete({ path: { id } });
+        await client.session.delete({ sessionID: id });
       },
       messages: async (id: string): Promise<Message[]> => {
-        const result = await client.session.messages({ path: { id } });
-        return result.data?.map((m: { info: Message; parts: Part[] }) => m.info) ?? [];
+        const result = await client.session.messages({ sessionID: id });
+        return result.data?.map((m) => m.info) ?? [];
       },
       messagesWithParts: async (id: string): Promise<Array<{ info: Message; parts: Part[] }>> => {
-        const result = await client.session.messages({ path: { id } });
+        const result = await client.session.messages({ sessionID: id });
         return result.data ?? [];
       },
       /** Sends a prompt and blocks until the response is complete. */
       prompt: async (id: string, parts: Part[], model?: string, agent?: string) => {
-        const body: {
-          parts: Part[];
-          model?: { providerID: string; modelID: string };
-          agent?: string;
-        } = { parts };
-        // Parse "providerID/modelID" format from model string
+        let modelObj: { providerID: string; modelID: string } | undefined;
         if (model) {
           const [providerID, modelID] = model.split('/');
-          body.model = { providerID, modelID };
+          modelObj = { providerID, modelID };
         }
-        if (agent) {
-          body.agent = agent;
-        }
-        await client.session.prompt({ path: { id }, body: body as never });
+        await client.session.prompt({
+          sessionID: id,
+          parts: parts as Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>,
+          model: modelObj,
+          agent,
+        });
       },
       /** Sends a prompt and returns immediately (non-blocking). */
       promptAsync: async (id: string, parts: Part[], model?: string, agent?: string) => {
-        const body: {
-          parts: Part[];
-          model?: { providerID: string; modelID: string };
-          agent?: string;
-        } = { parts };
+        let modelObj: { providerID: string; modelID: string } | undefined;
         if (model) {
           const [providerID, modelID] = model.split('/');
-          body.model = { providerID, modelID };
+          modelObj = { providerID, modelID };
         }
-        if (agent) {
-          body.agent = agent;
-        }
-        await client.session.promptAsync({ path: { id }, body: body as never });
+        await client.session.promptAsync({
+          sessionID: id,
+          parts: parts as Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>,
+          model: modelObj,
+          agent,
+        });
       },
       abort: async (id: string) => {
-        await client.session.abort({ path: { id } });
+        await client.session.abort({ sessionID: id });
+      },
+    },
+    lsp: {
+      status: async (): Promise<LspStatus[]> => {
+        const result = await client.lsp.status();
+        return result.data ?? [];
+      },
+    },
+    mcp: {
+      status: async (): Promise<Record<string, McpStatus>> => {
+        const result = await client.mcp.status();
+        return result.data ?? {};
+      },
+    },
+    config: {
+      get: async (): Promise<Config> => {
+        const result = await client.config.get();
+        if (!result.data) throw new Error('Failed to get configuration');
+        return result.data;
+      },
+    },
+    permission: {
+      reply: async (requestID: string, allow: boolean): Promise<void> => {
+        await client.permission.reply({
+          requestID,
+          reply: allow ? 'once' : 'reject',
+        });
       },
     },
     /** Subscribes to the SSE event stream and returns an unsubscribe callback. */
@@ -146,6 +185,7 @@ export function createSDKClient(directory?: string): SDKClient {
         providerId?: string;
         providerName?: string;
         isConnected?: boolean;
+        contextLimit?: number;
       }>
     > => {
       const result = await client.provider.list();
@@ -157,6 +197,7 @@ export function createSDKClient(directory?: string): SDKClient {
         providerId?: string;
         providerName?: string;
         isConnected?: boolean;
+        contextLimit?: number;
       }> = [];
       for (const p of providers) {
         const isConnected = connected.includes(p.id);
@@ -169,6 +210,7 @@ export function createSDKClient(directory?: string): SDKClient {
             providerId: p.id,
             providerName: p.name,
             isConnected,
+            contextLimit: model.limit?.context,
           });
         }
       }
@@ -186,6 +228,18 @@ export function createSDKClient(directory?: string): SDKClient {
         mode: a.mode,
         hidden: (a as { hidden?: boolean }).hidden,
       }));
+    },
+    /** Fetches the available skill list from the server. */
+    getSkills: async (): Promise<
+      Array<{ name: string; description?: string; location: string; content?: string }>
+    > => {
+      try {
+        const result = await client.app.skills();
+        return result.data ?? [];
+      } catch (err) {
+        console.error('Failed to get skills from SDK:', err);
+        return [];
+      }
     },
   };
 }

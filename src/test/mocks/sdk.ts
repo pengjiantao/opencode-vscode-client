@@ -11,9 +11,9 @@ import type {
   TextPart,
   ToolPart,
   UserMessage,
-} from '@opencode-ai/sdk';
+} from '@opencode-ai/sdk/v2/client';
 
-export type { Message, Part } from '@opencode-ai/sdk';
+export type { Message, Part } from '@opencode-ai/sdk/v2/client';
 export type {
   AssistantMessage,
   ReasoningPart,
@@ -46,6 +46,7 @@ export function createMockAssistantMessage(): AssistantMessage {
     parentID: 'msg-1',
     modelID: '',
     providerID: '',
+    agent: '',
     mode: '',
     path: { cwd: '', root: '' },
     cost: 0,
@@ -108,6 +109,7 @@ let sessionCounter = 0;
 export function createMockSession(overrides: Partial<Session> = {}): Session {
   return {
     id: `session-${++sessionCounter}`,
+    slug: '',
     projectID: '',
     directory: '',
     title: 'Untitled',

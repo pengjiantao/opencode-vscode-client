@@ -2,7 +2,7 @@
  * @file Tab bar showing open sessions with switch, close, and more-actions menu.
  */
 
-import type { Session } from '@opencode-ai/sdk';
+import type { Session } from '@opencode-ai/sdk/v2/client';
 import { IconButton } from './IconButton';
 import { Popover } from './Popover';
 

@@ -3,7 +3,7 @@
  * based on the part type (text, tool, reasoning, file, agent, step).
  */
 
-import type { Part } from '@opencode-ai/sdk';
+import type { Part } from '@opencode-ai/sdk/v2/client';
 import { Codicon } from './Codicon';
 import { FilePart } from './parts/FilePart';
 import { ReasoningPart } from './parts/ReasoningPart';

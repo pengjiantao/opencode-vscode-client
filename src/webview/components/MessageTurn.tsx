@@ -3,7 +3,7 @@
  * Displays user message content and, if available, the assistant's response parts and action footer.
  */
 
-import type { Message, Part } from '@opencode-ai/sdk';
+import type { Message, Part } from '@opencode-ai/sdk/v2/client';
 import { useEffect, useState } from 'react';
 import { Codicon } from './Codicon';
 import { PartRenderer } from './PartRenderer';

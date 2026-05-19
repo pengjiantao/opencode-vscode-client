@@ -3,9 +3,27 @@
  * Defines the IPC message protocol between the two sides.
  */
 
-import type { Event, Message, Part } from '@opencode-ai/sdk';
+import type { Event, Message, Part } from '@opencode-ai/sdk/v2/client';
 
 export type { Event };
+
+export interface LspServerInfo {
+  name: string;
+  status: string;
+  workspaceFolder?: string;
+}
+
+export interface McpServerInfo {
+  name: string;
+  status: string;
+  error?: string;
+}
+
+export interface SkillInfo {
+  name: string;
+  description?: string;
+  location: string;
+}
 
 /** Messages sent from the extension host to the webview. */
 export type ExtToWebview =
@@ -26,13 +44,23 @@ export type ExtToWebview =
         providerId?: string;
         providerName?: string;
         isConnected?: boolean;
+        contextLimit?: number;
       }>;
     }
   | {
       type: 'agents:list';
       agents: Array<{ id: string; name: string; mode?: string; hidden?: boolean }>;
     }
-  | { type: 'messages:list'; sessionID: string; messages: Message[]; parts: Part[] };
+  | { type: 'messages:list'; sessionID: string; messages: Message[]; parts: Part[] }
+  | {
+      type: 'metadata:sync';
+      workspaceName: string | null;
+      lspServers: LspServerInfo[];
+      mcpServers: McpServerInfo[];
+      skills: SkillInfo[];
+      plugins: string[];
+      extensionVersion: string;
+    };
 
 /** Messages sent from the webview to the extension host. */
 export type WebviewToExt =

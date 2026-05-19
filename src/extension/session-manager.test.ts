@@ -2,7 +2,7 @@
  * @file Unit tests for SessionManager — session CRUD, switching, archiving, and prompt sanitization.
  */
 
-import type { Part } from '@opencode-ai/sdk';
+import type { Part } from '@opencode-ai/sdk/v2/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockSession } from '../test/mocks/sdk';
 import type { SDKClient } from './sdk-client';

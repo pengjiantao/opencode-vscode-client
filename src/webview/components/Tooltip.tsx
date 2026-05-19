@@ -147,6 +147,12 @@ export function Tooltip() {
       if (!activeTargetRef.current) return;
 
       const related = e.relatedTarget as HTMLElement | null;
+
+      // If the mouse has moved into the tooltip container itself, preserve the tooltip.
+      if (related && (tooltipRef.current === related || tooltipRef.current?.contains(related))) {
+        return;
+      }
+
       // If the mouse has moved to an element that is NOT a descendant of the active target, trigger hide delay.
       // This is extremely robust against children being unmounted or replaced on click events.
       if (!related || !activeTargetRef.current.contains(related)) {
@@ -240,7 +246,7 @@ export function Tooltip() {
       onMouseLeave={handleTooltipMouseLeave}
       data-testid="custom-tooltip"
     >
-      {content}
+      <div dangerouslySetInnerHTML={{ __html: content }} />
     </div>
   );
 }

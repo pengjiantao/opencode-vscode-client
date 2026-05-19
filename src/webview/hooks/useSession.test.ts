@@ -2,7 +2,14 @@
  * @file Unit tests for useSession — store access and IPC action dispatching.
  */
 
-import type { Event, Message, Part, Permission, Session, SessionStatus } from '@opencode-ai/sdk';
+import type {
+  Event,
+  Message,
+  Part,
+  PermissionRequest,
+  Session,
+  SessionStatus,
+} from '@opencode-ai/sdk/v2/client';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSessionStore } from '../store/sessionStore';
@@ -180,7 +187,10 @@ describe('useSession', () => {
 
     it('handles permission.updated event', () => {
       const { result } = renderHook(() => useSession());
-      const permission = { id: 'perm-1', title: 'Test Permission' } as unknown as Permission;
+      const permission = {
+        id: 'perm-1',
+        permission: 'run_command',
+      } as unknown as PermissionRequest;
 
       act(() => {
         result.current.handleEvent({

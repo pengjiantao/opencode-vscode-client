@@ -4,7 +4,7 @@
  * Registers all IPC message handlers for session lifecycle and prompt operations.
  */
 
-import type { Part, Permission, SessionStatus } from '@opencode-ai/sdk';
+import type { Part, PermissionRequest, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import {
   commands,
   StatusBarAlignment,
@@ -14,6 +14,7 @@ import {
   type ExtensionContext,
 } from 'vscode';
 import { IPCBridge } from './ipc';
+import { syncMetadata as importSyncMetadata } from './metadata';
 import type { SDKClient } from './sdk-client';
 import { createSDKClient } from './sdk-client-impl';
 import { SessionManager } from './session-manager';
@@ -40,6 +41,14 @@ export async function activate(context: ExtensionContext): Promise<void> {
     sessionManager = new SessionManager(sdk);
     ipc = new IPCBridge();
     provider = new OpencodeSidebarViewProvider(context, ipc);
+
+    /**
+     * Gathers all LSP servers, MCP servers, workspace plugins, discovered skills,
+     * workspace root name, and extension version, and pushes them to the webview.
+     */
+    const syncMetadata = (): void => {
+      void importSyncMetadata(sdk, ipc.send.bind(ipc));
+    };
 
     // Initialize native status bar item to show current session processing status
     const statusBarItem = window.createStatusBarItem(StatusBarAlignment.Right, 100);
@@ -238,6 +247,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
         })
         .catch((err) => {
           console.error('Failed to load agents:', err);
+        })
+        .finally(() => {
+          void syncMetadata();
         });
     });
 
@@ -253,6 +265,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         .getMessagesAndParts(sessionID)
         .then(({ messages, parts }) => {
           ipc.send({ type: 'messages:list', sessionID, messages, parts });
+          void syncMetadata();
         })
         .catch((err) => {
           ipc.send({ type: 'error', message: (err as Error).message });
@@ -374,12 +387,19 @@ export async function activate(context: ExtensionContext): Promise<void> {
       const { model } = msg as { model: string };
       activeModel = model || undefined;
       void context.globalState.update('lastUsedModel', model || undefined);
+      void syncMetadata();
     });
 
     ipc.on('agent:switch', (msg) => {
       const { agent } = msg as { agent: string };
       activeAgent = agent || undefined;
       void context.globalState.update('lastUsedAgent', agent || undefined);
+      void syncMetadata();
+    });
+
+    ipc.on('permission:reply', (msg) => {
+      const { permissionID, allow } = msg as { permissionID: string; allow: boolean };
+      void sdk.permission.reply(permissionID, allow);
     });
 
     // Subscribe to events and register disposable to prevent memory leaks
@@ -390,7 +410,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       const evt = event as {
         type?: string;
         properties?: {
-          permission?: Permission;
+          permission?: PermissionRequest;
           sessionID?: string;
           status?: SessionStatus;
           info?: { id?: string };
@@ -409,6 +429,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
         // Clean up status of deleted sessions to prevent unbounded map growth
         sessionStatuses.delete(evt.properties.info.id);
         updateStatusBar();
+      } else if (evt.type === 'lsp.updated') {
+        void syncMetadata();
       }
     });
     context.subscriptions.push({ dispose: unsubscribeEvents });
@@ -445,15 +467,19 @@ export async function activate(context: ExtensionContext): Promise<void> {
 /**
  * Shows a VS Code modal dialog for permission requests (Allow/Deny).
  */
-function handlePermissionRequest(permission: Permission): void {
+function handlePermissionRequest(permission: PermissionRequest): void {
   window
     .showInformationMessage(
-      `OpenCode Permission: ${permission.title}`,
+      `OpenCode Permission: ${permission.permission}`,
       { modal: false },
       'Allow',
       'Deny',
     )
-    .then(() => {
-      // Permission handling via IPC
+    .then((choice) => {
+      if (choice === 'Allow') {
+        void sdk.permission.reply(permission.id, true);
+      } else if (choice === 'Deny') {
+        void sdk.permission.reply(permission.id, false);
+      }
     });
 }
