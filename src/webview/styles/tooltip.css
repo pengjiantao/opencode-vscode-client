@@ -4,7 +4,7 @@
   z-index: 10000;
   pointer-events: auto; /* Allow mouse hover to copy text */
   background-color: var(--vscode-editor-widget-background, #252526);
-  color: var(--vscode-editor-foreground, #cccccc);
+  color: var(--webview-foreground, #cccccc);
   border: 1px solid var(--vscode-editor-widget-border, #454545);
   border-radius: 4px;
   padding: 6px 10px;

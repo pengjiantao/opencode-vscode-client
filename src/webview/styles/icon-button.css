@@ -6,7 +6,7 @@
   border: 1px solid transparent;
   border-radius: 4px;
   background-color: transparent;
-  color: var(--vscode-editor-foreground, #cccccc);
+  color: var(--webview-foreground, #cccccc);
   cursor: pointer;
   padding: 0;
   transition:

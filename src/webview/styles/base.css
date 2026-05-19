@@ -1,5 +1,13 @@
 /* CSS variables, reset, body defaults, and scrollbar styling */
 :root {
+  --webview-background: var(
+    --vscode-sideBar-background,
+    var(--vscode-panel-background, var(--vscode-editor-background))
+  );
+  --webview-foreground: var(
+    --vscode-sideBar-foreground,
+    var(--vscode-panel-foreground, var(--vscode-editor-foreground))
+  );
   --vscode-font-family: var(--vscode-editor-font-family, system-ui, sans-serif);
   --vscode-font-size: var(--vscode-editor-font-size, 13px);
   --vscode-border-color: var(--vscode-editor-widget-border, #454545);
@@ -26,8 +34,8 @@ body {
   padding: 0;
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-font-size);
-  background-color: var(--vscode-editor-background);
-  color: var(--vscode-editor-foreground);
+  background-color: var(--webview-background);
+  color: var(--webview-foreground);
   height: 100vh;
   overflow: hidden;
 }

@@ -37,7 +37,7 @@
 }
 
 .tool-part .tool-header:hover {
-  background-color: color-mix(in srgb, var(--vscode-editor-foreground) 8%, transparent);
+  background-color: color-mix(in srgb, var(--webview-foreground) 8%, transparent);
 }
 
 /* Shared header icon styles for tool and reasoning blocks */
@@ -45,7 +45,7 @@
 .reasoning-part .reasoning-header-icon {
   font-size: 14px;
   opacity: 0.7;
-  color: var(--vscode-descriptionForeground, var(--vscode-editor-foreground));
+  color: var(--vscode-descriptionForeground, var(--webview-foreground));
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -62,7 +62,7 @@
   font-size: 11px;
   color: var(
     --vscode-descriptionForeground,
-    color-mix(in srgb, var(--vscode-editor-foreground) 75%, transparent)
+    color-mix(in srgb, var(--webview-foreground) 75%, transparent)
   );
   display: inline-flex;
   align-items: center;
@@ -75,7 +75,7 @@
   padding: 8px 12px 8px 24px;
   margin-left: 12px;
   margin-bottom: 4px;
-  border-left: 2px solid color-mix(in srgb, var(--vscode-editor-foreground) 10%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--webview-foreground) 10%, transparent);
 }
 
 .tool-part .tool-input,
@@ -101,7 +101,7 @@
   white-space: pre-wrap;
   background-color: var(
     --vscode-textCodeBlock-background,
-    color-mix(in srgb, var(--vscode-editor-foreground) 6%, var(--vscode-editor-background))
+    color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background))
   );
   padding: 8px;
   border-radius: 4px;
@@ -138,7 +138,7 @@
   white-space: pre-wrap;
   background-color: var(
     --vscode-textCodeBlock-background,
-    color-mix(in srgb, var(--vscode-editor-foreground) 6%, var(--vscode-editor-background))
+    color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background))
   );
   padding: 8px;
   border-radius: 4px;
@@ -171,7 +171,7 @@
 }
 
 .reasoning-part .reasoning-header:hover {
-  background-color: color-mix(in srgb, var(--vscode-editor-foreground) 8%, transparent);
+  background-color: color-mix(in srgb, var(--webview-foreground) 8%, transparent);
 }
 
 /* Inward indentation for expanded content */
@@ -179,7 +179,7 @@
   padding: 8px 12px 8px 24px;
   margin-left: 12px;
   margin-bottom: 4px;
-  border-left: 2px solid color-mix(in srgb, var(--vscode-editor-foreground) 10%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--webview-foreground) 10%, transparent);
   max-height: 300px;
   overflow-y: auto;
   opacity: 0.6;
@@ -227,7 +227,7 @@
   font-family: var(--vscode-editor-font-family, monospace);
   background-color: var(
     --vscode-textCodeBlock-background,
-    color-mix(in srgb, var(--vscode-editor-foreground) 8%, transparent)
+    color-mix(in srgb, var(--webview-foreground) 8%, transparent)
   );
   padding: 2px 4px;
   border-radius: 4px;
@@ -242,7 +242,7 @@
   overflow: hidden;
   background-color: var(
     --vscode-textCodeBlock-background,
-    color-mix(in srgb, var(--vscode-editor-foreground) 8%, transparent)
+    color-mix(in srgb, var(--webview-foreground) 8%, transparent)
   );
 }
 
@@ -253,7 +253,7 @@
   padding: 6px 12px;
   background-color: var(
     --vscode-textCodeBlock-background,
-    color-mix(in srgb, var(--vscode-editor-foreground) 8%, transparent)
+    color-mix(in srgb, var(--webview-foreground) 8%, transparent)
   );
   border-bottom: 1px solid var(--vscode-border-color);
 }
@@ -274,7 +274,7 @@ pre.code-block {
   font-size: 12px;
   background-color: var(
     --vscode-textCodeBlock-background,
-    color-mix(in srgb, var(--vscode-editor-foreground) 8%, transparent)
+    color-mix(in srgb, var(--webview-foreground) 8%, transparent)
   );
   line-height: 1.5;
 }
@@ -315,12 +315,12 @@ pre.code-block code {
 }
 
 .token.operator {
-  color: var(--vscode-editor-foreground, #d4d4d4);
+  color: var(--webview-foreground, #d4d4d4);
   opacity: 0.9;
 }
 
 .token.punctuation {
-  color: var(--vscode-editor-foreground, #d4d4d4);
+  color: var(--webview-foreground, #d4d4d4);
   opacity: 0.8;
 }
 
@@ -365,7 +365,7 @@ pre.code-block code {
   padding: 8px 12px;
   border: 1px solid var(--vscode-border-color);
   border-radius: 6px;
-  background-color: var(--vscode-editor-background);
+  background-color: var(--webview-background);
 }
 
 .file-part .file-icon {
@@ -413,7 +413,7 @@ pre.code-block code {
   width: 100%;
   font-size: 13px;
   line-height: 1.5;
-  color: var(--vscode-editor-foreground);
+  color: var(--webview-foreground);
 }
 
 .markdown-table th,
@@ -427,12 +427,12 @@ pre.code-block code {
   font-weight: 600;
   background-color: var(
     --vscode-textCodeBlock-background,
-    color-mix(in srgb, var(--vscode-editor-foreground) 8%, transparent)
+    color-mix(in srgb, var(--webview-foreground) 8%, transparent)
   );
 }
 
 .markdown-table tr:nth-child(even) {
-  background-color: color-mix(in srgb, var(--vscode-editor-foreground) 3%, transparent);
+  background-color: color-mix(in srgb, var(--webview-foreground) 3%, transparent);
 }
 
 .markdown-table td code {

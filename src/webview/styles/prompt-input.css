@@ -6,7 +6,7 @@
       --vscode-tab-border,
       var(--vscode-editorGroupHeader-tabsBorder, var(--vscode-border-color, #454545))
     );
-  background-color: var(--vscode-editor-background, #1e1e1e);
+  background-color: var(--webview-background, #1e1e1e);
 }
 
 .prompt-input-container {
@@ -169,7 +169,7 @@
 .popover-search-container {
   padding: 6px;
   border-bottom: 1px solid var(--vscode-border-color, #454545);
-  background-color: var(--vscode-editor-background, #1e1e1e);
+  background-color: var(--webview-background, #1e1e1e);
 }
 
 .popover-search-input {
@@ -236,7 +236,7 @@
 
 .popover-option:hover {
   background-color: var(--vscode-list-hoverBackground, #2a2d2e);
-  color: var(--vscode-list-hoverForeground, var(--vscode-editor-foreground, #ffffff));
+  color: var(--vscode-list-hoverForeground, var(--webview-foreground, #ffffff));
 }
 
 .popover-option.selected {

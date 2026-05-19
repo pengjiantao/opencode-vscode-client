@@ -163,7 +163,7 @@
 
 .select-option:hover {
   background-color: var(--vscode-list-hoverBackground, #2a2d2e);
-  color: var(--vscode-list-hoverForeground, var(--vscode-editor-foreground, #ffffff));
+  color: var(--vscode-list-hoverForeground, var(--webview-foreground, #ffffff));
 }
 
 .select-option.selected {
