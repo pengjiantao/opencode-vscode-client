@@ -94,16 +94,34 @@ export function MessageTurn({
     }
   };
 
+  const renderUserParts = () => {
+    const userParts = parts[userMessage.id];
+    if (!userParts) {
+      return <p>{getMessageText(userMessage)}</p>;
+    }
+
+    const nonSyntheticParts = userParts.filter((p) => !(p as { synthetic?: boolean }).synthetic);
+
+    const hasTextPart = nonSyntheticParts.some(
+      (p) => p.type === 'text' && p.metadata?.type !== 'pasted-text',
+    );
+    if (!hasTextPart) {
+      return nonSyntheticParts.map((part) => (
+        <PartRenderer key={part.id} part={part} allParts={userParts} />
+      ));
+    }
+
+    return nonSyntheticParts
+      .filter((p) => p.type === 'text' && p.metadata?.type !== 'pasted-text')
+      .map((part) => <PartRenderer key={part.id} part={part} allParts={userParts} />);
+  };
+
   const showActions = messagesToRender.length > 0 && !isGenerating;
 
   return (
     <div className="message-turn">
       <div className="user-message">
-        <div className="message-content">
-          {parts[userMessage.id]?.map((part) => <PartRenderer key={part.id} part={part} />) || (
-            <p>{getMessageText(userMessage)}</p>
-          )}
-        </div>
+        <div className="message-content">{renderUserParts()}</div>
       </div>
 
       {messagesToRender.map((msg) => (

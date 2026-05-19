@@ -1,0 +1,133 @@
+/* Premium, VS Code Fluent Design compliant Chip styling */
+
+.opencode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: transparent;
+  color: var(--vscode-textLink-foreground, #3794ff);
+  border: 1px solid transparent;
+  border-radius: 4px; /* sm layout radius */
+  padding: 3px 6px;
+  font-family: var(--vscode-font-family, system-ui, sans-serif);
+  font-size: calc(var(--vscode-font-size, 13px) - 2px); /* ~11px label-sm size */
+  line-height: 1.2;
+  user-select: none;
+  max-width: 180px;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease-in-out,
+    border-color 0.12s ease-in-out,
+    transform 0.12s ease-in-out;
+}
+
+.opencode-chip:hover {
+  background-color: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+  border-color: var(--vscode-focusBorder, #007acc);
+}
+
+.opencode-chip:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007acc);
+  outline-offset: -1px;
+}
+
+.chip-icon {
+  display: flex;
+  align-items: center;
+  color: var(--vscode-textLink-foreground, #3794ff);
+  font-size: 14px;
+}
+
+.chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.chip-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-left: 2px;
+  cursor: pointer;
+  color: var(--vscode-textLink-foreground, #3794ff);
+  opacity: 0.7;
+  border-radius: 2px;
+  width: 14px;
+  height: 14px;
+  transition:
+    color 0.12s ease-in-out,
+    opacity 0.12s ease-in-out,
+    background-color 0.12s ease-in-out;
+}
+
+.chip-remove-btn:hover {
+  color: var(--vscode-error-foreground, #f48771);
+  opacity: 1;
+  background-color: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+}
+
+/* Tooltip internal components styling */
+.tooltip-container {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.tooltip-meta {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground, #888888);
+}
+
+.tooltip-error {
+  font-size: 11px;
+  color: var(--vscode-error-foreground, #f48771);
+  margin-top: 4px;
+}
+
+.tooltip-img {
+  max-width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  border-radius: 4px;
+  display: block;
+  margin: 6px auto 0 auto;
+  border: 1px solid var(--vscode-editor-widget-border, #454545);
+  background-color: #2d2d2d;
+  background-image:
+    linear-gradient(45deg, #1d1d1d 25%, transparent 25%),
+    linear-gradient(-45deg, #1d1d1d 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1d1d1d 75%),
+    linear-gradient(-45deg, transparent 75%, #1d1d1d 75%);
+  background-size: 10px 10px;
+  background-position:
+    0 0,
+    0 5px,
+    5px -5px,
+    -5px 0px;
+}
+
+.tooltip-code {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  background-color: var(--vscode-editor-background, #1e1e1e);
+  border: 1px solid var(--vscode-editor-widget-border, #454545);
+  padding: 6px;
+  border-radius: 4px;
+  margin-top: 6px;
+  max-height: 140px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  text-align: left;
+  color: var(--vscode-editor-foreground, #cccccc);
+}
+
+.opencode-chip.inline-chip {
+  margin: 1px 2px;
+  vertical-align: middle;
+}

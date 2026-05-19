@@ -1,16 +1,28 @@
-import type { AssistantMessage, Message, SessionStatus } from '@opencode-ai/sdk/v2/client';
+/**
+ * @file Bottom prompt input bar featuring inline rich chips for files, images, and text snippets.
+ * Utilizes a contenteditable div to support inline attachments and DOM-traversal prompt serialization.
+ */
+
+import type { Part, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import React from 'react';
+import { useIPC } from '../hooks/useIPC';
 import { useSessionStore } from '../store/sessionStore';
 import '../styles/footer.css';
+import { getIconClass, getPromptData, getTooltipHtml } from '../utils/chipUtils';
 import { AgentSelector } from './AgentSelector';
-import { Codicon } from './Codicon';
 import { IconButton } from './IconButton';
 import { ModelSelector } from './ModelSelector';
+import { PromptInputFooter } from './PromptInputFooter';
 
+/** Props interface for PromptInput component */
 interface PromptInputProps {
-  onSubmit: (text: string) => void;
+  /** Callback to trigger on prompt submission */
+  onSubmit: (text: string, parts: Part[]) => void;
+  /** Callback to stop active generation */
   onAbort?: () => void;
+  /** Active session generation status */
   status?: SessionStatus;
+  /** Supported model models */
   models: Array<{
     id: string;
     name: string;
@@ -19,15 +31,21 @@ interface PromptInputProps {
     isConnected?: boolean;
     contextLimit?: number;
   }>;
+  /** List of primary agents */
   agents: Array<{ id: string; name: string }>;
+  /** Active model ID override */
   activeModel?: string;
+  /** Active agent ID override */
   activeAgent?: string;
+  /** Callback triggered on model selection change */
   onModelChange: (model: string) => void;
+  /** Callback triggered on agent selection change */
   onAgentChange: (agent: string) => void;
+  /** Disable input state */
   disabled?: boolean;
 }
 
-/** Bottom input bar with textarea, model/agent dropdowns, send/stop button, and status footer. */
+/** Bottom input bar with inline editable rich chips, selectors, and execution controls. */
 export function PromptInput({
   onSubmit,
   onAbort,
@@ -40,248 +58,26 @@ export function PromptInput({
   onAgentChange,
   disabled = false,
 }: PromptInputProps) {
-  const [text, setText] = React.useState('');
   const [isFocused, setIsFocused] = React.useState(false);
+  const [hasContent, setHasContent] = React.useState(false);
 
-  // Hybrid controlled/uncontrolled pattern:
-  // If controlled props (controlledModel / controlledAgent) are provided (e.g. from persisted App/globalState),
-  // they are prioritized. Otherwise, we fallback to local component state (localModel / localAgent) for backwards
-  // compatibility, component autonomy, and unit test isolation.
+  const fileInfos = useSessionStore((s) => s.fileInfos);
+  const { send } = useIPC(() => {});
+
   const [localModel, setLocalModel] = React.useState('');
   const [localAgent, setLocalAgent] = React.useState('');
 
   const selectedModel = controlledModel !== undefined ? controlledModel : localModel;
   const selectedAgent = controlledAgent !== undefined ? controlledAgent : localAgent;
 
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-
+  const editorRef = React.useRef<HTMLDivElement>(null);
   const isRunning = status?.type === 'busy' || status?.type === 'retry';
 
-  // Derive active model and agent (implicit first element when not selected yet)
   const activeModel = selectedModel || (models.length > 0 ? models[0].id : '');
   const activeAgent = selectedAgent || (agents.length > 0 ? agents[0].id : '');
 
-  // Select live status metadata and message logs from Zustand store
-  const workspaceName = useSessionStore((s) => s.workspaceName);
-  const lspServers = useSessionStore((s) => s.lspServers);
-  const mcpServers = useSessionStore((s) => s.mcpServers);
-  const skills = useSessionStore((s) => s.skills);
-  const plugins = useSessionStore((s) => s.plugins);
-  const extensionVersion = useSessionStore((s) => s.extensionVersion);
-
   const activeSessionID = useSessionStore((s) => s.activeSessionID);
-  const messages = useSessionStore((s) => s.messages);
 
-  // Derive cumulative cost and active context window utilization metrics
-  const sessionMessages = React.useMemo(() => {
-    return messages[activeSessionID || ''] || [];
-  }, [messages, activeSessionID]);
-
-  const isAssistantMessage = (msg: Message): msg is AssistantMessage => {
-    return msg.role === 'assistant';
-  };
-
-  const tokenTotal = React.useCallback((msg: Message) => {
-    if (!isAssistantMessage(msg) || !msg.tokens) return 0;
-    const t = msg.tokens;
-    return (
-      (t.input || 0) +
-      (t.output || 0) +
-      (t.reasoning || 0) +
-      (t.cache?.read || 0) +
-      (t.cache?.write || 0)
-    );
-  }, []);
-
-  const lastAssistantMsg = React.useMemo(() => {
-    for (let i = sessionMessages.length - 1; i >= 0; i--) {
-      const msg = sessionMessages[i];
-      if (!isAssistantMessage(msg)) continue;
-      return msg;
-    }
-    return null;
-  }, [sessionMessages]);
-
-  const totalCost = React.useMemo(() => {
-    return sessionMessages.reduce((sum, msg) => {
-      return sum + (isAssistantMessage(msg) ? msg.cost || 0 : 0);
-    }, 0);
-  }, [sessionMessages]);
-
-  const activeModelDetails = models.find((m) => m.id === activeModel);
-  const activeLimit = activeModelDetails?.contextLimit;
-
-  // Retrieve precise model-specific token context limit
-  const finalLimit = React.useMemo(() => {
-    if (lastAssistantMsg && isAssistantMessage(lastAssistantMsg)) {
-      const msgModelId = `${lastAssistantMsg.providerID}/${lastAssistantMsg.modelID}`;
-      const msgModelDetails = models.find((m) => m.id === msgModelId);
-      if (msgModelDetails && msgModelDetails.contextLimit) {
-        return msgModelDetails.contextLimit;
-      }
-    }
-    return activeLimit;
-  }, [lastAssistantMsg, activeLimit, models]);
-
-  const contextTotalTokens = lastAssistantMsg ? tokenTotal(lastAssistantMsg) : 0;
-  const contextPercentage =
-    finalLimit && contextTotalTokens > 0 ? Math.round((contextTotalTokens / finalLimit) * 100) : 0;
-
-  const escapeHtml = React.useCallback((str: string): string => {
-    return str.replace(/[&<>"']/g, (m) => {
-      switch (m) {
-        case '&':
-          return '&amp;';
-        case '<':
-          return '&lt;';
-        case '>':
-          return '&gt;';
-        case '"':
-          return '&quot;';
-        case "'":
-          return '&#39;';
-        default:
-          return m;
-      }
-    });
-  }, []);
-
-  // Compile rich HTML tooltips for mouse hover displays
-  const workspaceTooltip = React.useMemo(() => {
-    return `
-      <strong>Workspace Info</strong><br/>
-      <table>
-        <tr><td>Name:</td><td>${escapeHtml(workspaceName || 'No open folder')}</td></tr>
-        <tr><td>Session:</td><td>${escapeHtml(activeSessionID || 'None')}</td></tr>
-        ${plugins.length > 0 ? `<tr><td>Plugins:</td><td>${plugins.map(escapeHtml).join(', ')}</td></tr>` : ''}
-      </table>
-    `;
-  }, [workspaceName, activeSessionID, plugins, escapeHtml]);
-
-  const lspTooltip = React.useMemo(() => {
-    return `
-      <strong>Language Servers (LSP)</strong><br/>
-      ${
-        lspServers.length === 0
-          ? 'No language servers active.'
-          : `
-        <table>
-          ${lspServers
-            .map(
-              (lsp) => `
-            <tr>
-              <td>${escapeHtml(lsp.name)}:</td>
-              <td><span style="color: ${lsp.status === 'running' ? '#89d185' : '#cca700'}">${escapeHtml(lsp.status)}</span></td>
-            </tr>
-          `,
-            )
-            .join('')}
-        </table>
-      `
-      }
-    `;
-  }, [lspServers, escapeHtml]);
-
-  const mcpTooltip = React.useMemo(() => {
-    return `
-      <strong>Model Context Protocol (MCP)</strong><br/>
-      ${
-        mcpServers.length === 0
-          ? 'No MCP servers configured.'
-          : `
-        <table>
-          ${mcpServers
-            .map(
-              (mcp) => `
-            <tr>
-              <td>${escapeHtml(mcp.name)}:</td>
-              <td>
-                <span style="color: ${mcp.status === 'connected' || mcp.status === 'running' ? '#89d185' : '#f48771'}">
-                  ${escapeHtml(mcp.status)}
-                </span>
-                ${mcp.error ? `<br/><span style="font-size:10px;color:#f48771">${escapeHtml(mcp.error)}</span>` : ''}
-              </td>
-            </tr>
-          `,
-            )
-            .join('')}
-        </table>
-      `
-      }
-    `;
-  }, [mcpServers, escapeHtml]);
-
-  const skillsTooltip = React.useMemo(() => {
-    return `
-      <strong>Discovered Skills</strong><br/>
-      ${
-        skills.length === 0
-          ? 'No custom skills discovered.'
-          : `
-        <ul>
-          ${skills
-            .map(
-              (s) => `
-            <li>
-              <strong>${escapeHtml(s.name)}</strong>
-              ${s.description ? `<br/><span style="font-size: 11px; color: var(--vscode-descriptionForeground)">${escapeHtml(s.description)}</span>` : ''}
-            </li>
-          `,
-            )
-            .join('')}
-        </ul>
-      `
-      }
-    `;
-  }, [skills, escapeHtml]);
-
-  const versionTooltip = React.useMemo(() => {
-    return `
-      <strong>OpenCode Extension</strong><br/>
-      <table>
-        <tr><td>Version:</td><td>v${escapeHtml(extensionVersion)}</td></tr>
-        <tr><td>Publisher:</td><td>Google DeepMind</td></tr>
-        <tr><td>Core SDK:</td><td>@opencode-ai/sdk</td></tr>
-      </table>
-    `;
-  }, [extensionVersion, escapeHtml]);
-
-  const metricsTooltip = React.useMemo(() => {
-    return `
-      <strong>Context & Session Metrics</strong><br/>
-      ${
-        lastAssistantMsg
-          ? `
-        <table>
-          <tr><td>Input Tokens:</td><td>${(lastAssistantMsg.tokens?.input || 0).toLocaleString()}</td></tr>
-          <tr><td>Output Tokens:</td><td>${(lastAssistantMsg.tokens?.output || 0).toLocaleString()}</td></tr>
-          <tr><td>Reasoning:</td><td>${(lastAssistantMsg.tokens?.reasoning || 0).toLocaleString()}</td></tr>
-          <tr><td>Cache Read:</td><td>${(lastAssistantMsg.tokens?.cache?.read || 0).toLocaleString()}</td></tr>
-          <tr><td>Cache Write:</td><td>${(lastAssistantMsg.tokens?.cache?.write || 0).toLocaleString()}</td></tr>
-          <tr style="border-top: 1px solid var(--vscode-editor-widget-border)">
-            <td><strong>Total Context:</strong></td>
-            <td><strong>${contextTotalTokens.toLocaleString()}</strong></td>
-          </tr>
-          <tr><td>Model Limit:</td><td>${finalLimit ? finalLimit.toLocaleString() : 'N/A'}</td></tr>
-          <tr><td>Window Usage:</td><td>${contextPercentage}%</td></tr>
-          <tr style="border-top: 1px dashed var(--vscode-editor-widget-border)">
-            <td><strong>Cumulative Cost:</strong></td>
-            <td><strong style="color: var(--vscode-statusBarItem-warningForeground, #e2c08d)">$${totalCost.toFixed(4)}</strong></td>
-          </tr>
-        </table>
-      `
-          : `
-        <p>No assistant interactions in this session yet.</p>
-        <table>
-          <tr><td>Model Limit:</td><td>${finalLimit ? finalLimit.toLocaleString() : 'N/A'}</td></tr>
-          <tr><td>Cumulative Cost:</td><td><strong>$${totalCost.toFixed(4)}</strong></td></tr>
-        </table>
-      `
-      }
-    `;
-  }, [lastAssistantMsg, finalLimit, contextTotalTokens, contextPercentage, totalCost]);
-
-  // Notify extension of first model/agent default once loaded
   React.useEffect(() => {
     if (models.length > 0 && !selectedModel) {
       onModelChange(models[0].id);
@@ -294,27 +90,313 @@ export function PromptInput({
     }
   }, [agents, selectedAgent, onAgentChange]);
 
-  // Dynamic textarea height adjustment up to 10 lines (200px)
+  // Synchronously update tooltip custom titles when async file queries settle
   React.useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      const scrollHeight = textarea.scrollHeight;
-      // 200px max-height limit (10 lines * 20px)
-      textarea.style.height = `${Math.min(scrollHeight, 200)}px`;
+    if (editorRef.current) {
+      const fileChips = editorRef.current.querySelectorAll('.opencode-chip[data-chip-type="file"]');
+      fileChips.forEach((chipEl) => {
+        const path = chipEl.getAttribute('data-chip-path');
+        if (path) {
+          const cached = fileInfos[path];
+          if (cached) {
+            const chipData = {
+              type: 'file' as const,
+              path,
+              filename: chipEl.getAttribute('data-chip-filename') || undefined,
+              text: chipEl.getAttribute('data-chip-text') || undefined,
+              size: Number(chipEl.getAttribute('data-chip-size') || '0'),
+              mime: chipEl.getAttribute('data-chip-mime') || undefined,
+              isWorkspace: chipEl.getAttribute('data-chip-is-workspace') === 'true',
+            };
+            const tooltipHtml = getTooltipHtml(chipData, fileInfos);
+            chipEl.setAttribute('data-custom-title', tooltipHtml);
+          }
+        }
+      });
     }
-  }, [text]);
+  }, [fileInfos]);
+
+  const handleInput = React.useCallback(() => {
+    const { text } = getPromptData(editorRef.current, activeSessionID, fileInfos);
+    setHasContent(text.trim().length > 0);
+  }, [activeSessionID, fileInfos]);
+
+  const insertChip = React.useCallback(
+    (chip: {
+      id: string;
+      type: 'file' | 'image' | 'text';
+      filename?: string;
+      path?: string;
+      text?: string;
+      size?: number;
+      mime?: string;
+      isWorkspace?: boolean;
+      dataUrl?: string;
+      linesCount?: number;
+    }) => {
+      const selection = window.getSelection();
+      let range: Range | null = null;
+      if (selection && selection.rangeCount > 0) {
+        const potentialRange = selection.getRangeAt(0);
+        if (
+          editorRef.current &&
+          editorRef.current.contains(potentialRange.commonAncestorContainer)
+        ) {
+          range = potentialRange;
+        }
+      }
+
+      const chipNode = document.createElement('span');
+      chipNode.className = `opencode-chip ${chip.type}-chip inline-chip`;
+      chipNode.contentEditable = 'false';
+      chipNode.setAttribute('data-chip-id', chip.id);
+      chipNode.setAttribute('data-chip-type', chip.type);
+      if (chip.filename) chipNode.setAttribute('data-chip-filename', chip.filename);
+      if (chip.path) chipNode.setAttribute('data-chip-path', chip.path);
+      if (chip.text) chipNode.setAttribute('data-chip-text', chip.text);
+      if (chip.size) chipNode.setAttribute('data-chip-size', String(chip.size));
+      if (chip.mime) chipNode.setAttribute('data-chip-mime', chip.mime);
+      if (chip.isWorkspace) chipNode.setAttribute('data-chip-is-workspace', 'true');
+      if (chip.dataUrl) chipNode.setAttribute('data-chip-data-url', chip.dataUrl);
+      if (chip.linesCount) chipNode.setAttribute('data-chip-lines-count', String(chip.linesCount));
+
+      if (chip.type === 'file' && chip.path) {
+        send({ type: 'file:query', path: chip.path });
+      }
+
+      const iconClass = getIconClass(chip.type, chip.mime);
+      const displayLabel =
+        chip.type === 'text' ? `Pasted ${chip.linesCount} Lines` : chip.filename || 'file';
+
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'chip-icon';
+      const iconI = document.createElement('i');
+      iconI.className = `codicon codicon-${iconClass}`;
+      iconSpan.appendChild(iconI);
+      chipNode.appendChild(iconSpan);
+
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'chip-label';
+      labelSpan.textContent = displayLabel;
+      chipNode.appendChild(labelSpan);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'chip-remove-btn';
+      removeBtn.setAttribute('aria-label', 'Remove attachment');
+      const closeI = document.createElement('i');
+      closeI.className = 'codicon codicon-close';
+      removeBtn.appendChild(closeI);
+      chipNode.appendChild(removeBtn);
+
+      const tooltipHtml = getTooltipHtml(chip, fileInfos);
+      chipNode.setAttribute('data-custom-title', tooltipHtml);
+
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        chipNode.remove();
+        handleInput();
+      });
+
+      if (editorRef.current) {
+        editorRef.current.focus();
+      }
+
+      if (range) {
+        range.deleteContents();
+        range.insertNode(chipNode);
+
+        const spaceNode = document.createTextNode(' ');
+        chipNode.parentNode?.insertBefore(spaceNode, chipNode.nextSibling);
+
+        const newRange = document.createRange();
+        newRange.setStart(spaceNode, 1);
+        newRange.setEnd(spaceNode, 1);
+        selection?.removeAllRanges();
+        selection?.addRange(newRange);
+      } else if (editorRef.current) {
+        editorRef.current.appendChild(chipNode);
+        const spaceNode = document.createTextNode(' ');
+        editorRef.current.appendChild(spaceNode);
+
+        const newRange = document.createRange();
+        newRange.setStart(spaceNode, 1);
+        newRange.setEnd(spaceNode, 1);
+        selection?.removeAllRanges();
+        selection?.addRange(newRange);
+      }
+
+      handleInput();
+    },
+    [fileInfos, send, handleInput],
+  );
 
   const handleSubmit = () => {
     if (isRunning) {
       onAbort?.();
-    } else if (text.trim()) {
-      onSubmit(text.trim());
-      setText('');
+    } else {
+      const { text: promptText, parts: attachmentParts } = getPromptData(
+        editorRef.current,
+        activeSessionID,
+        fileInfos,
+      );
+      const trimmedText = promptText.trim();
+      if (trimmedText || attachmentParts.length > 0) {
+        const finalParts: Part[] = [];
+        if (trimmedText) {
+          finalParts.push({
+            type: 'text',
+            id: `temp-text-${Date.now()}`,
+            sessionID: activeSessionID || 'temp',
+            messageID: 'temp',
+            text: trimmedText,
+          } as unknown as Part);
+        }
+        finalParts.push(...attachmentParts);
+
+        onSubmit(trimmedText, finalParts);
+
+        if (editorRef.current) {
+          editorRef.current.innerHTML = '';
+        }
+        setHasContent(false);
+      }
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const pastedText = e.clipboardData.getData('text/plain')?.trim();
+    const pathPattern = /^(file:\/\/|\/|[a-zA-Z]:\\).+/;
+    const isPastedPath = pastedText && pathPattern.test(pastedText);
+
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      const files = Array.from(e.clipboardData.files);
+      let handled = false;
+
+      for (const file of files) {
+        if (file.type.startsWith('image/')) {
+          e.preventDefault();
+          handled = true;
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            insertChip({
+              id: `img-${Math.random().toString(36).substring(7)}`,
+              type: 'image',
+              filename: file.name || 'Pasted Image',
+              size: file.size,
+              mime: file.type,
+              dataUrl,
+            });
+          };
+          reader.readAsDataURL(file);
+        } else {
+          const resolvedPath =
+            (file as unknown as { path?: string }).path || (isPastedPath ? pastedText : undefined);
+          if (resolvedPath) {
+            e.preventDefault();
+            handled = true;
+            const isImage =
+              file.type?.startsWith('image/') ||
+              resolvedPath.toLowerCase().endsWith('.png') ||
+              resolvedPath.toLowerCase().endsWith('.jpg') ||
+              resolvedPath.toLowerCase().endsWith('.jpeg') ||
+              resolvedPath.toLowerCase().endsWith('.gif') ||
+              resolvedPath.toLowerCase().endsWith('.webp');
+            const isPdf =
+              file.type === 'application/pdf' || resolvedPath.toLowerCase().endsWith('.pdf');
+            const resolvedMime = isImage
+              ? file.type || 'image/png'
+              : isPdf
+                ? 'application/pdf'
+                : 'text/plain';
+            insertChip({
+              id: `file-path-${Math.random().toString(36).substring(7)}`,
+              type: 'file',
+              path: resolvedPath,
+              filename: file.name || resolvedPath.split(/[\\/]/).pop() || 'file',
+              size: file.size,
+              mime: resolvedMime,
+            });
+          } else {
+            e.preventDefault();
+            handled = true;
+            const reader = new FileReader();
+            reader.onload = () => {
+              const textContent = reader.result as string;
+              const linesCount = textContent.split('\n').length;
+              const isImage =
+                file.type?.startsWith('image/') ||
+                file.name.toLowerCase().endsWith('.png') ||
+                file.name.toLowerCase().endsWith('.jpg') ||
+                file.name.toLowerCase().endsWith('.jpeg') ||
+                file.name.toLowerCase().endsWith('.gif') ||
+                file.name.toLowerCase().endsWith('.webp');
+              const isPdf =
+                file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+              const resolvedMime = isImage
+                ? file.type || 'image/png'
+                : isPdf
+                  ? 'application/pdf'
+                  : 'text/plain';
+              insertChip({
+                id: `file-${Math.random().toString(36).substring(7)}`,
+                type: 'file',
+                filename: file.name,
+                size: file.size,
+                mime: resolvedMime,
+                text: textContent,
+                linesCount,
+              });
+            };
+            reader.readAsText(file);
+          }
+        }
+      }
+
+      if (handled) return;
+    }
+
+    if (pastedText) {
+      if (isPastedPath) {
+        e.preventDefault();
+        const isImage =
+          pastedText.toLowerCase().endsWith('.png') ||
+          pastedText.toLowerCase().endsWith('.jpg') ||
+          pastedText.toLowerCase().endsWith('.jpeg') ||
+          pastedText.toLowerCase().endsWith('.gif') ||
+          pastedText.toLowerCase().endsWith('.webp');
+        const isPdf = pastedText.toLowerCase().endsWith('.pdf');
+        const resolvedMime = isImage ? 'image/png' : isPdf ? 'application/pdf' : 'text/plain';
+        insertChip({
+          id: `file-path-${Math.random().toString(36).substring(7)}`,
+          type: 'file',
+          path: pastedText,
+          filename: pastedText.split(/[\\/]/).pop() || 'file',
+          mime: resolvedMime,
+        });
+        return;
+      }
+
+      if (pastedText.includes('\n') || pastedText.includes('\r')) {
+        e.preventDefault();
+        const linesCount = pastedText.split(/\r?\n/).length;
+        insertChip({
+          id: `text-${Math.random().toString(36).substring(7)}`,
+          type: 'text',
+          filename: `Pasted ${linesCount} Lines`,
+          text: pastedText,
+          linesCount,
+        });
+        return;
+      }
+
+      e.preventDefault();
+      document.execCommand('insertText', false, pastedText);
+      handleInput();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -324,15 +406,17 @@ export function PromptInput({
   return (
     <div className="prompt-input">
       <div className={`prompt-input-container ${isFocused ? 'focused' : ''}`}>
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+        <div
+          ref={editorRef}
+          className="prompt-input-editor"
+          contentEditable={!disabled}
+          onInput={handleInput}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          placeholder="Type a message... (Shift+Enter for new line)"
-          disabled={disabled}
+          {...{ placeholder: 'Type a message... (Shift+Enter for new line)' }}
+          data-testid="prompt-editor"
         />
 
         <div className="prompt-input-footer">
@@ -360,121 +444,25 @@ export function PromptInput({
             data-custom-title={isRunning ? 'Stop' : 'Send'}
             style={{
               display: 'inline-flex',
-              cursor: disabled || (!isRunning && !text.trim()) ? 'not-allowed' : 'default',
+              cursor: disabled || (!isRunning && !hasContent) ? 'not-allowed' : 'default',
             }}
           >
             <IconButton
               name={isRunning ? 'debug-stop' : 'send'}
               onClick={handleSubmit}
-              disabled={disabled || (!isRunning && !text.trim())}
+              disabled={disabled || (!isRunning && !hasContent)}
               title={isRunning ? 'Stop' : 'Send'}
               className={isRunning ? 'stop-btn' : 'send-btn'}
               size="medium"
               style={{
-                pointerEvents: disabled || (!isRunning && !text.trim()) ? 'none' : 'auto',
+                pointerEvents: disabled || (!isRunning && !hasContent) ? 'none' : 'auto',
               }}
             />
           </span>
         </div>
       </div>
 
-      <div className="prompt-input-sub-footer">
-        <div className="sub-footer-left">
-          <div
-            className="metadata-item workspace"
-            data-custom-title={workspaceTooltip}
-            data-testid="footer-workspace"
-          >
-            <Codicon name="folder" className="metadata-icon" />
-            <span>{workspaceName || 'No Workspace'}</span>
-          </div>
-
-          <div
-            className="metadata-item lsp"
-            data-custom-title={lspTooltip}
-            data-testid="footer-lsp"
-          >
-            <Codicon name="combine" className="metadata-icon" />
-            <span>
-              <span className="metadata-label">LSP: </span>
-              {lspServers.length}
-            </span>
-          </div>
-
-          <div
-            className="metadata-item mcp"
-            data-custom-title={mcpTooltip}
-            data-testid="footer-mcp"
-          >
-            <Codicon name="plug" className="metadata-icon" />
-            <span>
-              <span className="metadata-label">MCP: </span>
-              {mcpServers.length}
-            </span>
-          </div>
-
-          <div
-            className="metadata-item skills"
-            data-custom-title={skillsTooltip}
-            data-testid="footer-skills"
-          >
-            <Codicon name="workspace-trusted" className="metadata-icon" />
-            <span>
-              <span className="metadata-label">Skills: </span>
-              {skills.length}
-            </span>
-          </div>
-
-          <div
-            className="metadata-item version"
-            data-custom-title={versionTooltip}
-            data-testid="footer-version"
-          >
-            <Codicon name="info" className="metadata-icon" />
-            <span>
-              <span className="metadata-label">v</span>
-              {extensionVersion}
-            </span>
-          </div>
-        </div>
-
-        <div className="sub-footer-right">
-          <div
-            className={`metadata-item percentage ${contextPercentage > 80 ? 'warning' : ''}`}
-            data-custom-title={metricsTooltip}
-            data-testid="footer-context"
-          >
-            <Codicon name="graph" className="metadata-icon" />
-            <span>
-              {contextTotalTokens > 0 ? (
-                <>
-                  <span className="context-tokens-full">
-                    {contextTotalTokens.toLocaleString()} /{' '}
-                    {(finalLimit || 0).toLocaleString()}{' '}
-                  </span>
-                  <span>({contextPercentage}%)</span>
-                </>
-              ) : (
-                <>
-                  <span className="context-tokens-full">
-                    0 / {(finalLimit || 0).toLocaleString()}{' '}
-                  </span>
-                  <span>(0%)</span>
-                </>
-              )}
-            </span>
-          </div>
-
-          <div
-            className="metadata-item cost"
-            data-custom-title={metricsTooltip}
-            data-testid="footer-cost"
-          >
-            <Codicon name="credit-card" className="metadata-icon" />
-            <span>${totalCost.toFixed(3)}</span>
-          </div>
-        </div>
-      </div>
+      <PromptInputFooter models={models} activeModel={activeModel} />
     </div>
   );
 }

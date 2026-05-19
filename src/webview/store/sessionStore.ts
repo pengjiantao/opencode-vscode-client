@@ -55,6 +55,15 @@ interface SessionStore {
   setSkills: (skills: SkillInfo[]) => void;
   setPlugins: (plugins: string[]) => void;
   setExtensionVersion: (version: string) => void;
+
+  fileInfos: Record<
+    string,
+    { exists: boolean; size: number; content?: string; isWorkspace: boolean }
+  >;
+  setFileInfo: (
+    path: string,
+    info: { exists: boolean; size: number; content?: string; isWorkspace: boolean },
+  ) => void;
 }
 
 /** Zustand store for all session-related state in the webview. */
@@ -242,4 +251,13 @@ export const useSessionStore = create<SessionStore>((set) => ({
   setSkills: (skills) => set({ skills }),
   setPlugins: (plugins) => set({ plugins }),
   setExtensionVersion: (extensionVersion) => set({ extensionVersion }),
+
+  fileInfos: {},
+  setFileInfo: (path, info) =>
+    set((state) => ({
+      fileInfos: {
+        ...state.fileInfos,
+        [path]: info,
+      },
+    })),
 }));

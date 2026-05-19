@@ -19,6 +19,7 @@ import type { SDKClient } from './sdk-client';
 import { createSDKClient } from './sdk-client-impl';
 import { SessionManager } from './session-manager';
 import type { ExtToWebview } from './types';
+import { registerFileHandlers } from './utils/fileHandlers';
 import { OpencodeSidebarViewProvider } from './webview-provider';
 
 let sdk: SDKClient;
@@ -350,31 +351,29 @@ export async function activate(context: ExtensionContext): Promise<void> {
     });
 
     ipc.on('prompt:send', (msg) => {
-      const { text } = msg as { text: string };
+      const { text, parts } = msg as { text?: string; parts?: Part[] };
       const activeID = sessionManager.activeSessionID;
       if (!activeID) {
         ipc.send({ type: 'error', message: 'No active session' });
         return;
       }
-      sessionManager
-        .sendPrompt(
-          activeID,
-          [
-            {
-              type: 'text',
-              id: 'temp',
-              sessionID: activeID,
-              messageID: 'temp',
-              text,
-            } as unknown as Part,
-          ],
-          activeModel,
-          activeAgent,
-        )
-        .catch((err) => {
-          ipc.send({ type: 'error', message: (err as Error).message });
-        });
+
+      const promptParts = parts || [
+        {
+          type: 'text',
+          id: 'temp',
+          sessionID: activeID,
+          messageID: 'temp',
+          text: text || '',
+        } as unknown as Part,
+      ];
+
+      sessionManager.sendPrompt(activeID, promptParts, activeModel, activeAgent).catch((err) => {
+        ipc.send({ type: 'error', message: (err as Error).message });
+      });
     });
+
+    registerFileHandlers(ipc);
 
     ipc.on('prompt:abort', (msg) => {
       const { sessionID } = msg as { sessionID: string };

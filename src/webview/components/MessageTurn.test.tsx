@@ -52,6 +52,35 @@ describe('MessageTurn', () => {
     expect(screen.getByText('Hello user message part!')).toBeInTheDocument();
   });
 
+  it('filters out synthetic user parts to avoid rendering file read logs or contents', () => {
+    const userMsg = createMockUserMessage();
+    const originalTextPart = createMockTextPart('User prompt question');
+    originalTextPart.messageID = userMsg.id;
+
+    const syntheticPart = createMockTextPart('Called the Read tool with the following input...');
+    syntheticPart.id = 'synthetic-1';
+    syntheticPart.messageID = userMsg.id;
+    syntheticPart.synthetic = true;
+
+    const fileContentPart = createMockTextPart('Changelog content...');
+    fileContentPart.id = 'synthetic-2';
+    fileContentPart.messageID = userMsg.id;
+    fileContentPart.synthetic = true;
+
+    render(
+      <MessageTurn
+        userMessage={userMsg}
+        parts={{ [userMsg.id]: [originalTextPart, syntheticPart, fileContentPart] }}
+      />,
+    );
+
+    expect(screen.getByText('User prompt question')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Called the Read tool with the following input...'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Changelog content...')).not.toBeInTheDocument();
+  });
+
   it('renders assistant message in assistant-message container without role title', () => {
     const userMsg = createMockUserMessage();
     const assistantMsg = createMockAssistantMessage();

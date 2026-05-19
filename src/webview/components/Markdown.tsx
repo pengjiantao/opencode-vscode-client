@@ -1,20 +1,27 @@
 /**
  * @file Robust, lightweight, streaming-safe Markdown component with professional PrismJS code syntax highlighting.
  * Renders bold, italic, code blocks, lists, headings, and inline code natively.
+ * Also parses and renders custom inline attachment chips.
  */
 
+import type { Part } from '@opencode-ai/sdk/v2/client';
 import React from 'react';
+import { parseFileUrl } from '../utils/chipUtils';
+import { Chip } from './Chip';
 import { CodeBlock } from './CodeBlock';
 
 interface MarkdownProps {
   /** The markdown text to parse and render. */
   text: string;
+  /** Optional message parts for resolving inline attachment chips. */
+  allParts?: Part[];
 }
 
-/** Parses inline markdown markup (bold, italic, inline code, and links). */
-function renderInline(text: string): React.ReactNode[] {
+/** Parses inline markdown markup (bold, italic, inline code, links, and inline chips). */
+function renderInline(text: string, allParts?: Part[]): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
-  const regex = /(\*\*(.*?)\*\*)|(\*(.*?)\*)|(`(.*?)`)|(\[(.*?)\]\((.*?)\))/g;
+  const regex =
+    /(\*\*(.*?)\*\*)|(\*(.*?)\*)|(`(.*?)`)|(\[(.*?)\]\((.*?)\))|(\[(File|Text|Image):\s*(.*?)\])/g;
   let match;
   let lastIndex = 0;
   let keyIdx = 0;
@@ -35,6 +42,9 @@ function renderInline(text: string): React.ReactNode[] {
       linkFull,
       linkText,
       linkUrl,
+      chipFull,
+      chipType,
+      chipName,
     ] = match;
 
     if (boldFull) {
@@ -55,6 +65,89 @@ function renderInline(text: string): React.ReactNode[] {
           {linkText}
         </a>,
       );
+    } else if (chipFull) {
+      const matchedPart = allParts?.find((p) => {
+        if (chipType === 'File') {
+          return p.type === 'file' && p.filename === chipName;
+        } else if (chipType === 'Text') {
+          return (
+            p.type === 'text' &&
+            p.metadata?.type === 'pasted-text' &&
+            p.metadata?.filename === chipName
+          );
+        } else if (chipType === 'Image') {
+          return (
+            p.type === 'file' &&
+            p.filename === chipName &&
+            (p.mime?.startsWith('image/') || p.url?.startsWith('data:image/'))
+          );
+        }
+        return false;
+      });
+
+      let rendered = false;
+      if (matchedPart) {
+        if (chipType === 'Text' && matchedPart.type === 'text') {
+          rendered = true;
+          const meta = matchedPart.metadata as
+            | { filename?: string; linesCount?: number }
+            | undefined;
+          parts.push(
+            <span
+              key={`chip-${keyIdx++}`}
+              className="opencode-chip-inline-wrapper"
+              style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
+            >
+              <Chip
+                type="text"
+                filename={meta?.filename || chipName}
+                text={matchedPart.text}
+                linesCount={meta?.linesCount}
+              />
+            </span>,
+          );
+        } else if (matchedPart.type === 'file') {
+          rendered = true;
+          const isImage =
+            chipType === 'Image' ||
+            matchedPart.mime?.startsWith('image/') ||
+            matchedPart.url?.startsWith('data:image/');
+          const sourcePath =
+            matchedPart.source &&
+            (matchedPart.source.type === 'file' || matchedPart.source.type === 'symbol')
+              ? matchedPart.source.path
+              : undefined;
+          let resolvedPath: string | undefined = sourcePath;
+          let decodedText: string | undefined;
+          const url = matchedPart.url;
+
+          if (!isImage && url) {
+            const parsed = parseFileUrl(url, matchedPart.mime);
+            resolvedPath = resolvedPath || parsed.path;
+            decodedText = parsed.text;
+          }
+
+          parts.push(
+            <span
+              key={`chip-${keyIdx++}`}
+              className="opencode-chip-inline-wrapper"
+              style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
+            >
+              <Chip
+                type={isImage ? 'image' : 'file'}
+                filename={matchedPart.filename}
+                path={resolvedPath}
+                mime={matchedPart.mime}
+                dataUrl={isImage ? url : undefined}
+                text={decodedText}
+              />
+            </span>,
+          );
+        }
+      }
+      if (!rendered) {
+        parts.push(chipFull);
+      }
     }
 
     lastIndex = regex.lastIndex;
@@ -221,7 +314,7 @@ function parseAlignments(line: string): ('left' | 'center' | 'right' | null)[] {
 }
 
 /** Renders standard markdown document elements (headers, lists, block codes, paragraphs). */
-export function Markdown({ text }: MarkdownProps) {
+export function Markdown({ text, allParts }: MarkdownProps) {
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
   let currentCodeBlock: { lang: string; lines: string[] } | null = null;
@@ -236,7 +329,7 @@ export function Markdown({ text }: MarkdownProps) {
   const flushParagraph = () => {
     if (currentParagraphLines.length > 0) {
       const pText = currentParagraphLines.join(' ');
-      elements.push(<p key={`p-${elements.length}`}>{renderInline(pText)}</p>);
+      elements.push(<p key={`p-${elements.length}`}>{renderInline(pText, allParts)}</p>);
       currentParagraphLines = [];
     }
   };
@@ -267,7 +360,7 @@ export function Markdown({ text }: MarkdownProps) {
                   const align = alignments[idx] || undefined;
                   return (
                     <th key={idx} style={{ textAlign: align }}>
-                      {renderInline(header)}
+                      {renderInline(header, allParts)}
                     </th>
                   );
                 })}
@@ -281,7 +374,7 @@ export function Markdown({ text }: MarkdownProps) {
                       const align = alignments[cellIdx] || undefined;
                       return (
                         <td key={cellIdx} style={{ textAlign: align }}>
-                          {renderInline(cell)}
+                          {renderInline(cell, allParts)}
                         </td>
                       );
                     })}
@@ -359,7 +452,9 @@ export function Markdown({ text }: MarkdownProps) {
       const level = headingMatch[1].length;
       const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
       elements.push(
-        <HeadingTag key={`h-${elements.length}`}>{renderInline(headingMatch[2])}</HeadingTag>,
+        <HeadingTag key={`h-${elements.length}`}>
+          {renderInline(headingMatch[2], allParts)}
+        </HeadingTag>,
       );
       continue;
     }
@@ -379,7 +474,7 @@ export function Markdown({ text }: MarkdownProps) {
         flushList();
         currentList = { ordered: isOrdered, items: [] };
       }
-      currentList.items.push(renderInline(content));
+      currentList.items.push(renderInline(content, allParts));
       continue;
     }
 

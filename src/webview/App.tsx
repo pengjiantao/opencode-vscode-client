@@ -3,7 +3,7 @@
  * Manages IPC message routing, session state, and renders the complete UI.
  */
 
-import type { Session } from '@opencode-ai/sdk/v2/client';
+import type { Part } from '@opencode-ai/sdk/v2/client';
 import { useEffect, useState } from 'react';
 import type { ExtToWebview } from '../shared/types';
 import { ChatView } from './components/ChatView';
@@ -63,6 +63,7 @@ export function App() {
   const setSkills = useSessionStore((s) => s.setSkills);
   const setPlugins = useSessionStore((s) => s.setPlugins);
   const setExtensionVersion = useSessionStore((s) => s.setExtensionVersion);
+  const setFileInfo = useSessionStore((s) => s.setFileInfo);
 
   const { send } = useIPC(() => {});
   useEvents();
@@ -74,7 +75,7 @@ export function App() {
 
       switch (message.type) {
         case 'session:created':
-          addSession(message.session as Session);
+          addSession(message.session);
           break;
         case 'session:switched':
           setActiveSession(message.sessionID);
@@ -83,7 +84,7 @@ export function App() {
           removeSession(message.sessionID);
           break;
         case 'session:updated':
-          updateSession(message.session as Session);
+          updateSession(message.session);
           break;
         case 'session:deleted':
           removeSession(message.sessionID);
@@ -100,6 +101,14 @@ export function App() {
         case 'settings:open':
           setShowSettings(true);
           break;
+        case 'file:query-response':
+          setFileInfo(message.path, {
+            exists: message.exists,
+            size: message.size,
+            content: message.content,
+            isWorkspace: message.isWorkspace,
+          });
+          break;
         case 'metadata:sync':
           setWorkspaceName(message.workspaceName);
           setLspServers(message.lspServers);
@@ -112,7 +121,7 @@ export function App() {
           console.error('Server error:', message.message);
           break;
         case 'init':
-          setSessions(message.sessions as Session[]);
+          setSessions(message.sessions);
           if (message.activeModel) {
             setActiveModel(message.activeModel);
           }
@@ -138,6 +147,7 @@ export function App() {
     setSkills,
     setPlugins,
     setExtensionVersion,
+    setFileInfo,
   ]);
 
   const handleCreateSession = () => {
@@ -156,10 +166,12 @@ export function App() {
     send({ type: 'session:close-all' } as never);
   };
 
-  const handleSubmitPrompt = (text: string) => {
+  const handleSubmitPrompt = (text: string, parts?: Part[]) => {
     console.log(
       '[Webview] handleSubmitPrompt called with text:',
       text,
+      'parts:',
+      parts,
       'activeSessionID:',
       activeSessionID,
     );
@@ -168,7 +180,7 @@ export function App() {
       return;
     }
     console.log('[Webview] posting prompt:send to extension host');
-    send({ type: 'prompt:send', text } as never);
+    send({ type: 'prompt:send', text, parts } as never);
   };
 
   const handleModelChange = (model: string) => {

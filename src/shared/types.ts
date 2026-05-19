@@ -3,7 +3,7 @@
  * Defines the IPC message protocol between the two sides.
  */
 
-import type { Event, Message, Part } from '@opencode-ai/sdk/v2/client';
+import type { Event, Message, Part, Session } from '@opencode-ai/sdk/v2/client';
 
 export type { Event };
 
@@ -27,14 +27,14 @@ export interface SkillInfo {
 
 /** Messages sent from the extension host to the webview. */
 export type ExtToWebview =
-  | { type: 'session:created'; session: unknown }
+  | { type: 'session:created'; session: Session }
   | { type: 'session:switched'; sessionID: string }
   | { type: 'session:archived'; sessionID: string }
-  | { type: 'session:updated'; session: unknown }
+  | { type: 'session:updated'; session: Session }
   | { type: 'session:deleted'; sessionID: string }
   | { type: 'event:received'; event: Event }
   | { type: 'error'; message: string }
-  | { type: 'init'; sessions: unknown[]; activeModel?: string; activeAgent?: string }
+  | { type: 'init'; sessions: Session[]; activeModel?: string; activeAgent?: string }
   | { type: 'settings:open' }
   | {
       type: 'models:list';
@@ -53,6 +53,15 @@ export type ExtToWebview =
     }
   | { type: 'messages:list'; sessionID: string; messages: Message[]; parts: Part[] }
   | {
+      type: 'file:query-response';
+      path: string;
+      exists: boolean;
+      filename: string;
+      size: number;
+      content?: string;
+      isWorkspace: boolean;
+    }
+  | {
       type: 'metadata:sync';
       workspaceName: string | null;
       lspServers: LspServerInfo[];
@@ -70,11 +79,13 @@ export type WebviewToExt =
   | { type: 'session:close'; sessionID: string }
   | { type: 'session:close-all' }
   | { type: 'session:title'; sessionID: string; title: string }
-  | { type: 'prompt:send'; text: string }
+  | { type: 'prompt:send'; text?: string; parts?: Part[] }
   | { type: 'prompt:abort'; sessionID: string }
   | { type: 'model:switch'; model: string }
   | { type: 'agent:switch'; agent: string }
   | { type: 'permission:reply'; permissionID: string; allow: boolean }
   | { type: 'sessions:select-history' }
+  | { type: 'file:open'; path: string }
+  | { type: 'file:query'; path: string }
   | { type: 'init' }
   | { type: 'pong' };

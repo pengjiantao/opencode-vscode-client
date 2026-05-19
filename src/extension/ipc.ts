@@ -7,7 +7,7 @@ import type { WebviewPanel, WebviewView } from 'vscode';
 import type { ExtToWebview, WebviewToExt } from './types';
 
 /** Handler type for incoming webview-to-extension messages. */
-export type MessageHandler = (message: WebviewToExt) => void;
+export type MessageHandler = (message: WebviewToExt) => void | Promise<void>;
 
 /** Manages message passing between extension host and webview panel. */
 export class IPCBridge {
@@ -21,7 +21,7 @@ export class IPCBridge {
     this.panel.webview.onDidReceiveMessage((message: WebviewToExt) => {
       const handler = this.handlers.get(message.type);
       if (handler) {
-        handler(message);
+        void handler(message);
       }
     });
   }

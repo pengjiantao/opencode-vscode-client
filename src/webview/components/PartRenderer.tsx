@@ -4,6 +4,7 @@
  */
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
+import { Chip } from './Chip';
 import { Codicon } from './Codicon';
 import { FilePart } from './parts/FilePart';
 import { ReasoningPart } from './parts/ReasoningPart';
@@ -12,14 +13,30 @@ import { ToolPart } from './parts/ToolPart';
 
 interface PartRendererProps {
   part: Part;
+  allParts?: Part[];
   isAssistant?: boolean;
 }
 
 /** Routes a Part to its type-specific renderer component. */
-export function PartRenderer({ part, isAssistant = false }: PartRendererProps) {
+export function PartRenderer({ part, allParts, isAssistant = false }: PartRendererProps) {
   switch (part.type) {
     case 'text':
-      return <TextPart text={part.text} streaming={isAssistant && !part.time?.end} />;
+      if (part.metadata?.type === 'pasted-text') {
+        const meta = part.metadata as { type: string; filename?: string; linesCount?: number };
+        return (
+          <div className="part chip-part" style={{ display: 'inline-block', margin: '4px 0' }}>
+            <Chip
+              type="text"
+              filename={meta.filename || 'Pasted Text'}
+              text={part.text}
+              linesCount={meta.linesCount}
+            />
+          </div>
+        );
+      }
+      return (
+        <TextPart text={part.text} streaming={isAssistant && !part.time?.end} allParts={allParts} />
+      );
 
     case 'tool': {
       const state = part.state;
@@ -51,8 +68,15 @@ export function PartRenderer({ part, isAssistant = false }: PartRendererProps) {
     case 'reasoning':
       return <ReasoningPart text={part.text} time={part.time} metadata={part.metadata} />;
 
-    case 'file':
-      return <FilePart filename={part.filename} mime={part.mime} url={part.url} />;
+    case 'file': {
+      const sourcePath =
+        part.source && (part.source.type === 'file' || part.source.type === 'symbol')
+          ? part.source.path
+          : undefined;
+      return (
+        <FilePart filename={part.filename} mime={part.mime} url={part.url} path={sourcePath} />
+      );
+    }
 
     case 'agent':
       return (

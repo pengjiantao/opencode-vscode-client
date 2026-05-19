@@ -2,6 +2,7 @@
  * @file Unit and regression tests for Markdown component — verifying tables, lists, and headings.
  */
 
+import type { Part } from '@opencode-ai/sdk/v2/client';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { Markdown } from './Markdown';
@@ -248,5 +249,65 @@ describe('Markdown Component', () => {
     expect(container.querySelectorAll('ul')).toHaveLength(1);
     expect(container.querySelector('ol')?.textContent).toBe('Ordered Item');
     expect(container.querySelector('ul')?.textContent).toBe('Unordered Item');
+  });
+
+  it('regression: parses and renders custom inline attachment chips when matches exist', () => {
+    const text =
+      'Here is a file [File: CHANGELOG.md] and a text snippet [Text: Pasted 2 Lines] and unmatched [File: missing.txt].';
+    const allParts = [
+      {
+        id: 'part-1',
+        type: 'file',
+        filename: 'CHANGELOG.md',
+        url: 'file:///workspace/CHANGELOG.md',
+      },
+      {
+        id: 'part-2',
+        type: 'text',
+        text: 'line 1\nline 2',
+        metadata: {
+          type: 'pasted-text',
+          filename: 'Pasted 2 Lines',
+          linesCount: 2,
+        },
+      },
+    ] as unknown as Part[];
+
+    const { container } = render(<Markdown text={text} allParts={allParts} />);
+
+    const chipWrappers = container.querySelectorAll('.opencode-chip-inline-wrapper');
+    expect(chipWrappers).toHaveLength(2);
+
+    expect(screen.getByText('CHANGELOG.md')).toBeInTheDocument();
+    expect(screen.getByText('Pasted 2 Lines')).toBeInTheDocument();
+    expect(screen.queryByText('missing.txt')).not.toBeInTheDocument();
+    expect(screen.getByText(/unmatched \[File: missing.txt\]/)).toBeInTheDocument();
+  });
+
+  it('regression: passes source path to file chip during markdown inline rendering', () => {
+    const text = 'Check [File: CHANGELOG.md] for details.';
+    const allParts = [
+      {
+        id: 'part-1',
+        type: 'file',
+        filename: 'CHANGELOG.md',
+        url: 'data:text/plain;base64,aGVsbG8=',
+        source: {
+          type: 'file' as const,
+          path: 'relative/CHANGELOG.md',
+          text: {
+            value: 'hello',
+            start: 1,
+            end: 1,
+          },
+        },
+      },
+    ] as unknown as Part[];
+
+    const { container } = render(<Markdown text={text} allParts={allParts} />);
+
+    const chipElement = container.querySelector('.opencode-chip');
+    expect(chipElement).toBeInTheDocument();
+    expect(chipElement?.getAttribute('data-custom-title')).toContain('relative/CHANGELOG.md');
   });
 });

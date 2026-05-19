@@ -111,5 +111,37 @@ describe('SessionManager', () => {
         'coder',
       );
     });
+
+    it('regression: should sanitize file parts and handle data URL base64 rewriting correctly', async () => {
+      const mockPromptAsync = vi.fn().mockResolvedValue(undefined);
+      const mockSdk = {
+        session: {
+          promptAsync: mockPromptAsync,
+        },
+      } as unknown as SDKClient;
+      const manager = new SessionManager(mockSdk);
+
+      const parts = [
+        {
+          type: 'file',
+          mime: 'text/markdown',
+          url: 'data:text/markdown;base64,IyBDaGFuZ2Vsb2c=',
+          filename: 'CHANGELOG.md',
+        } as unknown as Part,
+        {
+          type: 'file',
+          mime: 'text/plain',
+          url: 'data:text/plain,hello%20world',
+          filename: 'hello.txt',
+        } as unknown as Part,
+      ];
+
+      await manager.sendPrompt('s1', parts);
+
+      expect(mockPromptAsync).toHaveBeenCalledTimes(1);
+      const passedParts = mockPromptAsync.mock.calls[0][1] as Array<{ type: string; url?: string }>;
+      expect(passedParts[0].url).toBe('data:text/plain;base64,IyBDaGFuZ2Vsb2c=');
+      expect(passedParts[1].url).toBe('data:text/plain;base64,aGVsbG8gd29ybGQ=');
+    });
   });
 });

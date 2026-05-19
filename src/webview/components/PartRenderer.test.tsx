@@ -74,6 +74,31 @@ describe('PartRenderer', () => {
     expect(screen.getByText('test.txt')).toBeInTheDocument();
   });
 
+  it('renders file part with source path passed to Chip', () => {
+    const part = {
+      type: 'file' as const,
+      id: 'part-1',
+      sessionID: 'session-1',
+      messageID: 'msg-1',
+      mime: 'text/plain',
+      url: 'data:text/plain;base64,aGVsbG8=',
+      filename: 'test_source.txt',
+      source: {
+        type: 'file' as const,
+        path: 'src/test_source.txt',
+        text: {
+          value: 'hello',
+          start: 1,
+          end: 1,
+        },
+      },
+    };
+    const { container } = render(<PartRenderer part={part} />);
+    const chipElement = container.querySelector('.opencode-chip');
+    expect(chipElement).toBeInTheDocument();
+    expect(chipElement?.getAttribute('data-custom-title')).toContain('src/test_source.txt');
+  });
+
   it('renders unknown part type', () => {
     const part = {
       type: 'unknown' as unknown as 'text',

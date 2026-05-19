@@ -62,6 +62,7 @@ vi.mock('../store/sessionStore', () => ({
       plugins: ['plugin-1'],
       extensionVersion: '0.1.2',
       activeSessionID: 'session-123',
+      fileInfos: {},
       messages: {
         'session-123': [
           {
@@ -83,7 +84,9 @@ vi.mock('../store/sessionStore', () => ({
   }),
 }));
 
-const mockOnSubmit = vi.fn();
+import type { Part } from '@opencode-ai/sdk/v2/client';
+
+const mockOnSubmit = vi.fn<(text: string, parts: Part[]) => void>();
 const mockOnModelChange = vi.fn();
 const mockOnAgentChange = vi.fn();
 
@@ -135,7 +138,8 @@ describe('PromptInput', () => {
     );
 
     const textarea = screen.getByPlaceholderText('Type a message... (Shift+Enter for new line)');
-    fireEvent.input(textarea, { target: { value: 'Hello world' } });
+    textarea.textContent = 'Hello world';
+    fireEvent.input(textarea);
     fireEvent.click(screen.getByRole('button', { name: /send/i }));
     expect(mockOnSubmit).toHaveBeenCalled();
   });
@@ -152,7 +156,8 @@ describe('PromptInput', () => {
     );
 
     const textarea = screen.getByPlaceholderText('Type a message... (Shift+Enter for new line)');
-    fireEvent.input(textarea, { target: { value: '' } });
+    textarea.textContent = '';
+    fireEvent.input(textarea);
 
     fireEvent.click(screen.getByRole('button', { name: /send/i }));
     expect(mockOnSubmit).not.toHaveBeenCalled();
@@ -337,5 +342,259 @@ describe('PromptInput', () => {
     expect(screen.getByTestId('footer-context')).toHaveTextContent('1,850 / 100,000 (2%)');
     // Total Cost: 0.05
     expect(screen.getByTestId('footer-cost')).toHaveTextContent('$0.050');
+  });
+
+  it('regression: handles paste events for image files, multiline texts, and file paths', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[{ id: 'model-1', name: 'Model 1' }]}
+        agents={[{ id: 'agent-1', name: 'Agent 1' }]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const textarea = screen.getByPlaceholderText('Type a message... (Shift+Enter for new line)');
+
+    // Test Multiline text paste:
+    const multilinePasteEvent = {
+      clipboardData: {
+        files: [],
+        getData: (format: string) => (format === 'text/plain' ? 'line 1\nline 2' : ''),
+      },
+      preventDefault: vi.fn(),
+    };
+    fireEvent.paste(textarea, multilinePasteEvent);
+    expect(screen.getByText('Pasted 2 Lines')).toBeInTheDocument();
+
+    // Test File path paste:
+    const pathPasteEvent = {
+      clipboardData: {
+        files: [],
+        getData: (format: string) => (format === 'text/plain' ? '/absolute/path/file.txt' : ''),
+      },
+      preventDefault: vi.fn(),
+    };
+    fireEvent.paste(textarea, pathPasteEvent);
+    expect(screen.getByText('file.txt')).toBeInTheDocument();
+  });
+
+  it('regression: serializes inline chips to placeholders and correct Part payloads on submit', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[{ id: 'model-1', name: 'Model 1' }]}
+        agents={[{ id: 'agent-1', name: 'Agent 1' }]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const textarea = screen.getByPlaceholderText('Type a message... (Shift+Enter for new line)');
+
+    // Paste multiline text snippet -> registers as a text chip
+    const textPasteEvent = {
+      clipboardData: {
+        files: [],
+        getData: (format: string) => (format === 'text/plain' ? 'some pasted code\nline 2' : ''),
+      },
+      preventDefault: vi.fn(),
+    };
+    fireEvent.paste(textarea, textPasteEvent);
+
+    // Set text around the chip
+    textarea.insertBefore(document.createTextNode('Prefix '), textarea.firstChild);
+    textarea.appendChild(document.createTextNode('Suffix'));
+
+    // Trigger input to update hasContent
+    fireEvent.input(textarea);
+
+    // Click submit
+    fireEvent.click(screen.getByRole('button', { name: /send/i }));
+
+    expect(mockOnSubmit).toHaveBeenCalled();
+    const [submittedText, submittedParts] = mockOnSubmit.mock.calls[0];
+
+    expect(submittedText).toContain('Prefix [Text: Pasted 2 Lines] Suffix');
+    expect(submittedParts.length).toBe(2);
+    expect(submittedParts[0].type).toBe('text');
+    const firstPart = submittedParts[0] as { type: 'text'; text: string };
+    expect(firstPart.text).toBe('Prefix [Text: Pasted 2 Lines] Suffix');
+
+    expect(submittedParts[1].type).toBe('text');
+    const secondPart = submittedParts[1] as {
+      type: 'text';
+      text: string;
+      metadata?: { type: string };
+    };
+    expect(secondPart.text).toBe('some pasted code\nline 2');
+    expect(secondPart.metadata?.type).toBe('pasted-text');
+  });
+
+  it('regression: serialization of file chips without paths converts to data: URLs', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[{ id: 'model-1', name: 'Model 1' }]}
+        agents={[{ id: 'agent-1', name: 'Agent 1' }]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const textarea = screen.getByPlaceholderText('Type a message... (Shift+Enter for new line)');
+
+    // Paste file contents without a path
+    const filePasteEvent = {
+      clipboardData: {
+        files: [
+          {
+            name: 'CHANGELOG.md',
+            size: 100,
+            type: 'text/markdown',
+          },
+        ],
+        getData: () => '',
+      },
+      preventDefault: vi.fn(),
+    };
+
+    // Mock FileReader behavior
+    const mockFileReader = {
+      onload: () => {},
+      readAsText: vi.fn(function (this: { onload: () => void }) {
+        this.onload();
+      }),
+      result: '# Changelog\nSome content',
+    };
+    vi.stubGlobal(
+      'FileReader',
+      vi.fn(() => mockFileReader),
+    );
+
+    fireEvent.paste(textarea, filePasteEvent);
+
+    // Trigger input to update hasContent
+    fireEvent.input(textarea);
+
+    // Click submit
+    fireEvent.click(screen.getByRole('button', { name: /send/i }));
+
+    expect(mockOnSubmit).toHaveBeenCalled();
+    const [submittedText, submittedParts] = mockOnSubmit.mock.calls[0];
+
+    expect(submittedText).toContain('[File: CHANGELOG.md]');
+    expect(submittedParts.length).toBe(2);
+    expect(submittedParts[1].type).toBe('file');
+    const filePart = submittedParts[1] as { type: 'file'; url: string; filename: string };
+    expect(filePart.filename).toBe('CHANGELOG.md');
+    expect(filePart.url).toContain('data:text/plain;base64,');
+
+    vi.unstubAllGlobals();
+  });
+
+  it('regression: pasting a file path retains the path and formats correctly', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[{ id: 'model-1', name: 'Model 1' }]}
+        agents={[{ id: 'agent-1', name: 'Agent 1' }]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const textarea = screen.getByPlaceholderText('Type a message... (Shift+Enter for new line)');
+
+    const pathPasteEvent = {
+      clipboardData: {
+        files: [],
+        getData: (format: string) =>
+          format === 'text/plain' ? '/home/user/workspace/CHANGELOG.md' : '',
+      },
+      preventDefault: vi.fn(),
+    };
+
+    fireEvent.paste(textarea, pathPasteEvent);
+    fireEvent.input(textarea);
+
+    fireEvent.click(screen.getByRole('button', { name: /send/i }));
+
+    expect(mockOnSubmit).toHaveBeenCalled();
+    const [submittedText, submittedParts] = mockOnSubmit.mock.calls[0];
+
+    expect(submittedText).toContain('[File: CHANGELOG.md]');
+    expect(submittedParts.length).toBe(2);
+    expect(submittedParts[1].type).toBe('file');
+    const filePart = submittedParts[1] as { type: 'file'; url: string; filename: string };
+    expect(filePart.filename).toBe('CHANGELOG.md');
+    expect(filePart.url).toBe('file:///home/user/workspace/CHANGELOG.md');
+  });
+
+  it('regression: inserting a chip focuses editor and sets selection correctly', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[{ id: 'model-1', name: 'Model 1' }]}
+        agents={[{ id: 'agent-1', name: 'Agent 1' }]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const textarea = screen.getByPlaceholderText('Type a message... (Shift+Enter for new line)');
+
+    // Spy on focus
+    const focusSpy = vi.spyOn(textarea, 'focus');
+
+    // Paste multiline text snippet -> triggers insertChip
+    const textPasteEvent = {
+      clipboardData: {
+        files: [],
+        getData: (format: string) => (format === 'text/plain' ? 'line 1\nline 2' : ''),
+      },
+      preventDefault: vi.fn(),
+    };
+    fireEvent.paste(textarea, textPasteEvent);
+
+    expect(focusSpy).toHaveBeenCalled();
+  });
+
+  /** Regression: insertChip constructs DOM elements safely to prevent XSS from filenames. */
+  it('regression: insertChip constructs DOM elements safely to prevent XSS from filenames', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[{ id: 'model-1', name: 'Model 1' }]}
+        agents={[{ id: 'agent-1', name: 'Agent 1' }]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const textarea = screen.getByPlaceholderText('Type a message... (Shift+Enter for new line)');
+
+    // Paste file with potentially dangerous name/metadata to trigger XSS if innerHTML was used
+    const dangerousName = '<img src=x onerror="window.xss=true">';
+    const pathPasteEvent = {
+      clipboardData: {
+        files: [],
+        getData: (format: string) =>
+          format === 'text/plain' ? `/home/user/workspace/${dangerousName}` : '',
+      },
+      preventDefault: vi.fn(),
+    };
+
+    fireEvent.paste(textarea, pathPasteEvent);
+
+    // Verify that the DOM does not contain an img element with onerror attribute
+    const imgElement = textarea.querySelector('img[onerror]');
+    expect(imgElement).toBeNull();
+
+    // Verify that the label text is exactly the dangerous name
+    const chipLabel = textarea.querySelector('.chip-label');
+    expect(chipLabel).toBeInTheDocument();
+    expect(chipLabel?.textContent).toBe(dangerousName);
   });
 });

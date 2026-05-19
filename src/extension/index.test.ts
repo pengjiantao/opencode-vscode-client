@@ -5,11 +5,22 @@
  */
 
 import type { SessionStatus } from '@opencode-ai/sdk/v2/client';
+import * as fs from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ExtensionContext, StatusBarItem } from 'vscode';
-import { window } from 'vscode';
+import type { ExtensionContext, StatusBarItem, TextDocument, TextEditor } from 'vscode';
+import { Uri, window, workspace } from 'vscode';
 import { activate } from './index';
 import { SessionManager, type SessionManagerState } from './session-manager';
+
+vi.mock('fs', () => ({
+  existsSync: vi.fn(),
+  statSync: vi.fn(),
+  readFileSync: vi.fn(),
+  promises: {
+    stat: vi.fn(),
+    readFile: vi.fn(),
+  },
+}));
 
 // Define typed mocks for SDKClient events subscription
 let sseHandlerCallback: ((event: unknown) => void) | undefined;
@@ -40,7 +51,8 @@ vi.mock('./sdk-client-impl', () => ({
 }));
 
 // Map to track active IPC event handler registration for test injection
-const ipcHandlers = new Map<string, (msg?: unknown) => void>();
+const ipcHandlers = new Map<string, (msg?: unknown) => void | Promise<void>>();
+const mockIpcSend = vi.fn();
 
 vi.mock('./ipc', () => {
   return {
@@ -48,7 +60,9 @@ vi.mock('./ipc', () => {
       on: vi.fn((event: string, handler: (msg?: unknown) => void) => {
         ipcHandlers.set(event, handler);
       }),
-      send: vi.fn(),
+      send: (...args: unknown[]) => {
+        mockIpcSend(...args);
+      },
     })),
   };
 });
@@ -219,7 +233,7 @@ describe('Extension Status Bar Activation', () => {
     const closeHandler = ipcHandlers.get('session:close');
     expect(closeHandler).toBeDefined();
     if (closeHandler) {
-      closeHandler({ sessionID: 'session-1' });
+      void closeHandler({ sessionID: 'session-1' });
     }
 
     // Active session status falls back to Ready as the map entry is deleted
@@ -243,12 +257,62 @@ describe('Extension Status Bar Activation', () => {
     const closeAllHandler = ipcHandlers.get('session:close-all');
     expect(closeAllHandler).toBeDefined();
     if (closeAllHandler) {
-      closeAllHandler();
+      void closeAllHandler();
     }
 
     if (activeSessionListener) {
       activeSessionListener({ activeSessionID: 'session-1', sessions: [], isConnected: true });
     }
     expect(mockStatusBarItem.text).toBe('$(circle-outline) OpenCode: Ready');
+  });
+
+  it('regression: handles file:open and file:query IPC events correctly', async () => {
+    await activate(mockContext);
+
+    // Test file:open handler
+    const openHandler = ipcHandlers.get('file:open');
+    expect(openHandler).toBeDefined();
+
+    const mockDoc = {};
+    vi.spyOn(workspace, 'getWorkspaceFolder').mockReturnValue({
+      uri: { fsPath: '/some', path: '/some', scheme: 'file' } as unknown as Uri,
+      name: 'workspace',
+      index: 0,
+    });
+    const openTextDocumentSpy = vi
+      .spyOn(workspace, 'openTextDocument')
+      .mockResolvedValue(mockDoc as unknown as TextDocument);
+    vi.spyOn(window, 'showTextDocument').mockResolvedValue(undefined as unknown as TextEditor);
+
+    if (openHandler) {
+      void openHandler({ path: '/some/file.txt' });
+    }
+
+    expect(openTextDocumentSpy).toHaveBeenCalled();
+
+    // Test file:query handler
+    const queryHandler = ipcHandlers.get('file:query');
+    expect(queryHandler).toBeDefined();
+
+    vi.mocked(fs.promises.stat).mockResolvedValue({
+      isFile: () => true,
+      size: 1024,
+    } as unknown as fs.Stats);
+    vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from('File content'));
+
+    if (queryHandler) {
+      await queryHandler({ path: '/some/file.txt' });
+    }
+
+    expect(fs.promises.stat).toHaveBeenCalledWith('/some/file.txt');
+    expect(mockIpcSend).toHaveBeenCalledWith({
+      type: 'file:query-response',
+      path: '/some/file.txt',
+      exists: true,
+      filename: 'file.txt',
+      size: 1024,
+      content: 'File content',
+      isWorkspace: true,
+    });
   });
 });

@@ -23,21 +23,29 @@
   border-color: var(--vscode-focusBorder, #007fd4);
 }
 
-.prompt-input-container textarea {
+.prompt-input-editor {
   box-sizing: border-box;
   width: 100%;
-  resize: none;
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-editor-font-size, 13px);
-  line-height: 1.4;
-  min-height: 40px; /* 2 lines default */
-  max-height: 200px; /* ~10 lines */
+  line-height: 1.5;
+  min-height: 32px;
+  max-height: 200px;
   padding: 8px 12px;
   background-color: transparent;
   color: var(--vscode-input-foreground, #cccccc);
   border: none;
   outline: none;
   overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.prompt-input-editor:empty:before {
+  content: attr(placeholder);
+  color: var(--vscode-input-placeholderForeground, #a0a0a0);
+  opacity: 0.7;
+  cursor: text;
 }
 
 .prompt-input-footer {

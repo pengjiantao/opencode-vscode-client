@@ -21,6 +21,7 @@ export const mockVscode = {
     showInformationMessage: vi.fn(),
     showErrorMessage: vi.fn(),
     showWarningMessage: vi.fn(),
+    showTextDocument: vi.fn(),
     registerWebviewViewProvider: vi.fn(() => ({ dispose: vi.fn() })),
     createStatusBarItem: vi.fn(() => ({
       show: vi.fn(),
@@ -54,11 +55,21 @@ export const mockVscode = {
       visible: true,
     })),
   },
+  Uri: {
+    file: vi.fn((path: string) => ({ fsPath: path, path, scheme: 'file' })),
+    parse: vi.fn((str: string) => ({
+      fsPath: str.replace('file://', ''),
+      path: str,
+      scheme: 'file',
+    })),
+  },
   workspace: {
     getConfiguration: vi.fn(() => ({
       get: vi.fn(() => null),
       update: vi.fn(),
     })),
+    openTextDocument: vi.fn(),
+    getWorkspaceFolder: vi.fn(() => undefined),
     workspaceFolders: [],
   },
   env: {

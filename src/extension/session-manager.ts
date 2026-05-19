@@ -143,11 +143,33 @@ export class SessionManager {
         } as unknown as Part;
       }
       if (part.type === 'file') {
+        const isImageOrPdf = part.mime.startsWith('image/') || part.mime === 'application/pdf';
+        const finalMime = isImageOrPdf ? part.mime : 'text/plain';
+        let finalUrl = part.url;
+        if (!isImageOrPdf && part.url.startsWith('data:')) {
+          const commaIndex = part.url.indexOf(',');
+          if (commaIndex !== -1) {
+            const meta = part.url.substring(0, commaIndex);
+            const content = part.url.substring(commaIndex + 1);
+            if (meta.includes(';base64')) {
+              finalUrl = `data:text/plain;base64,${content}`;
+            } else {
+              let decoded = content;
+              try {
+                decoded = decodeURIComponent(content);
+              } catch {
+                // fallback if not a valid URI-encoded string
+              }
+              const base64 = Buffer.from(decoded).toString('base64');
+              finalUrl = `data:text/plain;base64,${base64}`;
+            }
+          }
+        }
         return {
           type: 'file',
-          mime: part.mime,
+          mime: finalMime,
           filename: part.filename,
-          url: part.url,
+          url: finalUrl,
           source: part.source,
         } as unknown as Part;
       }

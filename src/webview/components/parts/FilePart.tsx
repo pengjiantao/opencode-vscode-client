@@ -1,33 +1,49 @@
 /**
- * @file Renders a file attachment part with icon based on MIME type.
+ * @file FilePart component rendering file and image attachments in the chat history.
+ * Delegates rendering to the interactive Chip component for consistent design,
+ * tooltips, and open file actions.
  */
 
-import { Codicon } from '../Codicon';
+import { parseFileUrl } from '../../utils/chipUtils';
+import { Chip } from '../Chip';
 
 interface FilePartProps {
+  /** Display name of the file. */
   filename?: string;
+  /** MIME type of the attachment. */
   mime: string;
+  /** Direct URL (file:// path or base64 data URL) of the attachment. */
   url: string;
+  /** Optional resolved local file path. */
+  path?: string;
 }
 
-/** Displays a file attachment with a type-specific icon. */
-export function FilePart({ filename, mime }: FilePartProps) {
-  /** Returns a VS Code icon codename based on the file MIME type. */
-  const getFileIcon = () => {
-    if (mime.startsWith('image/')) return '$(file-media)';
-    if (mime.startsWith('text/')) return '$(file-text)';
-    if (mime === 'application/pdf') return '$(file-pdf)';
-    if (mime === 'directory') return '$(folder)';
-    return '$(file)';
-  };
+/** Renders a file/image attachment part in the chat history using a Chip. */
+export function FilePart({ filename, mime, url, path: passedPath }: FilePartProps) {
+  const isImage = mime?.startsWith('image/') || url?.startsWith('data:image/');
+  const chipType = isImage ? 'image' : 'file';
+
+  // Extract absolute path from file:// scheme if present, or use the passed path
+  let path: string | undefined = passedPath;
+  let text: string | undefined;
+  if (chipType === 'file' && url) {
+    const parsed = parseFileUrl(url, mime);
+    path = passedPath || parsed.path;
+    text = parsed.text;
+  }
+
+  const dataUrl = isImage ? url : undefined;
 
   return (
-    <div className="part file-part">
-      <span className="file-icon">
-        <Codicon name={getFileIcon()} />
-      </span>
-      <span className="file-name">{filename || 'file'}</span>
-      <span className="file-badge">{mime}</span>
+    <div className="part file-part-wrapper" style={{ display: 'inline-block', margin: '4px 0' }}>
+      <Chip
+        type={chipType}
+        filename={filename}
+        path={path}
+        mime={mime}
+        dataUrl={dataUrl}
+        text={text}
+      />
     </div>
   );
 }
