@@ -3,123 +3,12 @@
  * Renders bold, italic, code blocks, lists, headings, and inline code natively.
  */
 
-import Prism from 'prismjs';
-import 'prismjs/components/prism-bash';
-import 'prismjs/components/prism-css';
-import 'prismjs/components/prism-go';
-import 'prismjs/components/prism-javascript';
-import 'prismjs/components/prism-json';
-import 'prismjs/components/prism-markdown';
-import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-rust';
-import 'prismjs/components/prism-typescript';
 import React from 'react';
-import { IconButton } from './IconButton';
+import { CodeBlock } from './CodeBlock';
 
 interface MarkdownProps {
   /** The markdown text to parse and render. */
   text: string;
-}
-
-/** Recursively renders a PrismJS token or string to React nodes. */
-function renderToken(token: string | Prism.Token, key: string): React.ReactNode {
-  if (typeof token === 'string') {
-    return token;
-  }
-  const type = token.type;
-  const content = token.content;
-
-  let children: React.ReactNode;
-  if (Array.isArray(content)) {
-    children = content.map((child, idx) => renderToken(child, `${key}-${idx}`));
-  } else if (typeof content === 'object') {
-    children = renderToken(content, `${key}-sub`);
-  } else {
-    children = content;
-  }
-
-  const alias = Array.isArray(token.alias) ? token.alias.join(' ') : token.alias || '';
-  const className = `token ${type} ${alias}`;
-  return (
-    <span key={key} className={className.trim()}>
-      {children}
-    </span>
-  );
-}
-
-/** Generates React nodes with syntax highlight classes for the provided code block using PrismJS. */
-function highlightCode(code: string, lang = ''): React.ReactNode {
-  const language = lang.toLowerCase();
-  let grammar = Prism.languages.clike; // default fallback
-
-  if (language === 'typescript' || language === 'ts') {
-    grammar = Prism.languages.typescript || Prism.languages.javascript;
-  } else if (language === 'javascript' || language === 'js') {
-    grammar = Prism.languages.javascript;
-  } else if (language === 'python' || language === 'py') {
-    grammar = Prism.languages.python;
-  } else if (language === 'bash' || language === 'sh' || language === 'shell') {
-    grammar = Prism.languages.bash;
-  } else if (language === 'json') {
-    grammar = Prism.languages.json;
-  } else if (language === 'css') {
-    grammar = Prism.languages.css;
-  } else if (language === 'go') {
-    grammar = Prism.languages.go;
-  } else if (language === 'rust') {
-    grammar = Prism.languages.rust;
-  } else if (language === 'html' || language === 'xml' || language === 'svg') {
-    grammar = Prism.languages.markup;
-  }
-
-  const tokens = Prism.tokenize(code, grammar);
-  return tokens.map((token, idx) => renderToken(token, `prism-${idx}`));
-}
-
-interface CodeBlockProps {
-  /** The language of the code block (e.g., 'typescript', 'bash'). */
-  lang: string;
-  /** The raw code content. */
-  code: string;
-}
-
-/** Renders a syntax-highlighted code block with an independent copy button and tooltip feedback. */
-function CodeBlock({ lang, code }: CodeBlockProps) {
-  const [copied, setCopied] = React.useState(false);
-
-  React.useEffect(() => {
-    if (copied) {
-      const timer = setTimeout(() => {
-        setCopied(false);
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [copied]);
-
-  const highlighted = React.useMemo(() => highlightCode(code, lang), [code, lang]);
-
-  const handleCopy = () => {
-    void navigator.clipboard.writeText(code);
-    setCopied(true);
-  };
-
-  return (
-    <div className="code-block-container">
-      <div className="code-block-header">
-        <span className="code-lang">{lang || 'code'}</span>
-        <IconButton
-          name={copied ? '$(check)' : '$(copy)'}
-          onClick={handleCopy}
-          title={copied ? 'Copied!' : 'Copy Code'}
-          size="small"
-          className="copy-code-btn"
-        />
-      </div>
-      <pre className="code-block">
-        <code>{highlighted}</code>
-      </pre>
-    </div>
-  );
 }
 
 /** Parses inline markdown markup (bold, italic, inline code, and links). */
@@ -178,6 +67,159 @@ function renderInline(text: string): React.ReactNode[] {
   return parts;
 }
 
+/**
+ * Checks if a markdown line acts as a table separator/alignment row (e.g., `|:---:|---:|`).
+ *
+ * Separator lines are composed solely of pipes, dashes, colons, and whitespace.
+ * Requiring at least one dash per column avoids false positives with normal text pipes.
+ *
+ * @param line - The raw string line to analyze.
+ * @returns True if the line matches the GFM table separator row format.
+ */
+function isSeparatorLine(line: string): boolean {
+  const trimmed = line.trim();
+  // A table separator must start and end with pipes in our parser
+  if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) {
+    return false;
+  }
+  const inner = trimmed.slice(1, -1);
+  const parts = inner.split('|');
+  // Every column between the pipes must represent a valid GFM separator (only colons and dashes)
+  return parts.every((part) => {
+    const p = part.trim();
+    return p.length > 0 && /^[:-]+$/.test(p);
+  });
+}
+
+/**
+ * Helper to check if a character at index `idx` in a string is escaped by a backslash.
+ * An odd number of preceding backslashes means the character is escaped.
+ *
+ * @param str - The string to check.
+ * @param idx - The index of the character to check.
+ * @returns True if the character is escaped.
+ */
+function isCharEscaped(str: string, idx: number): boolean {
+  let backslashCount = 0;
+  for (let j = idx - 1; j >= 0; j--) {
+    if (str[j] === '\\') {
+      backslashCount++;
+    } else {
+      break;
+    }
+  }
+  return backslashCount % 2 === 1;
+}
+
+/**
+ * Helper to measure the length of a consecutive sequence of backtick characters.
+ *
+ * @param str - The string to scan.
+ * @param startIdx - The starting index of the backtick sequence.
+ * @returns The length of consecutive backticks.
+ */
+function getBacktickSeqLen(str: string, startIdx: number): number {
+  let count = 0;
+  for (let idx = startIdx; idx < str.length; idx++) {
+    if (str[idx] === '`') {
+      count++;
+    } else {
+      break;
+    }
+  }
+  return count;
+}
+
+/**
+ * Parses a table row, splitting cells by `|` while correctly ignoring escaped pipes `\|`.
+ *
+ * We iterate through the string character by character to safely handle escaped pipe
+ * characters and inline backtick code spans of arbitrary lengths, ensuring they remain
+ * inside cell contents rather than acting as cell borders.
+ *
+ * @param line - The markdown table row line to parse.
+ * @returns An array of parsed cell contents, or null if the line does not start/end with pipes.
+ */
+function parseTableRow(line: string): string[] | null {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) {
+    return null;
+  }
+
+  // Conditionally strip trailing pipe only if it is an unescaped closing border.
+  // An escaped trailing pipe (e.g. `foo \|`) belongs to the final cell's content.
+  const hasClosingBorder = !isCharEscaped(trimmed, trimmed.length - 1);
+  const inner = hasClosingBorder ? trimmed.slice(1, -1) : trimmed.slice(1);
+
+  const cells: string[] = [];
+  let currentCell = '';
+  let activeBacktickLen = 0;
+  let idx = 0;
+
+  // Character-by-character scan to handle escaped pipes and inline code spans safely
+  while (idx < inner.length) {
+    const char = inner[idx];
+
+    // Toggle backtick state for unescaped backticks to ignore internal table pipes
+    if (char === '`' && !isCharEscaped(inner, idx)) {
+      const len = getBacktickSeqLen(inner, idx);
+      if (activeBacktickLen === 0) {
+        activeBacktickLen = len;
+      } else if (activeBacktickLen === len) {
+        activeBacktickLen = 0;
+      }
+      currentCell += inner.substring(idx, idx + len);
+      idx += len;
+      continue;
+    }
+
+    // Split the column if we find an unescaped pipe character outside of backticks
+    if (char === '|' && activeBacktickLen === 0 && !isCharEscaped(inner, idx)) {
+      cells.push(currentCell.trim());
+      currentCell = '';
+      idx++;
+      continue;
+    }
+
+    currentCell += char;
+    idx++;
+  }
+  cells.push(currentCell.trim());
+
+  // Replace escaped pipes back to standard pipe characters for rendering
+  return cells.map((cell) => cell.replace(/\\\|/g, '|'));
+}
+
+/**
+ * Extracts alignments for each column from the table separator row.
+ *
+ * Maps `:---:` to 'center', `:---` to 'left', `---:` to 'right', and default to null.
+ *
+ * @param line - The separator row line.
+ * @returns An array of column alignments corresponding to each table column.
+ */
+function parseAlignments(line: string): ('left' | 'center' | 'right' | null)[] {
+  const cells = parseTableRow(line);
+  if (!cells) {
+    return [];
+  }
+  return cells.map((cell) => {
+    const trimmed = cell.trim();
+    const starts = trimmed.startsWith(':');
+    const ends = trimmed.endsWith(':');
+    if (starts && ends) {
+      return 'center';
+    }
+    if (starts) {
+      return 'left';
+    }
+    if (ends) {
+      return 'right';
+    }
+    return null;
+  });
+}
+
 /** Renders standard markdown document elements (headers, lists, block codes, paragraphs). */
 export function Markdown({ text }: MarkdownProps) {
   const lines = text.split('\n');
@@ -185,6 +227,11 @@ export function Markdown({ text }: MarkdownProps) {
   let currentCodeBlock: { lang: string; lines: string[] } | null = null;
   let currentList: { ordered: boolean; items: React.ReactNode[][] } | null = null;
   let currentParagraphLines: string[] = [];
+  let currentTable: {
+    headers: string[];
+    alignments: ('left' | 'center' | 'right' | null)[];
+    rows: string[][];
+  } | null = null;
 
   const flushParagraph = () => {
     if (currentParagraphLines.length > 0) {
@@ -208,6 +255,47 @@ export function Markdown({ text }: MarkdownProps) {
     }
   };
 
+  const flushTable = () => {
+    if (currentTable) {
+      const { headers, alignments, rows } = currentTable;
+      elements.push(
+        <div key={`table-wrapper-${elements.length}`} className="markdown-table-wrapper">
+          <table className="markdown-table">
+            <thead>
+              <tr>
+                {headers.map((header, idx) => {
+                  const align = alignments[idx] || undefined;
+                  return (
+                    <th key={idx} style={{ textAlign: align }}>
+                      {renderInline(header)}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            {rows.length > 0 && (
+              <tbody>
+                {rows.map((row, rowIdx) => (
+                  <tr key={rowIdx}>
+                    {row.map((cell, cellIdx) => {
+                      const align = alignments[cellIdx] || undefined;
+                      return (
+                        <td key={cellIdx} style={{ textAlign: align }}>
+                          {renderInline(cell)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            )}
+          </table>
+        </div>,
+      );
+      currentTable = null;
+    }
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
@@ -219,6 +307,7 @@ export function Markdown({ text }: MarkdownProps) {
         elements.push(<CodeBlock key={`code-${elements.length}`} lang={lang} code={code} />);
         currentCodeBlock = null;
       } else {
+        flushTable();
         flushParagraph();
         flushList();
         const lang = line.trim().substring(3).trim();
@@ -232,9 +321,39 @@ export function Markdown({ text }: MarkdownProps) {
       continue;
     }
 
+    // Table row accumulation inside an active table block
+    if (currentTable) {
+      const rowCells = parseTableRow(line);
+      if (rowCells) {
+        currentTable.rows.push(rowCells);
+        continue;
+      } else {
+        // Not a table row, so flush the active table block first
+        flushTable();
+      }
+    }
+
+    // Table block detection (requires headers and a valid separator line immediately next)
+    if (!currentTable) {
+      const detectedHeaders = parseTableRow(line);
+      if (detectedHeaders && i + 1 < lines.length && isSeparatorLine(lines[i + 1])) {
+        flushParagraph();
+        flushList();
+        const alignments = parseAlignments(lines[i + 1]);
+        currentTable = {
+          headers: detectedHeaders,
+          alignments,
+          rows: [],
+        };
+        i++; // Skip the separator row
+        continue;
+      }
+    }
+
     // Headings
     const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
     if (headingMatch) {
+      flushTable();
       flushParagraph();
       flushList();
       const level = headingMatch[1].length;
@@ -251,6 +370,7 @@ export function Markdown({ text }: MarkdownProps) {
     const listMatch = unorderedMatch || orderedMatch;
 
     if (listMatch) {
+      flushTable();
       flushParagraph();
       const isOrdered = !!orderedMatch;
       const content = listMatch[2];
@@ -263,14 +383,16 @@ export function Markdown({ text }: MarkdownProps) {
       continue;
     }
 
-    // Empty line ends list or paragraph
+    // Empty line ends list, paragraph, or table
     if (line.trim() === '') {
+      flushTable();
       flushParagraph();
       flushList();
       continue;
     }
 
-    // Plain text
+    // Plain text paragraph accumulation
+    flushTable();
     flushList();
     currentParagraphLines.push(line.trim());
   }
@@ -282,6 +404,7 @@ export function Markdown({ text }: MarkdownProps) {
     elements.push(<CodeBlock key={`code-${elements.length}`} lang={lang} code={code} />);
   }
 
+  flushTable();
   flushParagraph();
   flushList();
 

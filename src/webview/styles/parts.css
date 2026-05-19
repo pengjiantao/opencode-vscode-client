@@ -398,3 +398,44 @@ pre.code-block code {
 .user-message .text-part {
   margin: 0;
 }
+
+/* Responsive themed Markdown table styling */
+.markdown-table-wrapper {
+  overflow-x: auto;
+  margin: 12px 0;
+  border-radius: 6px;
+  border: 1px solid
+    var(--vscode-widget-border, var(--vscode-border-color, rgba(128, 128, 128, 0.3)));
+}
+
+.markdown-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--vscode-editor-foreground);
+}
+
+.markdown-table th,
+.markdown-table td {
+  padding: 8px 12px;
+  border: 1px solid
+    var(--vscode-widget-border, var(--vscode-border-color, rgba(128, 128, 128, 0.3)));
+}
+
+.markdown-table th {
+  font-weight: 600;
+  background-color: var(
+    --vscode-textCodeBlock-background,
+    color-mix(in srgb, var(--vscode-editor-foreground) 8%, transparent)
+  );
+}
+
+.markdown-table tr:nth-child(even) {
+  background-color: color-mix(in srgb, var(--vscode-editor-foreground) 3%, transparent);
+}
+
+.markdown-table td code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}

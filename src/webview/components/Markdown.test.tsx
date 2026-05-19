@@ -1,0 +1,214 @@
+/**
+ * @file Unit and regression tests for Markdown component — verifying tables, lists, and headings.
+ */
+
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { Markdown } from './Markdown';
+
+describe('Markdown Component', () => {
+  it('renders bold, italic, and inline code correctly', () => {
+    render(<Markdown text="This is **bold**, *italic*, and `code` text." />);
+    expect(screen.getByText('bold').tagName).toBe('STRONG');
+    expect(screen.getByText('italic').tagName).toBe('EM');
+    expect(screen.getByText('code').tagName).toBe('CODE');
+  });
+
+  it('renders headers correctly', () => {
+    const { container } = render(
+      <Markdown text={['# Header 1', '## Header 2', '### Header 3'].join('\n')} />,
+    );
+    expect(container.querySelector('h1')?.textContent).toBe('Header 1');
+    expect(container.querySelector('h2')?.textContent).toBe('Header 2');
+    expect(container.querySelector('h3')?.textContent).toBe('Header 3');
+  });
+
+  it('renders lists correctly', () => {
+    const { container } = render(
+      <Markdown text={['- Item 1', '- Item 2', '1. First', '2. Second'].join('\n')} />,
+    );
+    expect(container.querySelector('ul')).toBeInTheDocument();
+    expect(container.querySelector('ol')).toBeInTheDocument();
+    expect(screen.getByText('Item 1').tagName).toBe('LI');
+    expect(screen.getByText('First').tagName).toBe('LI');
+  });
+
+  it('renders table elements correctly with headers and body rows', () => {
+    const markdownTable = [
+      '| Header A | Header B |',
+      '|----------|----------|',
+      '| Cell A1  | Cell B1  |',
+      '| Cell A2  | Cell B2  |',
+    ].join('\n');
+
+    const { container } = render(<Markdown text={markdownTable} />);
+
+    expect(container.querySelector('.markdown-table-wrapper')).toBeInTheDocument();
+    expect(container.querySelector('table')).toBeInTheDocument();
+    expect(container.querySelectorAll('th')).toHaveLength(2);
+    expect(container.querySelectorAll('td')).toHaveLength(4);
+
+    expect(screen.getByText('Header A').tagName).toBe('TH');
+    expect(screen.getByText('Cell B1').tagName).toBe('TD');
+  });
+
+  it('applies column alignments correctly based on GFM separator colons', () => {
+    const markdownTable = [
+      '| Left | Center | Right | Default |',
+      '|:---|:---:|---:|---|',
+      '| L | C | R | D |',
+    ].join('\n');
+
+    const { container } = render(<Markdown text={markdownTable} />);
+
+    const headers = container.querySelectorAll('th');
+    const cells = container.querySelectorAll('td');
+
+    // Headers alignments
+    expect(headers[0].style.textAlign).toBe('left');
+    expect(headers[1].style.textAlign).toBe('center');
+    expect(headers[2].style.textAlign).toBe('right');
+    expect(headers[3].style.textAlign).toBe('');
+
+    // Body cells alignments
+    expect(cells[0].style.textAlign).toBe('left');
+    expect(cells[1].style.textAlign).toBe('center');
+    expect(cells[2].style.textAlign).toBe('right');
+    expect(cells[3].style.textAlign).toBe('');
+  });
+
+  it('handles escaped pipes within cells correctly', () => {
+    const markdownTable = [
+      '| Commands | Description |',
+      '|---|---|',
+      '| `grep \\| search` | Searching with grep pipe |',
+    ].join('\n');
+
+    const { container } = render(<Markdown text={markdownTable} />);
+
+    // Columns should be exactly 2, escaping should prevent it from splitting into 3 cells
+    expect(container.querySelectorAll('th')).toHaveLength(2);
+    const cells = container.querySelectorAll('td');
+    expect(cells).toHaveLength(2);
+
+    expect(cells[0].querySelector('code')?.textContent).toBe('grep | search');
+  });
+
+  it('flushes tables when encountering headings or lists', () => {
+    const markdownTable = [
+      '| Header |',
+      '|---|',
+      '| Cell |',
+      '',
+      '# Heading Flusher',
+      '- List Flusher',
+    ].join('\n');
+
+    const { container } = render(<Markdown text={markdownTable} />);
+
+    // The table, heading, and list should all coexist cleanly
+    expect(container.querySelector('table')).toBeInTheDocument();
+    expect(container.querySelector('h1')?.textContent).toBe('Heading Flusher');
+    expect(container.querySelector('ul')).toBeInTheDocument();
+  });
+
+  it('handles unescaped pipe characters inside backtick inline code cells correctly', () => {
+    const markdownTable = [
+      '| 维度 | OpenCode SDK | Gemini CLI A2A |',
+      '|---|---|---|',
+      '| **工具输出** | `tool.success` 含 `content: [{type:"text"|"file",...}]` | `tool-call-update` |',
+    ].join('\n');
+
+    const { container } = render(<Markdown text={markdownTable} />);
+
+    // Columns should be exactly 3, not split into 4 columns by the internal pipe in backticks
+    expect(container.querySelectorAll('th')).toHaveLength(3);
+    const cells = container.querySelectorAll('td');
+    expect(cells).toHaveLength(3);
+
+    // Check text contents
+    expect(cells[0].textContent).toContain('工具输出');
+    expect(cells[1].textContent).toContain('tool.success');
+    expect(cells[1].textContent).toContain('content: [{type:"text"|"file",...}]');
+    expect(cells[2].textContent).toBe('tool-call-update');
+  });
+
+  it('handles double and multiple backtick code spans within cells correctly', () => {
+    const markdownTable = [
+      '| Header |',
+      '|---|',
+      '| ``code | span`` |',
+      '| ```triple | pipe``` |',
+    ].join('\n');
+
+    const { container } = render(<Markdown text={markdownTable} />);
+
+    // Verified: should not split into multiple cells on the inner pipe
+    expect(container.querySelectorAll('th')).toHaveLength(1);
+    const cells = container.querySelectorAll('td');
+    expect(cells).toHaveLength(2);
+    expect(cells[0].textContent).toBe('code | span');
+    expect(cells[1].textContent).toBe('triple | pipe');
+  });
+
+  it('handles escaped pipes at the end of a row correctly', () => {
+    const markdownTable = ['| Header |', '|---|', '| cell \\|'].join('\n');
+
+    const { container } = render(<Markdown text={markdownTable} />);
+
+    const cells = container.querySelectorAll('td');
+    expect(cells).toHaveLength(1);
+    expect(cells[0].textContent).toBe('cell |');
+  });
+
+  it('renders empty tables without rendering an empty tbody node', () => {
+    const markdownTable = ['| Header |', '|---|'].join('\n');
+
+    const { container } = render(<Markdown text={markdownTable} />);
+
+    expect(container.querySelector('table')).toBeInTheDocument();
+    expect(container.querySelector('th')).toBeInTheDocument();
+    expect(container.querySelector('tbody')).not.toBeInTheDocument();
+  });
+
+  it('handles empty cells correctly', () => {
+    const markdownTable = ['| A | B |', '|---|---|', '| | Cell |', '| Cell | |', '| ||'].join('\n');
+
+    const { container } = render(<Markdown text={markdownTable} />);
+
+    expect(container.querySelectorAll('th')).toHaveLength(2);
+    const cells = container.querySelectorAll('td');
+    expect(cells).toHaveLength(6);
+    expect(cells[0].textContent).toBe('');
+    expect(cells[1].textContent).toBe('Cell');
+    expect(cells[2].textContent).toBe('Cell');
+    expect(cells[3].textContent).toBe('');
+    expect(cells[4].textContent).toBe('');
+    expect(cells[5].textContent).toBe('');
+  });
+
+  it('parses leading and trailing cell whitespace correctly', () => {
+    const markdownTable = ['|   spaced cell   |', '|---|', '|   value   |'].join('\n');
+
+    const { container } = render(<Markdown text={markdownTable} />);
+
+    expect(container.querySelector('th')?.textContent).toBe('spaced cell');
+    expect(container.querySelector('td')?.textContent).toBe('value');
+  });
+
+  it('renders nested inline styling within cells correctly', () => {
+    const markdownTable = [
+      '| Formatting |',
+      '|---|',
+      '| **bold** *italic* [link](http://test) |',
+    ].join('\n');
+
+    const { container } = render(<Markdown text={markdownTable} />);
+
+    const cell = container.querySelector('td');
+    expect(cell).toBeInTheDocument();
+    expect(cell?.querySelector('strong')?.textContent).toBe('bold');
+    expect(cell?.querySelector('em')?.textContent).toBe('italic');
+    expect(cell?.querySelector('a')?.getAttribute('href')).toBe('http://test');
+  });
+});
