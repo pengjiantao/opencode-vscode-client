@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.4](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/compare/v0.1.3...v0.1.4) (2026-05-19)
+
+### Features
+
+- add editor/terminal selection context menu and inline chips ([25e836c](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/25e836c4d892a2b2517b351079f8bb21631cf7ce))
+- add workspace file search with @ mention autocomplete and gitignore support ([cf509b8](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/cf509b87119b3c354fdc15c91e96afd317d585ab))
+- **webview:** add auto-scroll to ChatView when new messages arrive ([56e286e](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/56e286ee9642fa8b8e7c64af31110c6c5cd36b24))
+- **webview:** add inline attachment chips with file handlers and metadata footer ([a2dfa58](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/a2dfa580834abc017b55c7f6d6098f09cfc41828))
+- **webview:** add responsive sidebar layout with metadata label hiding ([eba5edb](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/eba5edb10095cd791f943796cb4a5a76167c3104))
+
+### Bug Fixes
+
+- **webview:** preserve loose markdown lists across blank lines ([31f5a4a](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/31f5a4ad600f78e4bb7c7824b4740d137ac81f64))
+
 ### 0.1.3 (2026-05-19)
 
 ### Features
