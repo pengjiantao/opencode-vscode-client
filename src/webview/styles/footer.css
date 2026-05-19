@@ -47,6 +47,13 @@
 .metadata-item.workspace {
   color: var(--vscode-textLink-foreground, #007fd4);
   font-weight: 500;
+  max-width: 120px;
+}
+
+.metadata-item.workspace span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .metadata-item.workspace:hover {
@@ -69,4 +76,16 @@
 .metadata-item.percentage.warning {
   color: var(--vscode-errorForeground, #f48771);
   font-weight: bold;
+}
+
+/* Responsive adjustment for narrow screens */
+@media (max-width: 500px) {
+  .sub-footer-left,
+  .sub-footer-right {
+    gap: 8px; /* Tighter gap for narrow sidebars */
+  }
+  .metadata-label,
+  .context-tokens-full {
+    display: none; /* Hide verbose labels to save space */
+  }
 }

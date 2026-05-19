@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  overflow: hidden;
+  min-width: 340px;
 }
 
 .no-session {

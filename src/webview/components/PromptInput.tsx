@@ -395,7 +395,10 @@ export function PromptInput({
             data-testid="footer-lsp"
           >
             <Codicon name="combine" className="metadata-icon" />
-            <span>LSP: {lspServers.length}</span>
+            <span>
+              <span className="metadata-label">LSP: </span>
+              {lspServers.length}
+            </span>
           </div>
 
           <div
@@ -404,7 +407,10 @@ export function PromptInput({
             data-testid="footer-mcp"
           >
             <Codicon name="plug" className="metadata-icon" />
-            <span>MCP: {mcpServers.length}</span>
+            <span>
+              <span className="metadata-label">MCP: </span>
+              {mcpServers.length}
+            </span>
           </div>
 
           <div
@@ -413,7 +419,10 @@ export function PromptInput({
             data-testid="footer-skills"
           >
             <Codicon name="workspace-trusted" className="metadata-icon" />
-            <span>Skills: {skills.length}</span>
+            <span>
+              <span className="metadata-label">Skills: </span>
+              {skills.length}
+            </span>
           </div>
 
           <div
@@ -422,7 +431,10 @@ export function PromptInput({
             data-testid="footer-version"
           >
             <Codicon name="info" className="metadata-icon" />
-            <span>v{extensionVersion}</span>
+            <span>
+              <span className="metadata-label">v</span>
+              {extensionVersion}
+            </span>
           </div>
         </div>
 
@@ -434,9 +446,22 @@ export function PromptInput({
           >
             <Codicon name="graph" className="metadata-icon" />
             <span>
-              {contextTotalTokens > 0
-                ? `${contextTotalTokens.toLocaleString()} / ${(finalLimit || 0).toLocaleString()} (${contextPercentage}%)`
-                : `0 / ${(finalLimit || 0).toLocaleString()} (0%)`}
+              {contextTotalTokens > 0 ? (
+                <>
+                  <span className="context-tokens-full">
+                    {contextTotalTokens.toLocaleString()} /{' '}
+                    {(finalLimit || 0).toLocaleString()}{' '}
+                  </span>
+                  <span>({contextPercentage}%)</span>
+                </>
+              ) : (
+                <>
+                  <span className="context-tokens-full">
+                    0 / {(finalLimit || 0).toLocaleString()}{' '}
+                  </span>
+                  <span>(0%)</span>
+                </>
+              )}
             </span>
           </div>
 
