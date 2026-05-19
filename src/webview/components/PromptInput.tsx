@@ -7,6 +7,7 @@ import type { Part, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import React from 'react';
 import { useIPC } from '../hooks/useIPC';
 import { usePromptEditor } from '../hooks/usePromptEditor';
+import { usePromptSelectionIPC } from '../hooks/usePromptSelectionIPC';
 import { useSessionStore } from '../store/sessionStore';
 import '../styles/footer.css';
 import { getIconClass, getPromptData, getTooltipHtml } from '../utils/chipUtils';
@@ -100,12 +101,50 @@ export function PromptInput({
     }>
   >([]);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
+  const mentionTimeoutRef = React.useRef<number | null>(null);
 
   const closeMentionList = React.useCallback(() => {
+    if (mentionTimeoutRef.current) {
+      window.clearTimeout(mentionTimeoutRef.current);
+      mentionTimeoutRef.current = null;
+    }
     setMentionState({ show: false, query: '', startOffset: -1, textNode: null });
     setMentionResults([]);
     setSelectedIndex(0);
   }, []);
+
+  const handleSubmit = React.useCallback(() => {
+    if (isRunning) {
+      onAbort?.();
+    } else {
+      const { text: promptText, parts: attachmentParts } = getPromptData(
+        editorRef.current,
+        activeSessionID,
+        fileInfos,
+      );
+      const trimmedText = promptText.trim();
+      if (trimmedText || attachmentParts.length > 0) {
+        const finalParts: Part[] = [];
+        if (trimmedText) {
+          finalParts.push({
+            type: 'text',
+            id: `temp-text-${Date.now()}`,
+            sessionID: activeSessionID || 'temp',
+            messageID: 'temp',
+            text: trimmedText,
+          } as unknown as Part);
+        }
+        finalParts.push(...attachmentParts);
+
+        onSubmit(trimmedText, finalParts);
+
+        if (editorRef.current) {
+          editorRef.current.innerHTML = '';
+        }
+        setHasContent(false);
+      }
+    }
+  }, [isRunning, onAbort, activeSessionID, fileInfos, onSubmit]);
 
   const { send } = useIPC((message) => {
     if (message.type === 'workspace:search-files-response') {
@@ -119,11 +158,17 @@ export function PromptInput({
     setHasContent(text.trim().length > 0);
   }, [activeSessionID, fileInfos]);
 
-  const { handlePaste } = usePromptEditor({
+  const { handlePaste, insertChip, insertText } = usePromptEditor({
     editorRef,
     fileInfos,
     send,
     onInput: handleInput,
+  });
+
+  usePromptSelectionIPC({
+    insertChip,
+    insertText,
+    onSubmit: handleSubmit,
   });
 
   React.useEffect(() => {
@@ -170,6 +215,14 @@ export function PromptInput({
       send({ type: 'workspace:search-files', query: mentionState.query });
     }
   }, [mentionState.show, mentionState.query, send]);
+
+  React.useEffect(() => {
+    return () => {
+      if (mentionTimeoutRef.current) {
+        window.clearTimeout(mentionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const updateMentionState = React.useCallback(() => {
     const selection = window.getSelection();
@@ -272,14 +325,6 @@ export function PromptInput({
       labelSpan.textContent = item.name;
       chipNode.appendChild(labelSpan);
 
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'chip-remove-btn';
-      removeBtn.setAttribute('aria-label', 'Remove attachment');
-      const closeI = document.createElement('i');
-      closeI.className = 'codicon codicon-close';
-      removeBtn.appendChild(closeI);
-      chipNode.appendChild(removeBtn);
-
       const tooltipHtml = getTooltipHtml(
         {
           type: chipType,
@@ -292,21 +337,12 @@ export function PromptInput({
       );
       chipNode.setAttribute('data-custom-title', tooltipHtml);
 
-      removeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        chipNode.remove();
-        handleInput();
-      });
-
       range.deleteContents();
       range.insertNode(chipNode);
 
-      const spaceNode = document.createTextNode(' ');
-      chipNode.parentNode?.insertBefore(spaceNode, chipNode.nextSibling);
-
       const newRange = document.createRange();
-      newRange.setStart(spaceNode, 1);
-      newRange.setEnd(spaceNode, 1);
+      newRange.setStartAfter(chipNode);
+      newRange.setEndAfter(chipNode);
       selection.removeAllRanges();
       selection.addRange(newRange);
 
@@ -315,39 +351,6 @@ export function PromptInput({
     },
     [mentionState, fileInfos, send, handleInput, closeMentionList],
   );
-
-  const handleSubmit = () => {
-    if (isRunning) {
-      onAbort?.();
-    } else {
-      const { text: promptText, parts: attachmentParts } = getPromptData(
-        editorRef.current,
-        activeSessionID,
-        fileInfos,
-      );
-      const trimmedText = promptText.trim();
-      if (trimmedText || attachmentParts.length > 0) {
-        const finalParts: Part[] = [];
-        if (trimmedText) {
-          finalParts.push({
-            type: 'text',
-            id: `temp-text-${Date.now()}`,
-            sessionID: activeSessionID || 'temp',
-            messageID: 'temp',
-            text: trimmedText,
-          } as unknown as Part);
-        }
-        finalParts.push(...attachmentParts);
-
-        onSubmit(trimmedText, finalParts);
-
-        if (editorRef.current) {
-          editorRef.current.innerHTML = '';
-        }
-        setHasContent(false);
-      }
-    }
-  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (mentionState.show) {
@@ -404,7 +407,7 @@ export function PromptInput({
           onBlur={() => {
             setIsFocused(false);
             // Hide list after a short timeout so clicks on results are registered first
-            setTimeout(() => {
+            mentionTimeoutRef.current = window.setTimeout(() => {
               closeMentionList();
             }, 200);
           }}

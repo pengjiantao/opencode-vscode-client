@@ -79,6 +79,21 @@ export type ExtToWebview =
       skills: SkillInfo[];
       plugins: string[];
       extensionVersion: string;
+    }
+  | {
+      type: 'editor:selection';
+      text: string;
+      filename: string;
+      path: string;
+      startLine: number;
+      endLine: number;
+      action: 'insert' | 'explain';
+    }
+  | {
+      type: 'terminal:selection';
+      text: string;
+      linesCount: number;
+      action: 'insert' | 'explain-fix';
     };
 
 /** Messages sent from the webview to the extension host. */
@@ -95,7 +110,7 @@ export type WebviewToExt =
   | { type: 'agent:switch'; agent: string }
   | { type: 'permission:reply'; permissionID: string; allow: boolean }
   | { type: 'sessions:select-history' }
-  | { type: 'file:open'; path: string }
+  | { type: 'file:open'; path: string; startLine?: number; endLine?: number }
   | { type: 'file:query'; path: string }
   | { type: 'workspace:search-files'; query: string }
   | { type: 'init' }

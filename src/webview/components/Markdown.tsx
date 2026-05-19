@@ -7,6 +7,7 @@
 import type { Part } from '@opencode-ai/sdk/v2/client';
 import React from 'react';
 import { parseFileUrl } from '../utils/chipUtils';
+import { isSeparatorLine, parseAlignments, parseTableRow } from '../utils/markdownTableParser';
 import { Chip } from './Chip';
 import { CodeBlock } from './CodeBlock';
 
@@ -18,13 +19,210 @@ interface MarkdownProps {
 }
 
 /** Parses inline markdown markup (bold, italic, inline code, links, and inline chips). */
+/**
+ * Determines the rendering type of a file chip based on attributes and source metadata.
+ *
+ * @param chipType The parsed type of the chip.
+ * @param matchedPart The matching SDK Part data.
+ * @returns The resolved chip type identifier.
+ */
+function getChipTypeToRender(
+  chipType: string,
+  matchedPart: Extract<Part, { type: 'file' }>,
+): 'file' | 'image' | 'code-selection' | 'terminal' {
+  const isImage =
+    chipType === 'Image' ||
+    matchedPart.mime?.startsWith('image/') ||
+    matchedPart.url?.startsWith('data:image/');
+
+  if (isImage) {
+    return 'image';
+  }
+
+  if (
+    chipType === 'Terminal' ||
+    matchedPart.filename?.startsWith('terminal [') ||
+    (matchedPart.source &&
+      (matchedPart.source.type === 'file' || matchedPart.source.type === 'symbol') &&
+      matchedPart.source.path.startsWith('terminal-'))
+  ) {
+    return 'terminal';
+  }
+
+  if (
+    chipType === 'Code Selection' ||
+    (matchedPart.source && matchedPart.source.type === 'file' && matchedPart.source.text)
+  ) {
+    return 'code-selection';
+  }
+
+  return 'file';
+}
+
+/**
+ * Renders a matched inline chip based on pre-indexed lookup maps.
+ *
+ * @param chipType The parsed type identifier of the chip.
+ * @param chipName The parsed filename or display label of the chip.
+ * @param partsByFilename Pre-indexed file parts mapping filename to Part.
+ * @param partsByTextFilename Pre-indexed text parts mapping filename to Part.
+ * @param partsByImageFilename Pre-indexed image parts mapping filename to Part.
+ * @param partsByTerminalFilename Pre-indexed terminal parts mapping filename to Part.
+ * @param keyIdx Unique React key index.
+ */
+function parseAndRenderInlineChip(
+  chipType: string,
+  chipName: string,
+  partsByFilename: Map<string, Part>,
+  partsByTextFilename: Map<string, Part>,
+  partsByImageFilename: Map<string, Part>,
+  partsByTerminalFilename: Map<string, Part>,
+  keyIdx: number,
+): React.ReactNode | null {
+  let matchedPart: Part | undefined;
+  if (chipType === 'File' || chipType === 'Code Selection') {
+    matchedPart = partsByFilename.get(chipName);
+  } else if (chipType === 'Text') {
+    matchedPart = partsByTextFilename.get(chipName);
+  } else if (chipType === 'Image') {
+    matchedPart = partsByImageFilename.get(chipName);
+  } else if (chipType === 'Terminal') {
+    // Check both standard terminal pattern and plain filename matching
+    matchedPart =
+      partsByTerminalFilename.get(`terminal [${chipName}]`) || partsByFilename.get(chipName);
+  }
+
+  if (!matchedPart) return null;
+
+  if (chipType === 'Text' && matchedPart.type === 'text') {
+    const meta = matchedPart.metadata as { filename?: string; linesCount?: number } | undefined;
+    return (
+      <span
+        key={`chip-${keyIdx}`}
+        className="opencode-chip-inline-wrapper"
+        style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
+      >
+        <Chip
+          type="text"
+          filename={meta?.filename || chipName}
+          text={matchedPart.text}
+          linesCount={meta?.linesCount}
+        />
+      </span>
+    );
+  }
+
+  if (matchedPart.type === 'file') {
+    const chipTypeToRender = getChipTypeToRender(chipType, matchedPart);
+    const isImage = chipTypeToRender === 'image';
+
+    const sourcePath =
+      matchedPart.source &&
+      (matchedPart.source.type === 'file' || matchedPart.source.type === 'symbol')
+        ? matchedPart.source.path
+        : undefined;
+    let resolvedPath = sourcePath;
+    let decodedText: string | undefined;
+    const url = matchedPart.url;
+
+    if (!isImage && url) {
+      const parsed = parseFileUrl(url, matchedPart.mime);
+      resolvedPath = resolvedPath || parsed.path;
+      decodedText = parsed.text;
+    }
+
+    if (
+      !decodedText &&
+      matchedPart.source &&
+      matchedPart.source.type === 'file' &&
+      matchedPart.source.text
+    ) {
+      decodedText = matchedPart.source.text.value;
+    }
+
+    let startLine: number | undefined;
+    let endLine: number | undefined;
+    let linesCount: number | undefined;
+
+    if (
+      chipTypeToRender === 'code-selection' &&
+      matchedPart.source &&
+      matchedPart.source.type === 'file' &&
+      matchedPart.source.text
+    ) {
+      startLine = matchedPart.source.text.start;
+      endLine = matchedPart.source.text.end;
+    } else if (
+      chipTypeToRender === 'terminal' &&
+      matchedPart.source &&
+      matchedPart.source.type === 'file' &&
+      matchedPart.source.text
+    ) {
+      linesCount = matchedPart.source.text.end;
+    }
+
+    return (
+      <span
+        key={`chip-${keyIdx}`}
+        className="opencode-chip-inline-wrapper"
+        style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
+      >
+        <Chip
+          type={chipTypeToRender}
+          filename={matchedPart.filename}
+          path={resolvedPath}
+          mime={matchedPart.mime}
+          dataUrl={isImage ? url : undefined}
+          text={decodedText}
+          startLine={startLine}
+          endLine={endLine}
+          linesCount={linesCount}
+        />
+      </span>
+    );
+  }
+
+  return null;
+}
+
+/** Parses inline markdown markup (bold, italic, inline code, links, and inline chips). */
 function renderInline(text: string, allParts?: Part[]): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   const regex =
-    /(\*\*(.*?)\*\*)|(\*(.*?)\*)|(`(.*?)`)|(\[(.*?)\]\((.*?)\))|(\[(File|Text|Image):\s*(.*?)\])/g;
+    /(\*\*(.*?)\*\*)|(\*(.*?)\*)|(`(.*?)`)|(\[(.*?)\]\((.*?)\))|(\[(Code Selection):\s*(.*?)\]\])|(\[(File|Text|Image|Terminal):\s*(.*?)\])/g;
   let match;
   let lastIndex = 0;
   let keyIdx = 0;
+
+  // Pre-index parts for O(1) lookups to avoid nested linear searches
+  const partsByFilename = new Map<string, Part>();
+  const partsByTextFilename = new Map<string, Part>();
+  const partsByImageFilename = new Map<string, Part>();
+  const partsByTerminalFilename = new Map<string, Part>();
+
+  if (allParts) {
+    for (const p of allParts) {
+      if (p.type === 'file' && p.filename) {
+        partsByFilename.set(p.filename, p);
+        if (p.mime?.startsWith('image/') || p.url?.startsWith('data:image/')) {
+          partsByImageFilename.set(p.filename, p);
+        }
+        if (
+          p.filename.startsWith('terminal [') ||
+          (p.source &&
+            (p.source.type === 'file' || p.source.type === 'symbol') &&
+            p.source.path.startsWith('terminal-'))
+        ) {
+          partsByTerminalFilename.set(p.filename, p);
+        }
+      } else if (p.type === 'text') {
+        const meta = p.metadata as { type?: string; filename?: string } | undefined;
+        if (meta?.type === 'pasted-text' && meta?.filename) {
+          partsByTextFilename.set(meta.filename, p);
+        }
+      }
+    }
+  }
 
   while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) {
@@ -42,9 +240,12 @@ function renderInline(text: string, allParts?: Part[]): React.ReactNode[] {
       linkFull,
       linkText,
       linkUrl,
-      chipFull,
-      chipType,
-      chipName,
+      codeSelectionFull,
+      codeSelectionType,
+      codeSelectionName,
+      otherChipFull,
+      otherChipType,
+      otherChipName,
     ] = match;
 
     if (boldFull) {
@@ -65,88 +266,37 @@ function renderInline(text: string, allParts?: Part[]): React.ReactNode[] {
           {linkText}
         </a>,
       );
-    } else if (chipFull) {
-      const matchedPart = allParts?.find((p) => {
-        if (chipType === 'File') {
-          return p.type === 'file' && p.filename === chipName;
-        } else if (chipType === 'Text') {
-          return (
-            p.type === 'text' &&
-            p.metadata?.type === 'pasted-text' &&
-            p.metadata?.filename === chipName
-          );
-        } else if (chipType === 'Image') {
-          return (
-            p.type === 'file' &&
-            p.filename === chipName &&
-            (p.mime?.startsWith('image/') || p.url?.startsWith('data:image/'))
-          );
-        }
-        return false;
-      });
+    } else {
+      let chipFull: string | undefined;
+      let chipType: string | undefined;
+      let chipName: string | undefined;
 
-      let rendered = false;
-      if (matchedPart) {
-        if (chipType === 'Text' && matchedPart.type === 'text') {
-          rendered = true;
-          const meta = matchedPart.metadata as
-            | { filename?: string; linesCount?: number }
-            | undefined;
-          parts.push(
-            <span
-              key={`chip-${keyIdx++}`}
-              className="opencode-chip-inline-wrapper"
-              style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
-            >
-              <Chip
-                type="text"
-                filename={meta?.filename || chipName}
-                text={matchedPart.text}
-                linesCount={meta?.linesCount}
-              />
-            </span>,
-          );
-        } else if (matchedPart.type === 'file') {
-          rendered = true;
-          const isImage =
-            chipType === 'Image' ||
-            matchedPart.mime?.startsWith('image/') ||
-            matchedPart.url?.startsWith('data:image/');
-          const sourcePath =
-            matchedPart.source &&
-            (matchedPart.source.type === 'file' || matchedPart.source.type === 'symbol')
-              ? matchedPart.source.path
-              : undefined;
-          let resolvedPath: string | undefined = sourcePath;
-          let decodedText: string | undefined;
-          const url = matchedPart.url;
-
-          if (!isImage && url) {
-            const parsed = parseFileUrl(url, matchedPart.mime);
-            resolvedPath = resolvedPath || parsed.path;
-            decodedText = parsed.text;
-          }
-
-          parts.push(
-            <span
-              key={`chip-${keyIdx++}`}
-              className="opencode-chip-inline-wrapper"
-              style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
-            >
-              <Chip
-                type={isImage ? 'image' : 'file'}
-                filename={matchedPart.filename}
-                path={resolvedPath}
-                mime={matchedPart.mime}
-                dataUrl={isImage ? url : undefined}
-                text={decodedText}
-              />
-            </span>,
-          );
-        }
+      if (codeSelectionFull) {
+        chipFull = codeSelectionFull;
+        chipType = codeSelectionType;
+        chipName = codeSelectionName + ']';
+      } else if (otherChipFull) {
+        chipFull = otherChipFull;
+        chipType = otherChipType;
+        chipName = otherChipName;
       }
-      if (!rendered) {
-        parts.push(chipFull);
+
+      if (chipFull && chipType && chipName) {
+        const key = keyIdx++;
+        const chipElement = parseAndRenderInlineChip(
+          chipType,
+          chipName,
+          partsByFilename,
+          partsByTextFilename,
+          partsByImageFilename,
+          partsByTerminalFilename,
+          key,
+        );
+        if (chipElement) {
+          parts.push(chipElement);
+        } else {
+          parts.push(chipFull);
+        }
       }
     }
 
@@ -158,159 +308,6 @@ function renderInline(text: string, allParts?: Part[]): React.ReactNode[] {
   }
 
   return parts;
-}
-
-/**
- * Checks if a markdown line acts as a table separator/alignment row (e.g., `|:---:|---:|`).
- *
- * Separator lines are composed solely of pipes, dashes, colons, and whitespace.
- * Requiring at least one dash per column avoids false positives with normal text pipes.
- *
- * @param line - The raw string line to analyze.
- * @returns True if the line matches the GFM table separator row format.
- */
-function isSeparatorLine(line: string): boolean {
-  const trimmed = line.trim();
-  // A table separator must start and end with pipes in our parser
-  if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) {
-    return false;
-  }
-  const inner = trimmed.slice(1, -1);
-  const parts = inner.split('|');
-  // Every column between the pipes must represent a valid GFM separator (only colons and dashes)
-  return parts.every((part) => {
-    const p = part.trim();
-    return p.length > 0 && /^[:-]+$/.test(p);
-  });
-}
-
-/**
- * Helper to check if a character at index `idx` in a string is escaped by a backslash.
- * An odd number of preceding backslashes means the character is escaped.
- *
- * @param str - The string to check.
- * @param idx - The index of the character to check.
- * @returns True if the character is escaped.
- */
-function isCharEscaped(str: string, idx: number): boolean {
-  let backslashCount = 0;
-  for (let j = idx - 1; j >= 0; j--) {
-    if (str[j] === '\\') {
-      backslashCount++;
-    } else {
-      break;
-    }
-  }
-  return backslashCount % 2 === 1;
-}
-
-/**
- * Helper to measure the length of a consecutive sequence of backtick characters.
- *
- * @param str - The string to scan.
- * @param startIdx - The starting index of the backtick sequence.
- * @returns The length of consecutive backticks.
- */
-function getBacktickSeqLen(str: string, startIdx: number): number {
-  let count = 0;
-  for (let idx = startIdx; idx < str.length; idx++) {
-    if (str[idx] === '`') {
-      count++;
-    } else {
-      break;
-    }
-  }
-  return count;
-}
-
-/**
- * Parses a table row, splitting cells by `|` while correctly ignoring escaped pipes `\|`.
- *
- * We iterate through the string character by character to safely handle escaped pipe
- * characters and inline backtick code spans of arbitrary lengths, ensuring they remain
- * inside cell contents rather than acting as cell borders.
- *
- * @param line - The markdown table row line to parse.
- * @returns An array of parsed cell contents, or null if the line does not start/end with pipes.
- */
-function parseTableRow(line: string): string[] | null {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) {
-    return null;
-  }
-
-  // Conditionally strip trailing pipe only if it is an unescaped closing border.
-  // An escaped trailing pipe (e.g. `foo \|`) belongs to the final cell's content.
-  const hasClosingBorder = !isCharEscaped(trimmed, trimmed.length - 1);
-  const inner = hasClosingBorder ? trimmed.slice(1, -1) : trimmed.slice(1);
-
-  const cells: string[] = [];
-  let currentCell = '';
-  let activeBacktickLen = 0;
-  let idx = 0;
-
-  // Character-by-character scan to handle escaped pipes and inline code spans safely
-  while (idx < inner.length) {
-    const char = inner[idx];
-
-    // Toggle backtick state for unescaped backticks to ignore internal table pipes
-    if (char === '`' && !isCharEscaped(inner, idx)) {
-      const len = getBacktickSeqLen(inner, idx);
-      if (activeBacktickLen === 0) {
-        activeBacktickLen = len;
-      } else if (activeBacktickLen === len) {
-        activeBacktickLen = 0;
-      }
-      currentCell += inner.substring(idx, idx + len);
-      idx += len;
-      continue;
-    }
-
-    // Split the column if we find an unescaped pipe character outside of backticks
-    if (char === '|' && activeBacktickLen === 0 && !isCharEscaped(inner, idx)) {
-      cells.push(currentCell.trim());
-      currentCell = '';
-      idx++;
-      continue;
-    }
-
-    currentCell += char;
-    idx++;
-  }
-  cells.push(currentCell.trim());
-
-  // Replace escaped pipes back to standard pipe characters for rendering
-  return cells.map((cell) => cell.replace(/\\\|/g, '|'));
-}
-
-/**
- * Extracts alignments for each column from the table separator row.
- *
- * Maps `:---:` to 'center', `:---` to 'left', `---:` to 'right', and default to null.
- *
- * @param line - The separator row line.
- * @returns An array of column alignments corresponding to each table column.
- */
-function parseAlignments(line: string): ('left' | 'center' | 'right' | null)[] {
-  const cells = parseTableRow(line);
-  if (!cells) {
-    return [];
-  }
-  return cells.map((cell) => {
-    const trimmed = cell.trim();
-    const starts = trimmed.startsWith(':');
-    const ends = trimmed.endsWith(':');
-    if (starts && ends) {
-      return 'center';
-    }
-    if (starts) {
-      return 'left';
-    }
-    if (ends) {
-      return 'right';
-    }
-    return null;
-  });
 }
 
 /** Renders standard markdown document elements (headers, lists, block codes, paragraphs). */

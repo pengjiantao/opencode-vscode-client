@@ -283,9 +283,20 @@ describe('Extension Status Bar Activation', () => {
       .spyOn(workspace, 'openTextDocument')
       .mockResolvedValue(mockDoc as unknown as TextDocument);
     vi.spyOn(window, 'showTextDocument').mockResolvedValue(undefined as unknown as TextEditor);
+    vi.mocked(fs.statSync).mockReturnValue({
+      isFile: () => true,
+      isDirectory: () => false,
+      size: 1024,
+    } as unknown as fs.Stats);
+    vi.mocked(fs.promises.stat).mockResolvedValue({
+      isFile: () => true,
+      isDirectory: () => false,
+      size: 1024,
+    } as unknown as fs.Stats);
 
     if (openHandler) {
       void openHandler({ path: '/some/file.txt' });
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
 
     expect(openTextDocumentSpy).toHaveBeenCalled();
@@ -296,6 +307,7 @@ describe('Extension Status Bar Activation', () => {
 
     vi.mocked(fs.promises.stat).mockResolvedValue({
       isFile: () => true,
+      isDirectory: () => false,
       size: 1024,
     } as unknown as fs.Stats);
     vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from('File content'));

@@ -5,14 +5,8 @@
  */
 
 import type { Part, PermissionRequest, SessionStatus } from '@opencode-ai/sdk/v2/client';
-import {
-  commands,
-  StatusBarAlignment,
-  ThemeColor,
-  window,
-  workspace,
-  type ExtensionContext,
-} from 'vscode';
+import { StatusBarAlignment, ThemeColor, window, workspace, type ExtensionContext } from 'vscode';
+import { registerExtensionCommands } from './commands';
 import { IPCBridge } from './ipc';
 import { syncMetadata as importSyncMetadata } from './metadata';
 import type { SDKClient } from './sdk-client';
@@ -434,29 +428,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     });
     context.subscriptions.push({ dispose: unsubscribeEvents });
 
-    context.subscriptions.push(
-      commands.registerCommand('opencode-sidebar.focus', () => {
-        provider.view?.show(true);
-      }),
-    );
-
-    context.subscriptions.push(
-      commands.registerCommand('opencode-sidebar.createSession', () => {
-        handleCreateSession();
-      }),
-    );
-
-    context.subscriptions.push(
-      commands.registerCommand('opencode-sidebar.showHistory', () => {
-        handleSelectHistory();
-      }),
-    );
-
-    context.subscriptions.push(
-      commands.registerCommand('opencode-sidebar.openSettings', () => {
-        ipc.send({ type: 'settings:open' });
-      }),
-    );
+    registerExtensionCommands(context, ipc, provider, handleCreateSession, handleSelectHistory);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     window.showErrorMessage(`OpenCode Sidebar activation failed: ${message}`);

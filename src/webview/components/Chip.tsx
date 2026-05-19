@@ -15,7 +15,7 @@ import { Codicon } from './Codicon';
  */
 export interface ChipProps {
   /** The type of data represented by the chip. */
-  type: 'file' | 'image' | 'text';
+  type: 'file' | 'image' | 'text' | 'code-selection' | 'terminal';
   /** Display name of the chip (filename or description). */
   filename?: string;
   /** Absolute file path or URL on the local disk. */
@@ -30,10 +30,12 @@ export interface ChipProps {
   isWorkspace?: boolean;
   /** Base64 Data URL or remote source URL for image elements. */
   dataUrl?: string;
-  /** Number of lines for pasted text snippets. */
+  /** Number of lines for pasted text snippets or terminal logs. */
   linesCount?: number;
-  /** Callback to trigger when the dismiss icon button is clicked. */
-  onRemove?: () => void;
+  /** Start line number of the code selection. */
+  startLine?: number;
+  /** End line number of the code selection. */
+  endLine?: number;
 }
 
 /**
@@ -50,7 +52,8 @@ export function Chip({
   isWorkspace,
   dataUrl,
   linesCount,
-  onRemove,
+  startLine,
+  endLine,
 }: ChipProps) {
   const { send } = useIPC(() => {});
   const fileInfos = useSessionStore((s) => s.fileInfos);
@@ -76,21 +79,51 @@ export function Chip({
         send({ type: 'file:open', path });
         e.stopPropagation();
       }
+    } else if (type === 'code-selection' && path) {
+      send({ type: 'file:open', path, startLine, endLine });
+      e.stopPropagation();
     }
   };
 
-  const isClickable = type === 'file' && (cachedInfo?.isWorkspace || isWorkspace);
-  const displayLabel =
-    type === 'text'
-      ? `Pasted ${linesCount || text?.split('\n').length || 1} Lines`
-      : filename || 'file';
+  const isClickable =
+    (type === 'file' && (cachedInfo?.isWorkspace || isWorkspace)) ||
+    (type === 'code-selection' && !!path);
+
+  let displayLabel = filename || 'file';
+  if (type === 'text') {
+    displayLabel = `Pasted ${linesCount || text?.split('\n').length || 1} Lines`;
+  } else if (type === 'code-selection') {
+    if (filename && /\[\d+-\d+\]/.test(filename)) {
+      displayLabel = filename;
+    } else {
+      displayLabel = `${filename} [${startLine || 1}-${endLine || 1}]`;
+    }
+  } else if (type === 'terminal') {
+    if (filename && /terminal\s*\[\d+/.test(filename)) {
+      displayLabel = filename;
+    } else {
+      displayLabel = `terminal[${linesCount || 1} lines]`;
+    }
+  }
 
   return (
     <span
       className={`opencode-chip ${type}-chip ${isClickable ? 'clickable' : ''}`}
       onClick={handleClick}
       data-custom-title={getTooltipHtml(
-        { type, filename, path, text, size, mime, isWorkspace, dataUrl, linesCount },
+        {
+          type,
+          filename,
+          path,
+          text,
+          size,
+          mime,
+          isWorkspace,
+          dataUrl,
+          linesCount,
+          startLine,
+          endLine,
+        },
         fileInfos || {},
       )}
       role={isClickable ? 'button' : undefined}
@@ -100,18 +133,6 @@ export function Chip({
         <Codicon name={getIconName()} />
       </span>
       <span className="chip-label">{displayLabel}</span>
-      {onRemove && (
-        <button
-          className="chip-remove-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          aria-label="Remove attachment"
-        >
-          <Codicon name="$(close)" />
-        </button>
-      )}
     </span>
   );
 }

@@ -6,7 +6,16 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { RelativePattern, Uri, window, workspace } from 'vscode';
+import {
+  Position,
+  Range,
+  RelativePattern,
+  Selection,
+  Uri,
+  commands,
+  window,
+  workspace,
+} from 'vscode';
 import type { IPCBridge } from '../ipc';
 import { getConfiguration } from './config';
 import { isPathIgnored, loadGitignorePatterns } from './gitignore';
@@ -234,7 +243,11 @@ function sortMatches(items: WorkspaceItem[], query: string): WorkspaceItem[] {
 export function registerFileHandlers(ipc: IPCBridge): void {
   // IPC command to open a file in VS Code editor
   ipc.on('file:open', (msg) => {
-    const { path: filePath } = msg as { path: string };
+    const {
+      path: filePath,
+      startLine,
+      endLine,
+    } = msg as { path: string; startLine?: number; endLine?: number };
     try {
       const resolvedPath = resolveFilePath(filePath);
       const uri = Uri.file(resolvedPath);
@@ -246,9 +259,25 @@ export function registerFileHandlers(ipc: IPCBridge): void {
         return;
       }
 
+      // If the path represents a directory, opening it as a text document would fail.
+      // Instead, we reveal the directory in the native VS Code Explorer panel.
+      const stat = fs.statSync(resolvedPath);
+      if (stat.isDirectory()) {
+        commands.executeCommand('revealInExplorer', uri);
+        return;
+      }
+
       workspace.openTextDocument(uri).then(
         (doc) => {
-          window.showTextDocument(doc);
+          window.showTextDocument(doc).then((editor) => {
+            // Highlight and reveal the selection range if specified by a code-selection chip
+            if (startLine !== undefined && endLine !== undefined) {
+              const startPos = new Position(startLine - 1, 0);
+              const endPos = new Position(endLine - 1, doc.lineAt(endLine - 1).text.length);
+              editor.selection = new Selection(startPos, endPos);
+              editor.revealRange(new Range(startPos, endPos));
+            }
+          });
         },
         (err) => {
           window.showErrorMessage(`Failed to open document: ${(err as Error).message}`);
@@ -282,7 +311,9 @@ export function registerFileHandlers(ipc: IPCBridge): void {
         }
 
         const isFile = stat.isFile();
-        if (!isFile) {
+        const isDir = stat.isDirectory();
+        // Skip paths that are neither files nor directories (e.g. symlinks, named pipes)
+        if (!isFile && !isDir) {
           ipc.send({
             type: 'file:query-response',
             path: filePath,
@@ -295,25 +326,28 @@ export function registerFileHandlers(ipc: IPCBridge): void {
         }
 
         const filename = resolvedPath.split(/[\\/]/).pop() || '';
-        const size = stat.size;
+        const size = isDir ? 0 : stat.size;
 
         // Use the canonical VS Code API to determine workspace membership
         const uri = Uri.file(resolvedPath);
         const isWorkspace = !!workspace.getWorkspaceFolder(uri);
 
         let content: string | undefined;
-        const limit = 30 * 1024; // Limit preview extraction to files smaller than 30KB
-        // Defense-in-depth: limit file reading to workspace files only
-        if (isWorkspace && size <= limit) {
-          try {
-            const buffer = await fs.promises.readFile(resolvedPath);
-            // Exclude binary files containing null bytes
-            const isText = !buffer.includes(0);
-            if (isText) {
-              content = buffer.toString('utf-8');
+        // Only attempt reading contents for physical text files, not directories
+        if (isFile) {
+          const limit = 30 * 1024; // Limit preview extraction to files smaller than 30KB
+          // Defense-in-depth: limit file reading to workspace files only
+          if (isWorkspace && size <= limit) {
+            try {
+              const buffer = await fs.promises.readFile(resolvedPath);
+              // Exclude binary files containing null bytes
+              const isText = !buffer.includes(0);
+              if (isText) {
+                content = buffer.toString('utf-8');
+              }
+            } catch (readErr) {
+              console.error('Error reading file content:', readErr);
             }
-          } catch (readErr) {
-            console.error('Error reading file content:', readErr);
           }
         }
 

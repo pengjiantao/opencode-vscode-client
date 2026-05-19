@@ -22,13 +22,14 @@ export function escapeHtml(str: string): string {
 /**
  * Resolves the VS Code codicon class name for a given attachment type.
  *
- * @param type The type of attachment ('file', 'image', 'text').
+ * @param type The type of attachment ('file', 'image', 'text', 'code-selection', 'terminal').
  * @param mime The optional MIME type of the file.
  * @returns The codicon class name.
  */
 export const getIconClass = (type: string, mime?: string): string => {
   if (type === 'image') return 'file-media';
   if (type === 'text') return 'note';
+  if (type === 'terminal') return 'terminal';
   if (mime === 'directory') return 'folder';
   if (mime?.startsWith('image/')) return 'file-media';
   if (mime?.startsWith('text/')) return 'file-text';
@@ -45,7 +46,7 @@ export const getIconClass = (type: string, mime?: string): string => {
  */
 export const getTooltipHtml = (
   chip: {
-    type: 'file' | 'image' | 'text';
+    type: 'file' | 'image' | 'text' | 'code-selection' | 'terminal';
     filename?: string;
     path?: string;
     text?: string;
@@ -54,13 +55,36 @@ export const getTooltipHtml = (
     isWorkspace?: boolean;
     dataUrl?: string;
     linesCount?: number;
+    startLine?: number;
+    endLine?: number;
   },
   fileInfos: Record<
     string,
     { exists: boolean; size: number; content?: string; isWorkspace: boolean }
   >,
 ): string => {
-  const { type, filename, path, text, size, dataUrl, linesCount, mime } = chip;
+  const { type, filename, path, text, size, dataUrl, linesCount, mime, startLine, endLine } = chip;
+
+  if (type === 'code-selection') {
+    let cleanFilename = filename || 'file';
+    const rangeRegex = /\s*\[\d+-\d+\]$/;
+    if (rangeRegex.test(cleanFilename)) {
+      cleanFilename = cleanFilename.replace(rangeRegex, '');
+    }
+    return `<div class="tooltip-container">
+      <strong>Selected Code Snippet</strong> (${escapeHtml(cleanFilename)} [${startLine || 1}-${endLine || 1}])<br/>
+      ${path ? `<span class="tooltip-meta">Path: ${escapeHtml(path)}</span><br/>` : ''}
+      <pre class="tooltip-code">${escapeHtml(text || '')}</pre>
+    </div>`;
+  }
+
+  if (type === 'terminal') {
+    return `<div class="tooltip-container">
+      <strong>Terminal Output</strong> (${linesCount || 1} lines)
+      <pre class="tooltip-code">${escapeHtml(text || '')}</pre>
+    </div>`;
+  }
+
   if (mime === 'directory') {
     const displayPath = path || '';
     return `<div class="tooltip-container">
@@ -152,7 +176,12 @@ export const getPromptData = (
     } else if (node.nodeType === 1) {
       const el = node as HTMLElement;
       if (el.classList.contains('opencode-chip')) {
-        const type = el.getAttribute('data-chip-type') as 'file' | 'image' | 'text';
+        const type = el.getAttribute('data-chip-type') as
+          | 'file'
+          | 'image'
+          | 'text'
+          | 'code-selection'
+          | 'terminal';
         const id = el.getAttribute('data-chip-id') || '';
         const filename = el.getAttribute('data-chip-filename') || 'file';
         const path = el.getAttribute('data-chip-path') || undefined;
@@ -160,6 +189,8 @@ export const getPromptData = (
         const mime = el.getAttribute('data-chip-mime') || 'text/plain';
         const dataUrl = el.getAttribute('data-chip-data-url') || undefined;
         const linesCount = Number(el.getAttribute('data-chip-lines-count') || '0');
+        const startLine = Number(el.getAttribute('data-chip-start-line') || '1');
+        const endLine = Number(el.getAttribute('data-chip-end-line') || '1');
 
         if (type === 'image') {
           promptText += `[Image: ${filename}]`;
@@ -186,6 +217,77 @@ export const getPromptData = (
               filename,
             },
           } as unknown as Part);
+        } else if (type === 'code-selection') {
+          const displayRange = `[${startLine}-${endLine}]`;
+          let cleanFilename = filename || 'file';
+          const rangePattern = /\s*\[\d+-\d+\]$/;
+          if (rangePattern.test(cleanFilename)) {
+            cleanFilename = cleanFilename.replace(rangePattern, '');
+          }
+          promptText += `[Code Selection: ${cleanFilename} ${displayRange}]`;
+          let finalUrl: string;
+          if (path) {
+            let cleanPath = path.replace(/\\/g, '/');
+            if (!cleanPath.startsWith('/')) {
+              cleanPath = '/' + cleanPath;
+            }
+            finalUrl = `file://${cleanPath}`;
+          } else {
+            const MAX_DATA_URL_LIMIT = 50 * 1024;
+            const truncatedText =
+              chipText.length > MAX_DATA_URL_LIMIT
+                ? chipText.slice(0, MAX_DATA_URL_LIMIT) + '\n... (truncated due to size limit)'
+                : chipText;
+            const base64Content = btoa(unescape(encodeURIComponent(truncatedText)));
+            finalUrl = `data:${mime || 'text/plain'};base64,${base64Content}`;
+          }
+          const source = {
+            type: 'file' as const,
+            path: path || cleanFilename,
+            text: {
+              value: chipText,
+              start: startLine,
+              end: endLine,
+            },
+          };
+          parts.push({
+            type: 'file',
+            id,
+            sessionID: activeSessionID || 'temp',
+            messageID: 'temp',
+            mime: mime || 'text/plain',
+            filename: `${cleanFilename} ${displayRange}`,
+            url: finalUrl,
+            source,
+          } as unknown as Part);
+        } else if (type === 'terminal') {
+          promptText += `[Terminal: ${linesCount} lines]`;
+          const MAX_DATA_URL_LIMIT = 50 * 1024;
+          const truncatedText =
+            chipText.length > MAX_DATA_URL_LIMIT
+              ? chipText.slice(0, MAX_DATA_URL_LIMIT) + '\n... (truncated due to size limit)'
+              : chipText;
+          const base64Content = btoa(unescape(encodeURIComponent(truncatedText)));
+          const finalUrl = `data:text/plain;base64,${base64Content}`;
+          const source = {
+            type: 'file' as const,
+            path: `terminal-${id}`,
+            text: {
+              value: chipText,
+              start: 1,
+              end: linesCount,
+            },
+          };
+          parts.push({
+            type: 'file',
+            id,
+            sessionID: activeSessionID || 'temp',
+            messageID: 'temp',
+            mime: 'text/plain',
+            filename: `terminal [${linesCount} lines]`,
+            url: finalUrl,
+            source,
+          } as unknown as Part);
         } else if (type === 'file') {
           promptText += `[File: ${filename}]`;
           const cached = path ? fileInfos[path] : undefined;
@@ -198,7 +300,12 @@ export const getPromptData = (
             finalUrl = `file://${cleanPath}`;
           } else {
             const fileContent = chipText || cached?.content || '';
-            const base64Content = btoa(unescape(encodeURIComponent(fileContent)));
+            const MAX_DATA_URL_LIMIT = 50 * 1024;
+            const truncatedText =
+              fileContent.length > MAX_DATA_URL_LIMIT
+                ? fileContent.slice(0, MAX_DATA_URL_LIMIT) + '\n... (truncated due to size limit)'
+                : fileContent;
+            const base64Content = btoa(unescape(encodeURIComponent(truncatedText)));
             finalUrl = `data:${mime || 'text/plain'};base64,${base64Content}`;
           }
           const fileContent = chipText || cached?.content || '';

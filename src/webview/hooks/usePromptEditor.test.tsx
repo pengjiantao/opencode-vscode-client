@@ -142,25 +142,20 @@ describe('usePromptEditor', () => {
     expect(screen.getByText('Pasted 3 Lines')).toBeInTheDocument();
   });
 
-  it('should remove the chip when the close button is clicked', () => {
+  it('should insert chip and place cursor after it without trailing space', () => {
+    const sendSpy = vi.fn();
     const onInputSpy = vi.fn();
-    render(<TestComponent fileInfos={{}} sendSpy={vi.fn()} onInputSpy={onInputSpy} />);
+    render(<TestComponent fileInfos={{}} sendSpy={sendSpy} onInputSpy={onInputSpy} />);
 
     const editor = screen.getByTestId('editor');
     const button = screen.getByTestId('btn-insert-file');
     fireEvent.click(button);
 
-    const chip = editor.querySelector('.opencode-chip.file-chip');
-    expect(chip).toBeInTheDocument();
-
-    const removeBtn = chip?.querySelector('.chip-remove-btn');
-    expect(removeBtn).toBeInTheDocument();
-
-    onInputSpy.mockClear();
-    fireEvent.click(removeBtn!);
-
-    expect(chip).not.toBeInTheDocument();
-    expect(onInputSpy).toHaveBeenCalled();
+    // Verify no text nodes containing spaces are siblings of the chip
+    const spaceNode = Array.from(editor.childNodes).find(
+      (node) => node.nodeType === Node.TEXT_NODE && node.textContent === ' ',
+    );
+    expect(spaceNode).toBeUndefined();
   });
 
   it('should parse pasted file paths and insert them as chips', () => {

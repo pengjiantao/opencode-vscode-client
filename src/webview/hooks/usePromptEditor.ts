@@ -29,7 +29,7 @@ export interface UsePromptEditorProps {
  */
 export interface EditorChip {
   id: string;
-  type: 'file' | 'image' | 'text';
+  type: 'file' | 'image' | 'text' | 'code-selection' | 'terminal';
   filename?: string;
   path?: string;
   text?: string;
@@ -38,6 +38,8 @@ export interface EditorChip {
   isWorkspace?: boolean;
   dataUrl?: string;
   linesCount?: number;
+  startLine?: number;
+  endLine?: number;
 }
 
 /**
@@ -71,14 +73,22 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
       if (chip.isWorkspace) chipNode.setAttribute('data-chip-is-workspace', 'true');
       if (chip.dataUrl) chipNode.setAttribute('data-chip-data-url', chip.dataUrl);
       if (chip.linesCount) chipNode.setAttribute('data-chip-lines-count', String(chip.linesCount));
+      if (chip.startLine) chipNode.setAttribute('data-chip-start-line', String(chip.startLine));
+      if (chip.endLine) chipNode.setAttribute('data-chip-end-line', String(chip.endLine));
 
       if (chip.type === 'file' && chip.path) {
         send({ type: 'file:query', path: chip.path });
       }
 
       const iconClass = getIconClass(chip.type, chip.mime);
-      const displayLabel =
-        chip.type === 'text' ? `Pasted ${chip.linesCount} Lines` : chip.filename || 'file';
+      let displayLabel = chip.filename || 'file';
+      if (chip.type === 'text') {
+        displayLabel = `Pasted ${chip.linesCount} Lines`;
+      } else if (chip.type === 'code-selection') {
+        displayLabel = `${chip.filename} [${chip.startLine || 1}-${chip.endLine || 1}]`;
+      } else if (chip.type === 'terminal') {
+        displayLabel = `terminal[${chip.linesCount || 1} lines]`;
+      }
 
       const iconSpan = document.createElement('span');
       iconSpan.className = 'chip-icon';
@@ -92,22 +102,23 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
       labelSpan.textContent = displayLabel;
       chipNode.appendChild(labelSpan);
 
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'chip-remove-btn';
-      removeBtn.setAttribute('aria-label', 'Remove attachment');
-      const closeI = document.createElement('i');
-      closeI.className = 'codicon codicon-close';
-      removeBtn.appendChild(closeI);
-      chipNode.appendChild(removeBtn);
-
-      const tooltipHtml = getTooltipHtml(chip, fileInfos);
+      const tooltipHtml = getTooltipHtml(
+        {
+          type: chip.type,
+          filename: chip.filename,
+          path: chip.path,
+          text: chip.text,
+          size: chip.size,
+          mime: chip.mime,
+          isWorkspace: chip.isWorkspace,
+          dataUrl: chip.dataUrl,
+          linesCount: chip.linesCount,
+          startLine: chip.startLine,
+          endLine: chip.endLine,
+        },
+        fileInfos,
+      );
       chipNode.setAttribute('data-custom-title', tooltipHtml);
-
-      removeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        chipNode.remove();
-        onInput();
-      });
 
       if (editorRef.current) {
         editorRef.current.focus();
@@ -117,22 +128,17 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
         range.deleteContents();
         range.insertNode(chipNode);
 
-        const spaceNode = document.createTextNode(' ');
-        chipNode.parentNode?.insertBefore(spaceNode, chipNode.nextSibling);
-
         const newRange = document.createRange();
-        newRange.setStart(spaceNode, 1);
-        newRange.setEnd(spaceNode, 1);
+        newRange.setStartAfter(chipNode);
+        newRange.setEndAfter(chipNode);
         selection?.removeAllRanges();
         selection?.addRange(newRange);
       } else if (editorRef.current) {
         editorRef.current.appendChild(chipNode);
-        const spaceNode = document.createTextNode(' ');
-        editorRef.current.appendChild(spaceNode);
 
         const newRange = document.createRange();
-        newRange.setStart(spaceNode, 1);
-        newRange.setEnd(spaceNode, 1);
+        newRange.setStartAfter(chipNode);
+        newRange.setEndAfter(chipNode);
         selection?.removeAllRanges();
         selection?.addRange(newRange);
       }
@@ -279,5 +285,51 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
     [insertChip, onInput],
   );
 
-  return { insertChip, handlePaste };
+  /**
+   * Inserts a plain text node at the current cursor selection position in the editor.
+   * If there is no active selection inside the editor, appends the text node at the end.
+   *
+   * @param text The plain text content to insert.
+   */
+  const insertText = useCallback(
+    (text: string) => {
+      const selection = window.getSelection();
+      let range: Range | null = null;
+      if (selection && selection.rangeCount > 0) {
+        const potentialRange = selection.getRangeAt(0);
+        if (
+          editorRef.current &&
+          editorRef.current.contains(potentialRange.commonAncestorContainer)
+        ) {
+          range = potentialRange;
+        }
+      }
+
+      const textNode = document.createTextNode(text);
+
+      if (range) {
+        range.deleteContents();
+        range.insertNode(textNode);
+
+        const newRange = document.createRange();
+        newRange.setStartAfter(textNode);
+        newRange.setEndAfter(textNode);
+        selection?.removeAllRanges();
+        selection?.addRange(newRange);
+      } else if (editorRef.current) {
+        editorRef.current.appendChild(textNode);
+
+        const newRange = document.createRange();
+        newRange.setStartAfter(textNode);
+        newRange.setEndAfter(textNode);
+        selection?.removeAllRanges();
+        selection?.addRange(newRange);
+      }
+
+      onInput();
+    },
+    [editorRef, onInput],
+  );
+
+  return { insertChip, insertText, handlePaste };
 }

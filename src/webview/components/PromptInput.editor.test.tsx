@@ -167,11 +167,11 @@ describe('PromptInput - Editor & Mention Popover', () => {
     expect(mockOnSubmit).toHaveBeenCalled();
     const [submittedText, submittedParts] = mockOnSubmit.mock.calls[0];
 
-    expect(submittedText).toContain('Prefix [Text: Pasted 2 Lines] Suffix');
+    expect(submittedText).toContain('Prefix [Text: Pasted 2 Lines]Suffix');
     expect(submittedParts.length).toBe(2);
     expect(submittedParts[0].type).toBe('text');
     const firstPart = submittedParts[0] as { type: 'text'; text: string };
-    expect(firstPart.text).toBe('Prefix [Text: Pasted 2 Lines] Suffix');
+    expect(firstPart.text).toBe('Prefix [Text: Pasted 2 Lines]Suffix');
 
     expect(submittedParts[1].type).toBe('text');
     const secondPart = submittedParts[1] as {
@@ -453,5 +453,91 @@ describe('PromptInput - Editor & Mention Popover', () => {
 
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it('regression: handles editor:selection message, inserts chip, and triggers explain action if requested', () => {
+    vi.useFakeTimers();
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[{ id: 'model-1', name: 'Model 1' }]}
+        agents={[{ id: 'agent-1', name: 'Agent 1' }]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    // Mock incoming editor:selection IPC message
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: {
+            type: 'editor:selection',
+            text: 'const a = 1;',
+            filename: 'main.ts',
+            path: '/path/main.ts',
+            startLine: 1,
+            endLine: 2,
+            action: 'explain',
+          },
+        }),
+      );
+    });
+
+    // Let the setTimeout runs
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
+    // Check that onSubmit has been triggered with the explain text and the code selection parts
+    expect(mockOnSubmit).toHaveBeenCalled();
+    const [submittedText, submittedParts] = mockOnSubmit.mock.calls[0];
+    expect(submittedText).toContain('[Code Selection: main.ts [1-2]]');
+    expect(submittedText).toContain('Explain this code');
+    expect(submittedParts.length).toBe(2);
+    expect(submittedParts[1].type).toBe('file');
+
+    vi.useRealTimers();
+  });
+
+  it('regression: handles terminal:selection message, inserts chip, and triggers explain-fix action if requested', () => {
+    vi.useFakeTimers();
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[{ id: 'model-1', name: 'Model 1' }]}
+        agents={[{ id: 'agent-1', name: 'Agent 1' }]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    // Mock incoming terminal:selection IPC message
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: {
+            type: 'terminal:selection',
+            text: 'Error in line 5',
+            linesCount: 3,
+            action: 'explain-fix',
+          },
+        }),
+      );
+    });
+
+    // Let the setTimeout runs
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
+    expect(mockOnSubmit).toHaveBeenCalled();
+    const [submittedText, submittedParts] = mockOnSubmit.mock.calls[0];
+    expect(submittedText).toContain('[Terminal: 3 lines]');
+    expect(submittedText).toContain('Explain this content or fix issues in it');
+    expect(submittedParts.length).toBe(2);
+    expect(submittedParts[1].type).toBe('file');
+
+    vi.useRealTimers();
   });
 });

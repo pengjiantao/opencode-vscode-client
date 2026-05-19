@@ -69,13 +69,7 @@ export function PartRenderer({ part, allParts, isAssistant = false }: PartRender
       return <ReasoningPart text={part.text} time={part.time} metadata={part.metadata} />;
 
     case 'file': {
-      const sourcePath =
-        part.source && (part.source.type === 'file' || part.source.type === 'symbol')
-          ? part.source.path
-          : undefined;
-      return (
-        <FilePart filename={part.filename} mime={part.mime} url={part.url} path={sourcePath} />
-      );
+      return <FilePart part={part} />;
     }
 
     case 'agent':

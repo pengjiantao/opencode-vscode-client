@@ -310,4 +310,56 @@ describe('Markdown Component', () => {
     expect(chipElement).toBeInTheDocument();
     expect(chipElement?.getAttribute('data-custom-title')).toContain('relative/CHANGELOG.md');
   });
+
+  it('regression: renders custom Code Selection inline chips with range and text values', () => {
+    const text = 'Refactoring [[Code Selection: index.ts [10-20]]] here.';
+    const allParts = [
+      {
+        id: 'code-part',
+        type: 'file',
+        filename: 'index.ts [10-20]',
+        url: 'file:///workspace/index.ts',
+        source: {
+          type: 'file' as const,
+          path: 'index.ts',
+          text: {
+            value: 'console.log("hello");\nconst x = 5;',
+            start: 10,
+            end: 20,
+          },
+        },
+      },
+    ] as unknown as Part[];
+
+    const { container } = render(<Markdown text={text} allParts={allParts} />);
+    const chipWrapper = container.querySelector('.opencode-chip-inline-wrapper');
+    expect(chipWrapper).toBeInTheDocument();
+    expect(screen.getByText('index.ts [10-20]')).toBeInTheDocument();
+  });
+
+  it('regression: renders Terminal inline chips correctly', () => {
+    const text = 'Executed command logs [Terminal: 5 lines]';
+    const allParts = [
+      {
+        id: 'terminal-part',
+        type: 'file',
+        filename: 'terminal [5 lines]',
+        url: 'data:text/plain;base64,bGlzdAo=',
+        source: {
+          type: 'file' as const,
+          path: 'terminal-logs',
+          text: {
+            value: 'test output',
+            start: 1,
+            end: 5,
+          },
+        },
+      },
+    ] as unknown as Part[];
+
+    const { container } = render(<Markdown text={text} allParts={allParts} />);
+    const chipWrapper = container.querySelector('.opencode-chip-inline-wrapper');
+    expect(chipWrapper).toBeInTheDocument();
+    expect(screen.getByText('terminal [5 lines]')).toBeInTheDocument();
+  });
 });

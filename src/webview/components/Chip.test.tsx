@@ -57,14 +57,36 @@ describe('Chip', () => {
     expect(screen.getByText('Pasted 3 Lines')).toBeInTheDocument();
   });
 
-  it('handles remove button interactions', () => {
-    const onRemove = vi.fn();
-    render(<Chip type="file" filename="test.txt" path="/test/test.txt" onRemove={onRemove} />);
+  it('renders a code-selection chip and triggers open with lines range', () => {
+    render(
+      <Chip
+        type="code-selection"
+        filename="index.ts"
+        path="/test/index.ts"
+        startLine={10}
+        endLine={25}
+      />,
+    );
 
-    const closeBtn = screen.getByRole('button', { name: /remove attachment/i });
-    expect(closeBtn).toBeInTheDocument();
+    const label = screen.getByText('index.ts [10-25]');
+    expect(label).toBeInTheDocument();
 
-    fireEvent.click(closeBtn);
-    expect(onRemove).toHaveBeenCalledTimes(1);
+    const container = screen.getByRole('button');
+    expect(container).toHaveClass('clickable');
+
+    fireEvent.click(container);
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: '/test/index.ts',
+      startLine: 10,
+      endLine: 25,
+    });
+  });
+
+  it('renders a terminal chip and is not clickable', () => {
+    render(<Chip type="terminal" linesCount={5} text="output" />);
+
+    expect(screen.getByText('terminal[5 lines]')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });

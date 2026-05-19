@@ -118,6 +118,26 @@
         "title": "Settings",
         "category": "OpenCode",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "opencode-sidebar.sendSelectionToOpencode",
+        "title": "Send to OpenCode",
+        "category": "OpenCode"
+      },
+      {
+        "command": "opencode-sidebar.explainSelectionToOpencode",
+        "title": "Explain Code",
+        "category": "OpenCode"
+      },
+      {
+        "command": "opencode-sidebar.sendTerminalToOpencode",
+        "title": "Send Selected Lines to OpenCode",
+        "category": "OpenCode"
+      },
+      {
+        "command": "opencode-sidebar.explainTerminalToOpencode",
+        "title": "Explain and Fix in OpenCode",
+        "category": "OpenCode"
       }
     ],
     "menus": {
@@ -136,6 +156,38 @@
           "command": "opencode-sidebar.openSettings",
           "when": "view == opencode-sidebar.main",
           "group": "navigation@3"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "opencode-sidebar.sendSelectionToOpencode",
+          "when": "editorHasSelection && resourceScheme != 'output'",
+          "group": "opencode@1"
+        },
+        {
+          "command": "opencode-sidebar.explainSelectionToOpencode",
+          "when": "editorHasSelection && resourceScheme != 'output'",
+          "group": "opencode@2"
+        },
+        {
+          "command": "opencode-sidebar.sendTerminalToOpencode",
+          "when": "resourceScheme == 'output' && editorHasSelection",
+          "group": "opencode@1"
+        },
+        {
+          "command": "opencode-sidebar.explainTerminalToOpencode",
+          "when": "resourceScheme == 'output' && editorHasSelection",
+          "group": "opencode@2"
+        }
+      ],
+      "terminal/context": [
+        {
+          "command": "opencode-sidebar.sendTerminalToOpencode",
+          "group": "opencode@1"
+        },
+        {
+          "command": "opencode-sidebar.explainTerminalToOpencode",
+          "group": "opencode@2"
         }
       ]
     },

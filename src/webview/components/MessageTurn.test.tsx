@@ -356,4 +356,64 @@ describe('MessageTurn', () => {
       expect(writeTextSpy).toHaveBeenCalledWith('Text from assistant 1.\nText from assistant 2.');
     });
   });
+
+  it('regression: renders both text parts and file/chip parts inline in user message bubble', () => {
+    const userMsg = createMockUserMessage();
+    const textPart = createMockTextPart(
+      '[Code Selection: main.ts [1-10]] Explain this code and look at [Terminal: 5 lines]',
+    );
+    textPart.messageID = userMsg.id;
+
+    const filePart = {
+      type: 'file' as const,
+      id: 'part-file',
+      sessionID: 'session-1',
+      messageID: userMsg.id,
+      mime: 'text/plain',
+      url: 'file:///src/main.ts',
+      filename: 'main.ts [1-10]',
+      source: {
+        type: 'file' as const,
+        path: 'src/main.ts',
+        text: {
+          value: 'const x = 1;',
+          start: 1,
+          end: 10,
+        },
+      },
+    };
+
+    const terminalPart = {
+      type: 'file' as const,
+      id: 'part-terminal',
+      sessionID: 'session-1',
+      messageID: userMsg.id,
+      mime: 'text/plain',
+      url: 'data:text/plain;base64,ZXJyb3I=',
+      filename: 'terminal [5 lines]',
+      source: {
+        type: 'file' as const,
+        path: 'terminal-part-terminal',
+        text: {
+          value: 'error',
+          start: 1,
+          end: 5,
+        },
+      },
+    };
+
+    render(
+      <MessageTurn
+        userMessage={userMsg}
+        parts={{ [userMsg.id]: [textPart, filePart, terminalPart] }}
+      />,
+    );
+
+    // Verify text parts render
+    expect(screen.getByText('Explain this code and look at')).toBeInTheDocument();
+    // Verify file part (chip) renders inline
+    expect(screen.getByText('main.ts [1-10]')).toBeInTheDocument();
+    // Verify terminal part (chip) renders inline
+    expect(screen.getByText('terminal [5 lines]')).toBeInTheDocument();
+  });
 });

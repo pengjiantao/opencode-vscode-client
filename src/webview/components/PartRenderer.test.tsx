@@ -172,6 +172,56 @@ describe('PartRenderer', () => {
     expect(codeElement?.textContent?.startsWith('\n')).toBe(false);
   });
 
+  it('regression: renders code-selection part as code-selection chip in chat area', () => {
+    const part = {
+      type: 'file' as const,
+      id: 'part-code',
+      sessionID: 'session-1',
+      messageID: 'msg-1',
+      mime: 'text/plain',
+      url: 'file:///src/main.ts',
+      filename: 'main.ts [1-10]',
+      source: {
+        type: 'file' as const,
+        path: 'src/main.ts',
+        text: {
+          value: 'const a = 1;',
+          start: 1,
+          end: 10,
+        },
+      },
+    };
+    const { container } = render(<PartRenderer part={part} />);
+    const chipElement = container.querySelector('.opencode-chip.code-selection-chip');
+    expect(chipElement).toBeInTheDocument();
+    expect(screen.getByText('main.ts [1-10]')).toBeInTheDocument();
+  });
+
+  it('regression: renders terminal part as terminal chip in chat area', () => {
+    const part = {
+      type: 'file' as const,
+      id: 'part-terminal',
+      sessionID: 'session-1',
+      messageID: 'msg-1',
+      mime: 'text/plain',
+      url: 'data:text/plain;base64,ZXJyb3I=',
+      filename: 'terminal [3 lines]',
+      source: {
+        type: 'file' as const,
+        path: 'terminal-part-terminal',
+        text: {
+          value: 'error',
+          start: 1,
+          end: 3,
+        },
+      },
+    };
+    const { container } = render(<PartRenderer part={part} />);
+    const chipElement = container.querySelector('.opencode-chip.terminal-chip');
+    expect(chipElement).toBeInTheDocument();
+    expect(screen.getByText('terminal [3 lines]')).toBeInTheDocument();
+  });
+
   describe('getToolIcon', () => {
     it('maps tools to correct icons in a case-insensitive manner', () => {
       expect(getToolIcon('BASH')).toBe('$(terminal)');
