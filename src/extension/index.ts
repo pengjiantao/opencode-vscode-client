@@ -13,6 +13,7 @@ import type { SDKClient } from './sdk-client';
 import { createSDKClient } from './sdk-client-impl';
 import { SessionManager } from './session-manager';
 import type { ExtToWebview } from './types';
+import { handleCommandPart } from './utils/command-router';
 import { registerFileHandlers } from './utils/fileHandlers';
 import { OpencodeSidebarViewProvider } from './webview-provider';
 
@@ -349,6 +350,20 @@ export async function activate(context: ExtensionContext): Promise<void> {
       const activeID = sessionManager.activeSessionID;
       if (!activeID) {
         ipc.send({ type: 'error', message: 'No active session' });
+        return;
+      }
+
+      // Detect command parts and route to the dedicated command execution endpoint
+      const handled = handleCommandPart({
+        parts,
+        text,
+        activeID,
+        activeModel,
+        activeAgent,
+        sessionManager,
+        ipc,
+      });
+      if (handled) {
         return;
       }
 

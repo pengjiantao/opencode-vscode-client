@@ -56,12 +56,29 @@ export const getIconClass = (type: string, mime?: string): string => {
   if (type === 'image') return 'file-media';
   if (type === 'text') return 'note';
   if (type === 'terminal') return 'terminal';
+  if (type === 'command') return 'symbol-method';
+  if (type === 'skill') return 'lightbulb';
   if (mime === 'directory' || mime === 'application/x-directory') return 'folder';
   if (mime?.startsWith('image/')) return 'file-media';
   if (mime?.startsWith('text/')) return 'file-text';
   if (mime === 'application/pdf') return 'file-pdf';
   return 'file';
 };
+
+/**
+ * Resolves the codicon class for a command chip based on its source type.
+ */
+export function getCommandIconClass(source?: string): string {
+  switch (source) {
+    case 'skill':
+      return 'lightbulb';
+    case 'mcp':
+      return 'server-process';
+    case 'command':
+    default:
+      return 'symbol-method';
+  }
+}
 
 /**
  * Formats and generates the HTML string for the global custom tooltip engine.
@@ -72,7 +89,7 @@ export const getIconClass = (type: string, mime?: string): string => {
  */
 export const getTooltipHtml = (
   chip: {
-    type: 'file' | 'image' | 'text' | 'code-selection' | 'terminal';
+    type: 'file' | 'image' | 'text' | 'code-selection' | 'terminal' | 'command' | 'skill';
     filename?: string;
     path?: string;
     text?: string;
@@ -90,6 +107,20 @@ export const getTooltipHtml = (
   >,
 ): string => {
   const { type, filename, path, text, size, dataUrl, linesCount, mime, startLine, endLine } = chip;
+
+  if (type === 'command') {
+    return `<div class="tooltip-container">
+      <strong>Command: ${escapeHtml(filename || 'command')}</strong><br/>
+      <span class="tooltip-meta">Type parameters after the chip and press Enter to execute</span>
+    </div>`;
+  }
+
+  if (type === 'skill') {
+    return `<div class="tooltip-container">
+      <strong>Skill: ${escapeHtml(filename || 'skill')}</strong><br/>
+      ${text ? `<pre class="tooltip-code">${escapeHtml(text)}</pre>` : ''}
+    </div>`;
+  }
 
   if (type === 'code-selection') {
     let cleanFilename = filename || 'file';
@@ -206,7 +237,9 @@ export const getPromptData = (
           | 'image'
           | 'text'
           | 'code-selection'
-          | 'terminal';
+          | 'terminal'
+          | 'command'
+          | 'skill';
         const id = el.getAttribute('data-chip-id') || '';
         const filename = el.getAttribute('data-chip-filename') || 'file';
         const path = el.getAttribute('data-chip-path') || undefined;
@@ -311,6 +344,48 @@ export const getPromptData = (
             filename: `terminal [${linesCount} lines]`,
             url: finalUrl,
             source,
+          } as unknown as Part);
+        } else if (type === 'command') {
+          const commandName = el.getAttribute('data-chip-command-name') || filename;
+          const commandSource = el.getAttribute('data-chip-command-source') || undefined;
+          const placeholder = `[Command: ${commandName}]`;
+          const startOffset = promptText.length;
+          promptText += placeholder;
+          parts.push({
+            type: 'text',
+            id,
+            sessionID: activeSessionID || 'temp',
+            messageID: 'temp',
+            text: commandName,
+            metadata: {
+              type: 'command',
+              command: commandName,
+              source: commandSource,
+              placeholder,
+              startOffset,
+              endOffset: startOffset + placeholder.length,
+            },
+          } as unknown as Part);
+        } else if (type === 'skill') {
+          const skillContent = chipText || '';
+          const skillDesc = el.getAttribute('data-chip-skill-description') || '';
+          const placeholder = `[Skill: ${filename}]`;
+          const startOffset = promptText.length;
+          promptText += placeholder;
+          parts.push({
+            type: 'text',
+            id,
+            sessionID: activeSessionID || 'temp',
+            messageID: 'temp',
+            text: skillContent,
+            metadata: {
+              type: 'skill',
+              name: filename,
+              description: skillDesc,
+              placeholder,
+              startOffset,
+              endOffset: startOffset + placeholder.length,
+            },
           } as unknown as Part);
         } else if (type === 'file') {
           promptText += `[File: ${filename}]`;

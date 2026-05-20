@@ -35,6 +35,8 @@ export interface SDKClient {
     /** Sends a prompt without waiting for completion (non-blocking). */
     promptAsync(id: string, parts: Part[], model?: string, agent?: string): Promise<void>;
     abort(id: string): Promise<void>;
+    /** Sends a built-in command for execution. */
+    command(id: string, cmd: string, args?: string, model?: string, agent?: string): Promise<void>;
   };
   lsp: {
     status(): Promise<LspStatus[]>;
@@ -66,5 +68,16 @@ export interface SDKClient {
   /** Retrieves the list of available skills. */
   getSkills(): Promise<
     Array<{ name: string; description?: string; location: string; content?: string }>
+  >;
+  /** Retrieves the list of available built-in and user-defined commands. */
+  getCommands(): Promise<
+    Array<{
+      name: string;
+      description?: string;
+      source?: 'command' | 'mcp' | 'skill';
+      agent?: string;
+      model?: string;
+      hints?: string[];
+    }>
   >;
 }

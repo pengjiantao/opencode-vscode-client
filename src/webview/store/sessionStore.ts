@@ -11,7 +11,7 @@ import type {
   SessionStatus,
 } from '@opencode-ai/sdk/v2/client';
 import { create } from 'zustand';
-import type { LspServerInfo, McpServerInfo, SkillInfo } from '../../shared/types';
+import type { CommandInfo, LspServerInfo, McpServerInfo, SkillInfo } from '../../shared/types';
 
 /** Full shape of the session store's state and actions. */
 interface SessionStore {
@@ -32,6 +32,7 @@ interface SessionStore {
   lspServers: LspServerInfo[];
   mcpServers: McpServerInfo[];
   skills: SkillInfo[];
+  commands: CommandInfo[];
   plugins: string[];
   extensionVersion: string;
 
@@ -53,6 +54,7 @@ interface SessionStore {
   setLspServers: (lsp: LspServerInfo[]) => void;
   setMcpServers: (mcp: McpServerInfo[]) => void;
   setSkills: (skills: SkillInfo[]) => void;
+  setCommands: (commands: CommandInfo[]) => void;
   setPlugins: (plugins: string[]) => void;
   setExtensionVersion: (version: string) => void;
 
@@ -242,6 +244,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   lspServers: [],
   mcpServers: [],
   skills: [],
+  commands: [],
   plugins: [],
   extensionVersion: 'unknown',
 
@@ -249,6 +252,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   setLspServers: (lspServers) => set({ lspServers }),
   setMcpServers: (mcpServers) => set({ mcpServers }),
   setSkills: (skills) => set({ skills }),
+  setCommands: (commands) => set({ commands }),
   setPlugins: (plugins) => set({ plugins }),
   setExtensionVersion: (extensionVersion) => set({ extensionVersion }),
 

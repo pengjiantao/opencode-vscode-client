@@ -8,6 +8,9 @@ import { useEffect, useState } from 'react';
 import { Codicon } from './Codicon';
 import { PartRenderer } from './PartRenderer';
 
+const ATTACHMENT_PLACEHOLDER_PATTERN =
+  /\[(?:File|Text|Image|Terminal|Command|Skill):\s*.*?\]|\[\[Code Selection:\s*.*?\]\]/;
+
 interface MessageTurnProps {
   /** The user message initiated in this turn. */
   userMessage: Message;
@@ -19,6 +22,8 @@ interface MessageTurnProps {
   parts: Record<string, Part[]>;
   /** Whether the assistant is currently generating output. */
   isGenerating?: boolean;
+  /** Whether this is the last turn in the conversation. */
+  isLastTurn?: boolean;
 }
 
 /**
@@ -61,6 +66,140 @@ function getTimelineConnection(
   return { hasPredecessor, hasSuccessor };
 }
 
+/**
+ * Extracts the text metadata type used by inline payload parts.
+ * These parts back chips embedded in a separate visible text part.
+ */
+function getTextMetadataType(part: Part): string | undefined {
+  if (part.type !== 'text') return undefined;
+
+  const metadata = part.metadata as { type?: unknown } | undefined;
+  return typeof metadata?.type === 'string' ? metadata.type : undefined;
+}
+
+/**
+ * Extracts metadata used to restore inline command and skill chips.
+ * Older messages may not have offset fields, so callers must tolerate undefined.
+ */
+function getInlinePayloadMetadata(part: Part):
+  | {
+      type: 'command' | 'skill';
+      name: string;
+      startOffset?: number;
+      placeholder?: string;
+    }
+  | undefined {
+  if (part.type !== 'text') return undefined;
+
+  const metadata = part.metadata as
+    | {
+        type?: unknown;
+        command?: unknown;
+        name?: unknown;
+        startOffset?: unknown;
+        placeholder?: unknown;
+      }
+    | undefined;
+  if (metadata?.type !== 'command' && metadata?.type !== 'skill') return undefined;
+
+  const nameSource = metadata.type === 'command' ? metadata.command : metadata.name;
+  if (typeof nameSource !== 'string' || nameSource.length === 0) return undefined;
+
+  return {
+    type: metadata.type,
+    name: nameSource,
+    startOffset: typeof metadata.startOffset === 'number' ? metadata.startOffset : undefined,
+    placeholder: typeof metadata.placeholder === 'string' ? metadata.placeholder : undefined,
+  };
+}
+
+/**
+ * Builds the textual placeholder that Markdown can turn back into an inline chip.
+ */
+function getInlinePlaceholder(part: Part): string | undefined {
+  const metadata = getInlinePayloadMetadata(part);
+  if (!metadata) return undefined;
+
+  return (
+    metadata.placeholder ||
+    `[${metadata.type === 'command' ? 'Command' : 'Skill'}: ${metadata.name}]`
+  );
+}
+
+/**
+ * Determines whether a text part should be rendered as visible prose.
+ * Inline payloads are resolved by Markdown placeholders and must not render twice.
+ */
+function isDisplayTextPart(part: Part): boolean {
+  const metadataType = getTextMetadataType(part);
+  return (
+    part.type === 'text' &&
+    metadataType !== 'pasted-text' &&
+    metadataType !== 'command' &&
+    metadataType !== 'skill'
+  );
+}
+
+/**
+ * Infers an insertion point for legacy messages where the backend stored the
+ * command/skill part but the visible text no longer contains its placeholder.
+ */
+function inferLegacyInlineInsertionIndex(text: string): number {
+  const nextAttachmentIndex = text.search(ATTACHMENT_PLACEHOLDER_PATTERN);
+  const searchEnd = nextAttachmentIndex === -1 ? text.length : nextAttachmentIndex;
+  const prefix = text.slice(0, searchEnd);
+
+  const useMatch = /(?:使用|use|using)\s*/i.exec(prefix);
+  if (useMatch) {
+    return useMatch.index + useMatch[0].length;
+  }
+
+  const firstTokenMatch = /^\s*\S+\s*/.exec(prefix);
+  if (firstTokenMatch) {
+    return firstTokenMatch[0].length;
+  }
+
+  return searchEnd;
+}
+
+/**
+ * Restores missing inline placeholders for command/skill payload parts.
+ * This keeps historical or backend-normalized messages from rendering chips
+ * below the prompt or dropping them entirely.
+ */
+function restoreMissingInlinePayloads(text: string, allParts: Part[]): string {
+  const insertions = allParts
+    .map((part, order) => {
+      const placeholder = getInlinePlaceholder(part);
+      const metadata = getInlinePayloadMetadata(part);
+      if (!placeholder || !metadata || text.includes(placeholder)) return undefined;
+
+      const index =
+        metadata.startOffset !== undefined
+          ? Math.min(Math.max(metadata.startOffset, 0), text.length)
+          : inferLegacyInlineInsertionIndex(text);
+      return { index, order, placeholder };
+    })
+    .filter((item): item is { index: number; order: number; placeholder: string } => !!item)
+    .sort((a, b) => b.index - a.index || b.order - a.order);
+
+  return insertions.reduce(
+    (result, insertion) =>
+      result.slice(0, insertion.index) + insertion.placeholder + result.slice(insertion.index),
+    text,
+  );
+}
+
+/** Returns a display text part with missing command/skill placeholders restored. */
+function restoreDisplayTextPart(part: Part, allParts: Part[]): Part {
+  if (part.type !== 'text') return part;
+
+  const restoredText = restoreMissingInlinePayloads(part.text, allParts);
+  if (restoredText === part.text) return part;
+
+  return { ...part, text: restoredText };
+}
+
 /** A paired user message and optional assistant response with part rendering. */
 export function MessageTurn({
   userMessage,
@@ -68,6 +207,7 @@ export function MessageTurn({
   assistantMessages,
   parts,
   isGenerating = false,
+  isLastTurn = false,
 }: MessageTurnProps) {
   const [copied, setCopied] = useState(false);
 
@@ -126,21 +266,38 @@ export function MessageTurn({
 
     const nonSyntheticParts = userParts.filter((p) => !(p as { synthetic?: boolean }).synthetic);
 
-    const hasTextPart = nonSyntheticParts.some(
-      (p) => p.type === 'text' && p.metadata?.type !== 'pasted-text',
-    );
+    // If all parts are synthetic (e.g. backend-generated continuation prompts),
+    // don't render an empty user bubble.
+    if (nonSyntheticParts.length === 0) {
+      return null;
+    }
+
+    const hasTextPart = nonSyntheticParts.some(isDisplayTextPart);
     if (!hasTextPart) {
       return nonSyntheticParts.map((part) => (
         <PartRenderer key={part.id} part={part} allParts={userParts} />
       ));
     }
 
-    return nonSyntheticParts
-      .filter((p) => p.type === 'text' && p.metadata?.type !== 'pasted-text')
-      .map((part) => <PartRenderer key={part.id} part={part} allParts={userParts} />);
+    const displayTextParts = nonSyntheticParts.filter(isDisplayTextPart);
+    return displayTextParts.map((part, index) => (
+      <PartRenderer
+        key={part.id}
+        part={index === 0 ? restoreDisplayTextPart(part, userParts) : part}
+        allParts={userParts}
+      />
+    ));
   };
 
   const showActions = messagesToRender.length > 0 && !isGenerating;
+
+  // A subtask user message means a subagent was delegated — a continuation
+  // turn is expected, so don't show per-turn action buttons prematurely.
+  // Only show them when the entire conversation (including the continuation)
+  // is complete, i.e. this subtask turn is also the last turn.
+  const userParts = parts[userMessage.id];
+  const hasSubtask = userParts?.some((p) => p.type === 'subtask') ?? false;
+  const showActionsFinal = showActions && (!hasSubtask || isLastTurn);
 
   const allAssistantParts = messagesToRender.flatMap((msg) => parts[msg.id] || []);
   const visibleParts = allAssistantParts.filter(
@@ -148,14 +305,19 @@ export function MessageTurn({
       (p.type === 'text' && p.text && p.text.trim() !== '') ||
       p.type === 'tool' ||
       p.type === 'reasoning' ||
-      p.type === 'file',
+      p.type === 'file' ||
+      p.type === 'subtask',
   );
+
+  const userContent = renderUserParts();
 
   return (
     <div className="message-turn">
-      <div className="user-message">
-        <div className="message-content">{renderUserParts()}</div>
-      </div>
+      {userContent && (
+        <div className="user-message">
+          <div className="message-content">{userContent}</div>
+        </div>
+      )}
 
       {messagesToRender.map((msg) => (
         <div key={msg.id} className="assistant-message">
@@ -178,7 +340,7 @@ export function MessageTurn({
         </div>
       ))}
 
-      {showActions && (
+      {showActionsFinal && (
         <div className="message-actions">
           <button
             className="action-btn"

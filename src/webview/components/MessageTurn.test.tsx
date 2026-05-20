@@ -115,6 +115,7 @@ describe('MessageTurn', () => {
           assistantMessage={assistantMsg}
           parts={{}}
           isGenerating={false}
+          isLastTurn={true}
         />,
       );
 
@@ -179,6 +180,7 @@ describe('MessageTurn', () => {
           assistantMessage={assistantMsg}
           parts={parts}
           isGenerating={false}
+          isLastTurn={true}
         />,
       );
 
@@ -203,6 +205,7 @@ describe('MessageTurn', () => {
           assistantMessage={assistantMsg}
           parts={{ [assistantMsg.id]: [textPart] }}
           isGenerating={false}
+          isLastTurn={true}
         />,
       );
 
@@ -248,6 +251,7 @@ describe('MessageTurn', () => {
           assistantMessage={assistantMsg}
           parts={{}}
           isGenerating={false}
+          isLastTurn={true}
         />,
       );
 
@@ -273,6 +277,7 @@ describe('MessageTurn', () => {
           assistantMessage={assistantMsg}
           parts={{}}
           isGenerating={false}
+          isLastTurn={true}
         />,
       );
 
@@ -296,6 +301,7 @@ describe('MessageTurn', () => {
           assistantMessage={assistantMsg}
           parts={{}}
           isGenerating={false}
+          isLastTurn={true}
         />,
       );
 
@@ -320,6 +326,7 @@ describe('MessageTurn', () => {
           assistantMessages={[assistantMsg1, assistantMsg2]}
           parts={{}}
           isGenerating={false}
+          isLastTurn={true}
         />,
       );
 
@@ -347,6 +354,7 @@ describe('MessageTurn', () => {
           assistantMessages={[assistantMsg1, assistantMsg2]}
           parts={parts}
           isGenerating={false}
+          isLastTurn={true}
         />,
       );
 

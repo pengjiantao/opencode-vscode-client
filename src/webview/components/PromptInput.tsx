@@ -6,14 +6,16 @@
 import type { Part, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import React from 'react';
 import type { WebviewToExt } from '../../shared/types';
-import { getMimeType } from '../../shared/utils';
+import { useCommandEditor } from '../hooks/useCommandEditor';
 import { useIPC } from '../hooks/useIPC';
+import { useMentionEditor } from '../hooks/useMentionEditor';
 import { usePromptEditor } from '../hooks/usePromptEditor';
 import { usePromptSelectionIPC } from '../hooks/usePromptSelectionIPC';
 import { useSessionStore } from '../store/sessionStore';
 import '../styles/footer.css';
-import { getIconClass, getPromptData, getTooltipHtml } from '../utils/chipUtils';
+import { getPromptData, getTooltipHtml } from '../utils/chipUtils';
 import { AgentSelector } from './AgentSelector';
+import { CommandListPopover } from './CommandListPopover';
 import { IconButton } from './IconButton';
 import { MentionPopover } from './MentionPopover';
 import { ModelSelector } from './ModelSelector';
@@ -67,6 +69,8 @@ export function PromptInput({
   const [hasContent, setHasContent] = React.useState(false);
 
   const fileInfos = useSessionStore((s) => s.fileInfos);
+  const commands = useSessionStore((s) => s.commands);
+  const skills = useSessionStore((s) => s.skills);
 
   const [localModel, setLocalModel] = React.useState('');
   const [localAgent, setLocalAgent] = React.useState('');
@@ -81,39 +85,6 @@ export function PromptInput({
   const activeAgent = selectedAgent || (agents.length > 0 ? agents[0].id : '');
 
   const activeSessionID = useSessionStore((s) => s.activeSessionID);
-
-  const [mentionState, setMentionState] = React.useState<{
-    show: boolean;
-    query: string;
-    startOffset: number;
-    textNode: Node | null;
-  }>({
-    show: false,
-    query: '',
-    startOffset: -1,
-    textNode: null,
-  });
-
-  const [mentionResults, setMentionResults] = React.useState<
-    Array<{
-      name: string;
-      relativePath: string;
-      type: 'file' | 'dir';
-      fsPath: string;
-    }>
-  >([]);
-  const [selectedIndex, setSelectedIndex] = React.useState(0);
-  const mentionTimeoutRef = React.useRef<number | null>(null);
-
-  const closeMentionList = React.useCallback(() => {
-    if (mentionTimeoutRef.current) {
-      window.clearTimeout(mentionTimeoutRef.current);
-      mentionTimeoutRef.current = null;
-    }
-    setMentionState({ show: false, query: '', startOffset: -1, textNode: null });
-    setMentionResults([]);
-    setSelectedIndex(0);
-  }, []);
 
   const handleSubmit = React.useCallback(() => {
     if (isRunning) {
@@ -158,6 +129,39 @@ export function PromptInput({
   }, [activeSessionID, fileInfos]);
 
   const { handlePaste, insertChip, insertText } = usePromptEditor({
+    editorRef,
+    fileInfos,
+    send,
+    onInput: handleInput,
+  });
+
+  const {
+    commandState,
+    commandSelectedIndex,
+    setCommandSelectedIndex,
+    commandResults,
+    closeCommandList,
+    handleSlashTrigger,
+    onSelectCommandItem,
+  } = useCommandEditor({
+    editorRef,
+    commands,
+    skills,
+    fileInfos,
+    onInput: handleInput,
+  });
+
+  const {
+    mentionState,
+    mentionResults,
+    setMentionResults,
+    selectedIndex,
+    setSelectedIndex,
+    mentionTimeoutRef,
+    closeMentionList,
+    handleMentionTrigger,
+    insertMentionChip,
+  } = useMentionEditor({
     editorRef,
     fileInfos,
     send,
@@ -245,12 +249,13 @@ export function PromptInput({
         window.clearTimeout(mentionTimeoutRef.current);
       }
     };
-  }, []);
+  }, [mentionTimeoutRef]);
 
   const updateMentionState = React.useCallback(() => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) {
       closeMentionList();
+      closeCommandList();
       return;
     }
     const range = selection.getRangeAt(0);
@@ -258,12 +263,14 @@ export function PromptInput({
 
     if (textNode.nodeType !== Node.TEXT_NODE) {
       closeMentionList();
+      closeCommandList();
       return;
     }
 
     const text = textNode.textContent || '';
     const offset = range.startOffset;
 
+    // Detect @ for file mentions
     let atIndex = -1;
     for (let i = offset - 1; i >= 0; i--) {
       if (text[i] === '@') {
@@ -277,93 +284,41 @@ export function PromptInput({
       }
     }
 
+    // Detect / for commands and skills
+    let slashIndex = -1;
+    let hasTextBefore = false;
+    for (let i = offset - 1; i >= 0; i--) {
+      if (text[i] === '/') {
+        if (i === 0 || /\s/.test(text[i - 1])) {
+          slashIndex = i;
+          break;
+        }
+      }
+      if (/\s/.test(text[i])) {
+        break;
+      }
+    }
+    // Determine if there is non-whitespace text before the / (check earlier in the text node)
+    if (slashIndex !== -1 && slashIndex > 0) {
+      hasTextBefore = text.substring(0, slashIndex).trim().length > 0;
+    }
+
     if (atIndex !== -1) {
       const query = text.substring(atIndex + 1, offset);
-      setMentionState({
-        show: true,
-        query,
-        startOffset: atIndex,
-        textNode,
-      });
+      handleMentionTrigger(textNode, atIndex, query);
+      // Close command list when @ is active
+      closeCommandList();
     } else {
       closeMentionList();
     }
-  }, [closeMentionList]);
 
-  const insertMentionChip = React.useCallback(
-    (item: { name: string; relativePath: string; type: 'file' | 'dir'; fsPath: string }) => {
-      if (!mentionState.textNode) return;
-
-      const selection = window.getSelection();
-      if (!selection) return;
-
-      const range = document.createRange();
-      try {
-        range.setStart(mentionState.textNode, mentionState.startOffset);
-        const currentRange = selection.getRangeAt(0);
-        range.setEnd(mentionState.textNode, currentRange.startOffset);
-      } catch (e) {
-        console.error('Failed to set range for mention insertion:', e);
-        return;
-      }
-
-      const chipId = `file-${Math.random().toString(36).substring(7)}`;
-      const chipType = 'file';
-      const mime = item.type === 'dir' ? 'directory' : getMimeType(item.name);
-
-      const chipNode = document.createElement('span');
-      chipNode.className = `opencode-chip file-chip inline-chip`;
-      chipNode.contentEditable = 'false';
-      chipNode.setAttribute('data-chip-id', chipId);
-      chipNode.setAttribute('data-chip-type', chipType);
-      chipNode.setAttribute('data-chip-filename', item.name);
-      chipNode.setAttribute('data-chip-path', item.fsPath);
-      chipNode.setAttribute('data-chip-mime', mime);
-      chipNode.setAttribute('data-chip-is-workspace', 'true');
-
-      if (item.type === 'file') {
-        send({ type: 'file:query', path: item.fsPath });
-      }
-
-      const iconClass = getIconClass(chipType, mime);
-      const iconSpan = document.createElement('span');
-      iconSpan.className = 'chip-icon';
-      const iconI = document.createElement('i');
-      iconI.className = `codicon codicon-${iconClass}`;
-      iconSpan.appendChild(iconI);
-      chipNode.appendChild(iconSpan);
-
-      const labelSpan = document.createElement('span');
-      labelSpan.className = 'chip-label';
-      labelSpan.textContent = item.name;
-      chipNode.appendChild(labelSpan);
-
-      const tooltipHtml = getTooltipHtml(
-        {
-          type: chipType,
-          filename: item.name,
-          path: item.fsPath,
-          mime,
-          isWorkspace: true,
-        },
-        fileInfos,
-      );
-      chipNode.setAttribute('data-custom-title', tooltipHtml);
-
-      range.deleteContents();
-      range.insertNode(chipNode);
-
-      const newRange = document.createRange();
-      newRange.setStartAfter(chipNode);
-      newRange.setEndAfter(chipNode);
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-
-      closeMentionList();
-      handleInput();
-    },
-    [mentionState, fileInfos, send, handleInput, closeMentionList],
-  );
+    if (slashIndex !== -1) {
+      const query = text.substring(slashIndex + 1, offset);
+      handleSlashTrigger(textNode, slashIndex, query, hasTextBefore);
+    } else {
+      closeCommandList();
+    }
+  }, [closeMentionList, closeCommandList, handleSlashTrigger, handleMentionTrigger]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (mentionState.show) {
@@ -391,6 +346,33 @@ export function PromptInput({
       }
     }
 
+    if (commandState.show) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeCommandList();
+        return;
+      }
+      if (commandResults.length > 0) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setCommandSelectedIndex((prev) => (prev + 1) % commandResults.length);
+          return;
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setCommandSelectedIndex(
+            (prev) => (prev - 1 + commandResults.length) % commandResults.length,
+          );
+          return;
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          onSelectCommandItem(commandResults[commandSelectedIndex]);
+          return;
+        }
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -406,6 +388,14 @@ export function PromptInput({
         onSelect={insertMentionChip}
       />
 
+      <CommandListPopover
+        show={commandState.show}
+        results={commandResults}
+        selectedIndex={commandSelectedIndex}
+        onSelect={onSelectCommandItem}
+        skillsOnly={commandState.skillsOnly}
+      />
+
       <div className={`prompt-input-container ${isFocused ? 'focused' : ''}`}>
         <div
           ref={editorRef}
@@ -419,9 +409,10 @@ export function PromptInput({
           onFocus={() => setIsFocused(true)}
           onBlur={() => {
             setIsFocused(false);
-            // Hide list after a short timeout so clicks on results are registered first
+            // Hide lists after a short timeout so clicks on results are registered first
             mentionTimeoutRef.current = window.setTimeout(() => {
               closeMentionList();
+              closeCommandList();
             }, 200);
           }}
           {...{ placeholder: 'Type a message... (Shift+Enter for new line)' }}

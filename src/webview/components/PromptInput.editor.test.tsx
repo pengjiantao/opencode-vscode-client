@@ -59,6 +59,7 @@ vi.mock('../store/sessionStore', () => ({
       lspServers: [{ name: 'typescript-lsp', status: 'running' }],
       mcpServers: [{ name: 'git-mcp', status: 'connected' }],
       skills: [{ name: 'customize-opencode', description: 'desc' }],
+      commands: [],
       plugins: ['plugin-1'],
       extensionVersion: '0.1.2',
       activeSessionID: 'session-123',
@@ -423,7 +424,7 @@ describe('PromptInput - Editor & Mention Popover', () => {
     const popover = screen.getByTestId('mention-popover');
     expect(popover).toBeInTheDocument();
 
-    const items = screen.getAllByTestId(/mention-item-/);
+    const items = screen.getAllByTestId(/mention-popover-item-/);
     expect(items.length).toBe(2);
     expect(items[0]).toHaveTextContent('file1.txt');
     expect(items[1]).toHaveTextContent('src');

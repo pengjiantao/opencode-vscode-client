@@ -23,6 +23,16 @@ export interface SkillInfo {
   name: string;
   description?: string;
   location: string;
+  content?: string;
+}
+
+export interface CommandInfo {
+  name: string;
+  description?: string;
+  source?: 'command' | 'mcp' | 'skill';
+  agent?: string;
+  model?: string;
+  hints?: string[];
 }
 
 /** Messages sent from the extension host to the webview. */
@@ -77,6 +87,7 @@ export type ExtToWebview =
       lspServers: LspServerInfo[];
       mcpServers: McpServerInfo[];
       skills: SkillInfo[];
+      commands: CommandInfo[];
       plugins: string[];
       extensionVersion: string;
     }

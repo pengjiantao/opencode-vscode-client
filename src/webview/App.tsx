@@ -61,6 +61,7 @@ export function App() {
   const setLspServers = useSessionStore((s) => s.setLspServers);
   const setMcpServers = useSessionStore((s) => s.setMcpServers);
   const setSkills = useSessionStore((s) => s.setSkills);
+  const setCommands = useSessionStore((s) => s.setCommands);
   const setPlugins = useSessionStore((s) => s.setPlugins);
   const setExtensionVersion = useSessionStore((s) => s.setExtensionVersion);
   const setFileInfo = useSessionStore((s) => s.setFileInfo);
@@ -114,6 +115,7 @@ export function App() {
           setLspServers(message.lspServers);
           setMcpServers(message.mcpServers);
           setSkills(message.skills);
+          setCommands(message.commands || []);
           setPlugins(message.plugins);
           setExtensionVersion(message.extensionVersion);
           break;
@@ -145,6 +147,7 @@ export function App() {
     setLspServers,
     setMcpServers,
     setSkills,
+    setCommands,
     setPlugins,
     setExtensionVersion,
     setFileInfo,

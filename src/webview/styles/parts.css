@@ -530,3 +530,21 @@ pre.code-block code {
     opacity: 0.85;
   }
 }
+
+/* Subtask part — inline indicator when a command delegates to a subagent */
+.subtask-part {
+  margin: 4px 0;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size, 13px);
+  line-height: 1.5;
+}
+
+.subtask-part .subtask-label {
+  font-weight: 600;
+  color: var(--vscode-textLink-foreground);
+}
+
+.subtask-part .subtask-desc {
+  margin-left: 6px;
+  color: color-mix(in srgb, var(--vscode-descriptionForeground) 70%, transparent);
+}

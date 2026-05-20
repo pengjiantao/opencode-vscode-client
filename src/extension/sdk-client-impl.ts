@@ -123,6 +123,30 @@ export function createSDKClient(directory?: string): SDKClient {
       abort: async (id: string) => {
         await client.session.abort({ sessionID: id });
       },
+      command: async (
+        id: string,
+        cmd: string,
+        args?: string,
+        model?: string,
+        agent?: string,
+      ): Promise<void> => {
+        const result = await client.session.command({
+          sessionID: id,
+          command: cmd,
+          arguments: args,
+          model,
+          agent,
+        });
+        const typed = result as { data?: unknown; error?: unknown };
+        if (typed.error) {
+          const errMsg =
+            typeof typed.error === 'string'
+              ? typed.error
+              : (typed.error as { message?: string }).message || JSON.stringify(typed.error);
+          throw new Error(`Command "${cmd}" failed: ${errMsg}`);
+        }
+        console.log('[SDK] command succeeded:', cmd);
+      },
     },
     lsp: {
       status: async (): Promise<LspStatus[]> => {
@@ -238,6 +262,32 @@ export function createSDKClient(directory?: string): SDKClient {
         return result.data ?? [];
       } catch (err) {
         console.error('Failed to get skills from SDK:', err);
+        return [];
+      }
+    },
+    /** Fetches the available command list from the server. */
+    getCommands: async (): Promise<
+      Array<{
+        name: string;
+        description?: string;
+        source?: 'command' | 'mcp' | 'skill';
+        agent?: string;
+        model?: string;
+        hints?: string[];
+      }>
+    > => {
+      try {
+        const result = await client.command.list();
+        return (result.data ?? []).map((c) => ({
+          name: c.name,
+          description: c.description,
+          source: c.source,
+          agent: c.agent,
+          model: c.model,
+          hints: c.hints,
+        }));
+      } catch (err) {
+        console.error('Failed to get commands from SDK:', err);
         return [];
       }
     },

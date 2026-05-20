@@ -42,13 +42,13 @@ describe('MentionPopover', () => {
     );
 
     // package.json (root): item-path element should not exist
-    const packageItem = screen.getByText('package.json').closest('.mention-item');
+    const packageItem = screen.getByText('package.json').closest('.search-list-item');
     expect(packageItem).toBeInTheDocument();
     const packagePath = packageItem?.querySelector('.item-path');
     expect(packagePath).toBeNull();
 
     // index.ts (sub directory): parent relative dir should be 'src/extension'
-    const indexItem = screen.getByText('index.ts').closest('.mention-item');
+    const indexItem = screen.getByText('index.ts').closest('.search-list-item');
     expect(indexItem).toBeInTheDocument();
     const indexPath = indexItem?.querySelector('.item-path');
     expect(indexPath).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe('MentionPopover', () => {
     );
 
     // Assign mock function to all list items (since selected class will move to index 1)
-    const items = container.querySelectorAll('.mention-item');
+    const items = container.querySelectorAll('.search-list-item');
     items.forEach((item) => {
       item.scrollIntoView = scrollSpy;
     });

@@ -187,6 +187,17 @@ export class SessionManager {
     await this.sdk.session.promptAsync(sessionID, cleanedParts, model, agent);
   }
 
+  /** Sends a built-in command for execution with optional arguments. */
+  async sendCommand(
+    sessionID: string,
+    command: string,
+    args?: string,
+    model?: string,
+    agent?: string,
+  ): Promise<void> {
+    await this.sdk.session.command(sessionID, command, args, model, agent);
+  }
+
   /** Aborts a running prompt for the given session. */
   async abort(sessionID: string): Promise<void> {
     await this.sdk.session.abort(sessionID);

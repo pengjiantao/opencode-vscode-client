@@ -17,11 +17,22 @@ interface MarkdownProps {
   allParts?: Part[];
 }
 
+interface InlineTextMetadata {
+  /** Metadata type used to identify special inline payload text parts. */
+  type?: string;
+  /** Display filename for pasted-text payloads. */
+  filename?: string;
+  /** Skill name for skill payloads. */
+  name?: string;
+  /** Command name for command payloads. */
+  command?: string;
+}
+
 /** Parses inline markdown markup (bold, italic, inline code, links, and inline chips). */
 function renderInline(text: string, allParts?: Part[]): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   const regex =
-    /(\*\*(.*?)\*\*)|(\*(.*?)\*)|(`(.*?)`)|(\[(.*?)\]\((.*?)\))|(\[(Code Selection):\s*(.*?)\]\])|(\[(File|Text|Image|Terminal):\s*(.*?)\])/g;
+    /(\*\*(.*?)\*\*)|(\*(.*?)\*)|(`(.*?)`)|(\[(.*?)\]\((.*?)\))|(\[(Code Selection):\s*(.*?)\]\])|(\[(File|Text|Image|Terminal|Command|Skill):\s*(.*?)\])/g;
   let match;
   let lastIndex = 0;
   let keyIdx = 0;
@@ -31,6 +42,8 @@ function renderInline(text: string, allParts?: Part[]): React.ReactNode[] {
   const partsByTextFilename = new Map<string, Part>();
   const partsByImageFilename = new Map<string, Part>();
   const partsByTerminalFilename = new Map<string, Part>();
+  const partsByCommandName = new Map<string, Part>();
+  const partsBySkillName = new Map<string, Part>();
 
   if (allParts) {
     for (const p of allParts) {
@@ -48,9 +61,13 @@ function renderInline(text: string, allParts?: Part[]): React.ReactNode[] {
           partsByTerminalFilename.set(p.filename, p);
         }
       } else if (p.type === 'text') {
-        const meta = p.metadata as { type?: string; filename?: string } | undefined;
+        const meta = p.metadata as InlineTextMetadata | undefined;
         if (meta?.type === 'pasted-text' && meta?.filename) {
           partsByTextFilename.set(meta.filename, p);
+        } else if (meta?.type === 'command' && meta?.command) {
+          partsByCommandName.set(meta.command, p);
+        } else if (meta?.type === 'skill' && meta?.name) {
+          partsBySkillName.set(meta.name, p);
         }
       }
     }
@@ -122,6 +139,8 @@ function renderInline(text: string, allParts?: Part[]): React.ReactNode[] {
           partsByTextFilename,
           partsByImageFilename,
           partsByTerminalFilename,
+          partsByCommandName,
+          partsBySkillName,
           key,
         );
         if (chipElement) {

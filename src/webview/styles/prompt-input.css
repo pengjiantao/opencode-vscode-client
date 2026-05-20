@@ -259,7 +259,9 @@
 }
 
 /* Mention popover and autocomplete styles */
-.mention-list-popover {
+/* Shared search-list popover (used by MentionPopover and CommandListPopover) */
+.mention-list-popover,
+.search-list-popover {
   position: absolute;
   bottom: 100%;
   left: 12px;
@@ -279,7 +281,8 @@
   animation: selectPopoverFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.mention-item {
+.mention-item,
+.search-list-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -293,12 +296,15 @@
 }
 
 .mention-item:hover,
-.mention-item.selected {
+.mention-item.selected,
+.search-list-item:hover,
+.search-list-item.selected {
   background-color: var(--vscode-list-focusBackground, var(--vscode-list-hoverBackground, #2a2d2e));
   color: var(--vscode-list-hoverForeground, var(--webview-foreground, #ffffff));
 }
 
-.mention-item .item-icon {
+.mention-item .item-icon,
+.search-list-item .item-icon {
   font-size: 14px;
   display: inline-flex;
   align-items: center;
@@ -307,11 +313,14 @@
 }
 
 .mention-item:hover .item-icon,
-.mention-item.selected .item-icon {
+.mention-item.selected .item-icon,
+.search-list-item:hover .item-icon,
+.search-list-item.selected .item-icon {
   color: inherit;
 }
 
-.mention-item .item-info {
+.mention-item .item-info,
+.search-list-item .item-info {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
@@ -321,14 +330,16 @@
   flex: 1;
 }
 
-.mention-item .item-name {
+.mention-item .item-name,
+.search-list-item .item-name {
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.mention-item .item-path {
+.mention-item .item-path,
+.search-list-item .item-path {
   font-size: 11px;
   color: var(--vscode-descriptionForeground, #888888);
   overflow: hidden;
@@ -340,7 +351,9 @@
 }
 
 .mention-item:hover .item-path,
-.mention-item.selected .item-path {
+.mention-item.selected .item-path,
+.search-list-item:hover .item-path,
+.search-list-item.selected .item-path {
   color: color-mix(
     in srgb,
     var(--vscode-list-hoverForeground, var(--webview-foreground, #ffffff)) 70%,
@@ -348,7 +361,31 @@
   );
 }
 
-.mention-no-results {
+/* Command/skill description (secondary text in command list) */
+.mention-item .item-description,
+.search-list-item .item-description {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground, #888888);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.mention-item:hover .item-description,
+.mention-item.selected .item-description,
+.search-list-item:hover .item-description,
+.search-list-item.selected .item-description {
+  color: color-mix(
+    in srgb,
+    var(--vscode-list-hoverForeground, var(--webview-foreground, #ffffff)) 70%,
+    transparent
+  );
+}
+
+.mention-no-results,
+.search-list-no-results {
   padding: 12px;
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-font-size, 13px);

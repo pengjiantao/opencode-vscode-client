@@ -9,6 +9,16 @@ import { useSessionStore } from '../store/sessionStore';
 import { MessageTurn } from './MessageTurn';
 import { PermissionCard } from './PermissionCard';
 
+/**
+ * Checks whether a user message is entirely backend-generated (all parts are synthetic).
+ * Such messages (e.g. "Summarize the task output and continue") should not split turns.
+ */
+function isSyntheticUserMessage(messageID: string, parts: Record<string, Part[]>): boolean {
+  const msgParts = parts[messageID];
+  if (!msgParts || msgParts.length === 0) return false;
+  return msgParts.every((p) => !!(p as { synthetic?: boolean }).synthetic);
+}
+
 interface ChatViewProps {
   sessionID: string;
   messages: Message[];
@@ -27,13 +37,19 @@ export function ChatView({ sessionID, messages, parts, onPermissionReply }: Chat
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
 
-  /** Groups sequential messages into user→assistant turn pairs with support for multiple assistant responses. */
+  /** Groups sequential messages into user→assistant turn pairs.
+   *  Backend-generated synthetic user messages (all parts synthetic) are skipped
+   *  to keep subagent and main-agent responses in a single continuous turn. */
   const turns = useMemo(() => {
     const result: Array<{ user: Message; assistantMessages: Message[] }> = [];
     let currentTurn: { user: Message; assistantMessages: Message[] } | null = null;
 
     for (const msg of messages) {
       if (msg.role === 'user') {
+        if (isSyntheticUserMessage(msg.id, parts)) {
+          // Backend-generated continuation — don't start a new turn
+          continue;
+        }
         if (currentTurn) {
           result.push(currentTurn);
         }
@@ -48,7 +64,7 @@ export function ChatView({ sessionID, messages, parts, onPermissionReply }: Chat
     }
 
     return result;
-  }, [messages]);
+  }, [messages, parts]);
 
   const handlePermissionReply = (permissionID: string, allow: boolean) => {
     onPermissionReply(permissionID, allow);
@@ -102,6 +118,7 @@ export function ChatView({ sessionID, messages, parts, onPermissionReply }: Chat
             assistantMessages={turn.assistantMessages}
             parts={parts}
             isGenerating={isGenerating}
+            isLastTurn={isLastTurn}
           />
         );
       })}

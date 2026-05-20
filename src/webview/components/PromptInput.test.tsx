@@ -59,6 +59,7 @@ vi.mock('../store/sessionStore', () => ({
       lspServers: [{ name: 'typescript-lsp', status: 'running' }],
       mcpServers: [{ name: 'git-mcp', status: 'connected' }],
       skills: [{ name: 'customize-opencode', description: 'desc' }],
+      commands: [],
       plugins: ['plugin-1'],
       extensionVersion: '0.1.2',
       activeSessionID: 'session-123',

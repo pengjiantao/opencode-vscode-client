@@ -4,7 +4,7 @@
 
 import { extensions, workspace } from 'vscode';
 import type { SDKClient } from './sdk-client';
-import type { ExtToWebview, LspServerInfo, McpServerInfo, SkillInfo } from './types';
+import type { CommandInfo, ExtToWebview, LspServerInfo, McpServerInfo, SkillInfo } from './types';
 
 /**
  * Gathers all LSP servers, MCP servers, workspace plugins, discovered skills,
@@ -79,6 +79,7 @@ export async function syncMetadata(
             name: s.name,
             description: s.description,
             location: s.location,
+            content: s.content,
           });
         }
       }
@@ -86,7 +87,15 @@ export async function syncMetadata(
       console.error('Failed to sync skills from SDK:', err);
     }
 
-    // 5. Query Active Extension version from VS Code
+    // 5. Fetch available commands from SDK
+    let commands: CommandInfo[] = [];
+    try {
+      commands = await sdk.getCommands();
+    } catch (err) {
+      console.error('Failed to fetch commands from SDK:', err);
+    }
+
+    // 6. Query Active Extension version from VS Code
     const extensionVersion =
       ((
         extensions.getExtension('fiyqkrc.opencode-vscode-client')?.packageJSON as
@@ -94,13 +103,14 @@ export async function syncMetadata(
           | undefined
       )?.version as string) || 'unknown';
 
-    // 6. Push synchronized metadata payload to Webview
+    // 7. Push synchronized metadata payload to Webview
     sendIpc({
       type: 'metadata:sync',
       workspaceName,
       lspServers,
       mcpServers,
       skills,
+      commands,
       plugins,
       extensionVersion,
     });

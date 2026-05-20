@@ -7,7 +7,7 @@
 import React, { useEffect } from 'react';
 import { useIPC } from '../hooks/useIPC';
 import { useSessionStore } from '../store/sessionStore';
-import { getIconClass, getTooltipHtml } from '../utils/chipUtils';
+import { getCommandIconClass, getIconClass, getTooltipHtml } from '../utils/chipUtils';
 import { Codicon } from './Codicon';
 
 /**
@@ -15,7 +15,7 @@ import { Codicon } from './Codicon';
  */
 export interface ChipProps {
   /** The type of data represented by the chip. */
-  type: 'file' | 'image' | 'text' | 'code-selection' | 'terminal';
+  type: 'file' | 'image' | 'text' | 'code-selection' | 'terminal' | 'command' | 'skill';
   /** Display name of the chip (filename or description). */
   filename?: string;
   /** Absolute file path or URL on the local disk. */
@@ -69,7 +69,8 @@ export function Chip({
   }, [type, path, cachedInfo, send]);
 
   /** Determines the VS Code codicon name based on the attachment type. */
-  const getIconName = (): string => `$(${getIconClass(type, mime)})`;
+  const getIconName = (): string =>
+    `$(${type === 'command' ? getCommandIconClass(mime) : type === 'skill' ? getIconClass('skill') : getIconClass(type, mime)})`;
 
   /** Handles click events, sending open file IPC commands for workspace files. */
   const handleClick = (e: React.MouseEvent) => {
@@ -104,6 +105,10 @@ export function Chip({
     } else {
       displayLabel = `terminal[${linesCount || 1} lines]`;
     }
+  } else if (type === 'command') {
+    displayLabel = filename || 'command';
+  } else if (type === 'skill') {
+    displayLabel = filename || 'skill';
   }
 
   return (

@@ -57,6 +57,8 @@ export function getChipTypeToRender(
  * @param partsByTextFilename Pre-indexed text parts mapping filename to Part.
  * @param partsByImageFilename Pre-indexed image parts mapping filename to Part.
  * @param partsByTerminalFilename Pre-indexed terminal parts mapping filename to Part.
+ * @param partsByCommandName Pre-indexed command text parts mapping command name to Part.
+ * @param partsBySkillName Pre-indexed skill text parts mapping skill name to Part.
  * @param keyIdx Unique React key index.
  */
 export function parseAndRenderInlineChip(
@@ -66,6 +68,8 @@ export function parseAndRenderInlineChip(
   partsByTextFilename: Map<string, Part>,
   partsByImageFilename: Map<string, Part>,
   partsByTerminalFilename: Map<string, Part>,
+  partsByCommandName: Map<string, Part>,
+  partsBySkillName: Map<string, Part>,
   keyIdx: number,
 ): React.ReactNode | null {
   let matchedPart: Part | undefined;
@@ -78,6 +82,10 @@ export function parseAndRenderInlineChip(
   } else if (chipType === 'Terminal') {
     matchedPart =
       partsByTerminalFilename.get(`terminal [${chipName}]`) || partsByFilename.get(chipName);
+  } else if (chipType === 'Command') {
+    matchedPart = partsByCommandName.get(chipName);
+  } else if (chipType === 'Skill') {
+    matchedPart = partsBySkillName.get(chipName);
   }
 
   if (!matchedPart) return null;
@@ -96,6 +104,32 @@ export function parseAndRenderInlineChip(
           text={matchedPart.text}
           linesCount={meta?.linesCount}
         />
+      </span>
+    );
+  }
+
+  if (chipType === 'Command' && matchedPart.type === 'text') {
+    const meta = matchedPart.metadata as { command?: string; source?: string } | undefined;
+    return (
+      <span
+        key={`chip-${keyIdx}`}
+        className="opencode-chip-inline-wrapper"
+        style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
+      >
+        <Chip type="command" filename={meta?.command || chipName} mime={meta?.source} />
+      </span>
+    );
+  }
+
+  if (chipType === 'Skill' && matchedPart.type === 'text') {
+    const meta = matchedPart.metadata as { name?: string } | undefined;
+    return (
+      <span
+        key={`chip-${keyIdx}`}
+        className="opencode-chip-inline-wrapper"
+        style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
+      >
+        <Chip type="skill" filename={meta?.name || chipName} text={matchedPart.text} />
       </span>
     );
   }

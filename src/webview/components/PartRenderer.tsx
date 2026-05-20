@@ -29,21 +29,46 @@ export function PartRenderer({
 }: PartRendererProps) {
   switch (part.type) {
     case 'text':
-      if (!part.text || part.text.trim() === '') {
-        return null;
-      }
       if (part.metadata?.type === 'pasted-text') {
         const meta = part.metadata as { type: string; filename?: string; linesCount?: number };
         return (
-          <div className="part chip-part" style={{ display: 'inline-block', margin: '4px 0' }}>
+          <span
+            className="opencode-chip-inline-wrapper"
+            style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
+          >
             <Chip
               type="text"
               filename={meta.filename || 'Pasted Text'}
               text={part.text}
               linesCount={meta.linesCount}
             />
-          </div>
+          </span>
         );
+      }
+      if (part.metadata?.type === 'command') {
+        const meta = part.metadata as { type: string; command?: string; source?: string };
+        return (
+          <span
+            className="opencode-chip-inline-wrapper"
+            style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
+          >
+            <Chip type="command" filename={meta.command || part.text} mime={meta.source} />
+          </span>
+        );
+      }
+      if (part.metadata?.type === 'skill') {
+        const meta = part.metadata as { type: string; name?: string; description?: string };
+        return (
+          <span
+            className="opencode-chip-inline-wrapper"
+            style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
+          >
+            <Chip type="skill" filename={meta.name || part.text} text={part.text} />
+          </span>
+        );
+      }
+      if (!part.text || part.text.trim() === '') {
+        return null;
       }
       return (
         <TextPart text={part.text} streaming={isAssistant && !part.time?.end} allParts={allParts} />
@@ -102,6 +127,17 @@ export function PartRenderer({
           <span className="agent-name">{part.name}</span>
         </div>
       );
+
+    case 'subtask': {
+      const displayLabel = part.command || part.agent || 'subtask';
+      const desc = part.description || '';
+      return (
+        <p className="part subtask-part">
+          <span className="subtask-label">Subtask: {displayLabel}</span>
+          {desc && <span className="subtask-desc">{desc}</span>}
+        </p>
+      );
+    }
 
     case 'step-start':
     case 'step-finish':
