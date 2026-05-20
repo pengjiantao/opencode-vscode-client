@@ -144,7 +144,8 @@ export class SessionManager {
       }
       if (part.type === 'file') {
         const isImageOrPdf = part.mime.startsWith('image/') || part.mime === 'application/pdf';
-        const finalMime = isImageOrPdf ? part.mime : 'text/plain';
+        const isDirectory = part.mime === 'directory' || part.mime === 'application/x-directory';
+        const finalMime = isImageOrPdf || isDirectory ? part.mime : 'text/plain';
         let finalUrl = part.url;
         if (!isImageOrPdf && part.url.startsWith('data:')) {
           const commaIndex = part.url.indexOf(',');

@@ -4,6 +4,32 @@
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
 
+const FILENAME_LINE_RANGE_PATTERN = /\s*\[(\d+)-(\d+)\]$/;
+
+/** Line range parsed from an explicit code-selection chip label. */
+export interface ParsedLineRange {
+  /** One-based start line. */
+  startLine: number;
+  /** One-based end line. */
+  endLine: number;
+}
+
+/**
+ * Extracts an explicit line range suffix from a code-selection filename.
+ *
+ * @param filename The display filename that may end with " [start-end]".
+ * @returns The parsed line range, or undefined when no explicit suffix exists.
+ */
+export function parseFilenameLineRange(filename?: string): ParsedLineRange | undefined {
+  const match = filename?.match(FILENAME_LINE_RANGE_PATTERN);
+  if (!match) return undefined;
+
+  return {
+    startLine: Number(match[1]),
+    endLine: Number(match[2]),
+  };
+}
+
 /**
  * Escapes special HTML characters to prevent XSS inside the global custom tooltip.
  *
@@ -30,7 +56,7 @@ export const getIconClass = (type: string, mime?: string): string => {
   if (type === 'image') return 'file-media';
   if (type === 'text') return 'note';
   if (type === 'terminal') return 'terminal';
-  if (mime === 'directory') return 'folder';
+  if (mime === 'directory' || mime === 'application/x-directory') return 'folder';
   if (mime?.startsWith('image/')) return 'file-media';
   if (mime?.startsWith('text/')) return 'file-text';
   if (mime === 'application/pdf') return 'file-pdf';
@@ -67,9 +93,8 @@ export const getTooltipHtml = (
 
   if (type === 'code-selection') {
     let cleanFilename = filename || 'file';
-    const rangeRegex = /\s*\[\d+-\d+\]$/;
-    if (rangeRegex.test(cleanFilename)) {
-      cleanFilename = cleanFilename.replace(rangeRegex, '');
+    if (FILENAME_LINE_RANGE_PATTERN.test(cleanFilename)) {
+      cleanFilename = cleanFilename.replace(FILENAME_LINE_RANGE_PATTERN, '');
     }
     return `<div class="tooltip-container">
       <strong>Selected Code Snippet</strong> (${escapeHtml(cleanFilename)} [${startLine || 1}-${endLine || 1}])<br/>
@@ -85,7 +110,7 @@ export const getTooltipHtml = (
     </div>`;
   }
 
-  if (mime === 'directory') {
+  if (mime === 'directory' || mime === 'application/x-directory') {
     const displayPath = path || '';
     return `<div class="tooltip-container">
       <strong>${escapeHtml(filename || 'Directory')}</strong><br/>
@@ -220,9 +245,8 @@ export const getPromptData = (
         } else if (type === 'code-selection') {
           const displayRange = `[${startLine}-${endLine}]`;
           let cleanFilename = filename || 'file';
-          const rangePattern = /\s*\[\d+-\d+\]$/;
-          if (rangePattern.test(cleanFilename)) {
-            cleanFilename = cleanFilename.replace(rangePattern, '');
+          if (FILENAME_LINE_RANGE_PATTERN.test(cleanFilename)) {
+            cleanFilename = cleanFilename.replace(FILENAME_LINE_RANGE_PATTERN, '');
           }
           promptText += `[Code Selection: ${cleanFilename} ${displayRange}]`;
           let finalUrl: string;
@@ -308,17 +332,9 @@ export const getPromptData = (
             const base64Content = btoa(unescape(encodeURIComponent(truncatedText)));
             finalUrl = `data:${mime || 'text/plain'};base64,${base64Content}`;
           }
-          const fileContent = chipText || cached?.content || '';
-          const source = {
-            type: 'file' as const,
-            path: path || filename,
-            text: {
-              value: fileContent,
-              start: 1,
-              end: fileContent ? fileContent.split('\n').length : 1,
-            },
-          };
-
+          // Do not create source object for whole files and directories to avoid backend schema validation errors
+          // and to prevent rendering them as code selections with line ranges (e.g. [1-1]) in the chat history.
+          // Code selection parts (which have a defined line range) are handled separately under type === 'code-selection'.
           parts.push({
             type: 'file',
             id,
@@ -327,7 +343,6 @@ export const getPromptData = (
             mime,
             filename,
             url: finalUrl,
-            source,
           } as unknown as Part);
         }
       } else {

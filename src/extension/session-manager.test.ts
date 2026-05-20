@@ -143,5 +143,65 @@ describe('SessionManager', () => {
       expect(passedParts[0].url).toBe('data:text/plain;base64,IyBDaGFuZ2Vsb2c=');
       expect(passedParts[1].url).toBe('data:text/plain;base64,aGVsbG8gd29ybGQ=');
     });
+
+    it('regression: should preserve directory mime type when processing directory parts', async () => {
+      const mockPromptAsync = vi.fn().mockResolvedValue(undefined);
+      const mockSdk = {
+        session: {
+          promptAsync: mockPromptAsync,
+        },
+      } as unknown as SDKClient;
+      const manager = new SessionManager(mockSdk);
+
+      const parts = [
+        {
+          type: 'file',
+          mime: 'directory',
+          url: 'file:///workspace/memory',
+          filename: 'memory',
+        } as unknown as Part,
+      ];
+
+      await manager.sendPrompt('s1', parts);
+
+      expect(mockPromptAsync).toHaveBeenCalledTimes(1);
+      const passedParts = mockPromptAsync.mock.calls[0][1] as Array<{
+        type: string;
+        mime: string;
+        url?: string;
+      }>;
+      expect(passedParts[0].mime).toBe('directory');
+      expect(passedParts[0].url).toBe('file:///workspace/memory');
+    });
+
+    it('regression: should preserve application/x-directory mime type when processing directory parts from backend', async () => {
+      const mockPromptAsync = vi.fn().mockResolvedValue(undefined);
+      const mockSdk = {
+        session: {
+          promptAsync: mockPromptAsync,
+        },
+      } as unknown as SDKClient;
+      const manager = new SessionManager(mockSdk);
+
+      const parts = [
+        {
+          type: 'file',
+          mime: 'application/x-directory',
+          url: 'file:///workspace/memory',
+          filename: 'memory',
+        } as unknown as Part,
+      ];
+
+      await manager.sendPrompt('s1', parts);
+
+      expect(mockPromptAsync).toHaveBeenCalledTimes(1);
+      const passedParts = mockPromptAsync.mock.calls[0][1] as Array<{
+        type: string;
+        mime: string;
+        url?: string;
+      }>;
+      expect(passedParts[0].mime).toBe('application/x-directory');
+      expect(passedParts[0].url).toBe('file:///workspace/memory');
+    });
   });
 });

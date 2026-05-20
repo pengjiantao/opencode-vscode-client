@@ -416,4 +416,41 @@ describe('MessageTurn', () => {
     // Verify terminal part (chip) renders inline
     expect(screen.getByText('terminal [5 lines]')).toBeInTheDocument();
   });
+
+  it('regression: renders inline file references without source offsets as line ranges', () => {
+    const userMsg = createMockUserMessage();
+    const textPart = createMockTextPart('[File: merges.txt] 这个文件是什么的');
+    textPart.messageID = userMsg.id;
+
+    const filePart = {
+      type: 'file' as const,
+      id: 'part-file-reference',
+      sessionID: 'session-1',
+      messageID: userMsg.id,
+      mime: 'text/plain',
+      url: 'file:///workspace/merges.txt',
+      filename: 'merges.txt',
+      source: {
+        type: 'file' as const,
+        path: 'src/qwenpaw/tokenizer/merges.txt',
+        text: {
+          value: '[File: merges.txt]',
+          start: 1,
+          end: 1,
+        },
+      },
+    };
+
+    const { container } = render(
+      <MessageTurn userMessage={userMsg} parts={{ [userMsg.id]: [textPart, filePart] }} />,
+    );
+
+    const chipElement = container.querySelector('.opencode-chip');
+    expect(chipElement).toBeInTheDocument();
+    expect(chipElement).toHaveClass('file-chip');
+    expect(chipElement).not.toHaveClass('code-selection-chip');
+    expect(screen.getByText('merges.txt')).toBeInTheDocument();
+    expect(screen.getByText('这个文件是什么的')).toBeInTheDocument();
+    expect(screen.queryByText('merges.txt [1-1]')).not.toBeInTheDocument();
+  });
 });

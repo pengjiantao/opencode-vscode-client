@@ -362,4 +362,82 @@ describe('Markdown Component', () => {
     expect(chipWrapper).toBeInTheDocument();
     expect(screen.getByText('terminal [5 lines]')).toBeInTheDocument();
   });
+
+  it('regression: renders Directory inline chips correctly without line range suffix and uses folder icon', () => {
+    const text = 'Here is a folder [File: memory].';
+    const allParts = [
+      {
+        id: 'dir-part',
+        type: 'file',
+        filename: 'memory',
+        mime: 'directory',
+        url: 'file:///workspace/memory',
+        source: {
+          type: 'file' as const,
+          path: 'memory',
+        },
+      },
+    ] as unknown as Part[];
+
+    const { container } = render(<Markdown text={text} allParts={allParts} />);
+    const chipElement = container.querySelector('.opencode-chip');
+    expect(chipElement).toBeInTheDocument();
+    expect(chipElement).toHaveClass('file-chip');
+    expect(screen.getByText('memory')).toBeInTheDocument();
+    expect(screen.queryByText('memory [1-1]')).not.toBeInTheDocument();
+    const iconElement = container.querySelector('.codicon-folder');
+    expect(iconElement).toBeInTheDocument();
+  });
+
+  it('regression: renders application/x-directory inline chips correctly without line range suffix and uses folder icon', () => {
+    const text = 'Here is a folder [File: memory].';
+    const allParts = [
+      {
+        id: 'dir-part-app',
+        type: 'file',
+        filename: 'memory',
+        mime: 'application/x-directory',
+        url: 'file:///workspace/memory',
+        source: {
+          type: 'file' as const,
+          path: 'memory',
+        },
+      },
+    ] as unknown as Part[];
+
+    const { container } = render(<Markdown text={text} allParts={allParts} />);
+    const chipElement = container.querySelector('.opencode-chip');
+    expect(chipElement).toBeInTheDocument();
+    expect(chipElement).toHaveClass('file-chip');
+    expect(screen.getByText('memory')).toBeInTheDocument();
+    expect(screen.queryByText('memory [1-1]')).not.toBeInTheDocument();
+    const iconElement = container.querySelector('.codicon-folder');
+    expect(iconElement).toBeInTheDocument();
+  });
+
+  it('regression: renders whole file chip without line range suffix even if source text is populated', () => {
+    const text = 'Referencing [File: merges.txt] in chat.';
+    const allParts = [
+      {
+        id: 'part-file-with-text',
+        type: 'file',
+        filename: 'merges.txt',
+        url: 'file:///workspace/merges.txt',
+        source: {
+          type: 'file' as const,
+          path: 'merges.txt',
+          text: {
+            value: 'file contents',
+          },
+        },
+      },
+    ] as unknown as Part[];
+
+    const { container } = render(<Markdown text={text} allParts={allParts} />);
+    const chipElement = container.querySelector('.opencode-chip');
+    expect(chipElement).toBeInTheDocument();
+    expect(chipElement).toHaveClass('file-chip');
+    expect(screen.getByText('merges.txt')).toBeInTheDocument();
+    expect(screen.queryByText('merges.txt [1-1]')).not.toBeInTheDocument();
+  });
 });

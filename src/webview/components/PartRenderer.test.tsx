@@ -222,6 +222,121 @@ describe('PartRenderer', () => {
     expect(screen.getByText('terminal [3 lines]')).toBeInTheDocument();
   });
 
+  it('regression: renders directory part as file chip with folder icon and no line range', () => {
+    const part = {
+      type: 'file' as const,
+      id: 'part-dir',
+      sessionID: 'session-1',
+      messageID: 'msg-1',
+      mime: 'directory',
+      url: 'file:///src/memory',
+      filename: 'memory',
+      source: {
+        type: 'file' as const,
+        path: 'src/memory',
+      },
+    } as unknown as import('@opencode-ai/sdk/v2/client').Part;
+    const { container } = render(<PartRenderer part={part} />);
+    const chipElement = container.querySelector('.opencode-chip');
+    expect(chipElement).toBeInTheDocument();
+    expect(chipElement).toHaveClass('file-chip');
+    expect(screen.getByText('memory')).toBeInTheDocument();
+    expect(screen.queryByText('memory [1-1]')).not.toBeInTheDocument();
+    const iconElement = container.querySelector('.codicon-folder');
+    expect(iconElement).toBeInTheDocument();
+  });
+
+  it('regression: renders application/x-directory part with folder icon and no line range', () => {
+    const part = {
+      type: 'file' as const,
+      id: 'part-dir-app',
+      sessionID: 'session-1',
+      messageID: 'msg-1',
+      mime: 'application/x-directory',
+      url: 'file:///src/memory',
+      filename: 'memory',
+      source: {
+        type: 'file' as const,
+        path: 'src/memory',
+      },
+    } as unknown as import('@opencode-ai/sdk/v2/client').Part;
+    const { container } = render(<PartRenderer part={part} />);
+    const chipElement = container.querySelector('.opencode-chip');
+    expect(chipElement).toBeInTheDocument();
+    expect(chipElement).toHaveClass('file-chip');
+    expect(screen.getByText('memory')).toBeInTheDocument();
+    expect(screen.queryByText('memory [1-1]')).not.toBeInTheDocument();
+    const iconElement = container.querySelector('.codicon-folder');
+    expect(iconElement).toBeInTheDocument();
+  });
+
+  it('regression: renders sourceless directory part correctly with folder icon', () => {
+    const part = {
+      type: 'file' as const,
+      id: 'part-dir-sourceless',
+      sessionID: 'session-1',
+      messageID: 'msg-1',
+      mime: 'application/x-directory',
+      url: 'file:///src/memory',
+      filename: 'memory',
+    } as unknown as import('@opencode-ai/sdk/v2/client').Part;
+    const { container } = render(<PartRenderer part={part} />);
+    const chipElement = container.querySelector('.opencode-chip');
+    expect(chipElement).toBeInTheDocument();
+    expect(chipElement).toHaveClass('file-chip');
+    expect(screen.getByText('memory')).toBeInTheDocument();
+    expect(screen.queryByText('memory [1-1]')).not.toBeInTheDocument();
+    const iconElement = container.querySelector('.codicon-folder');
+    expect(iconElement).toBeInTheDocument();
+  });
+
+  it('regression: renders whole file parts without line range and with file icon when source is omitted', () => {
+    const part = {
+      type: 'file' as const,
+      id: 'part-file-sourceless',
+      sessionID: 'session-1',
+      messageID: 'msg-1',
+      mime: 'text/plain',
+      url: 'file:///src/main.py',
+      filename: 'main.py',
+    } as unknown as import('@opencode-ai/sdk/v2/client').Part;
+    const { container } = render(<PartRenderer part={part} />);
+    const chipElement = container.querySelector('.opencode-chip');
+    expect(chipElement).toBeInTheDocument();
+    expect(chipElement).toHaveClass('file-chip');
+    expect(screen.getByText('main.py')).toBeInTheDocument();
+    expect(screen.queryByText('main.py [1-1]')).not.toBeInTheDocument();
+    const iconElement = container.querySelector('.codicon-file-text');
+    expect(iconElement).toBeInTheDocument();
+  });
+
+  it('regression: renders whole file part with source text but no line range as file chip without line range suffix', () => {
+    const part = {
+      type: 'file' as const,
+      id: 'part-file-with-text-sourceless-range',
+      sessionID: 'session-1',
+      messageID: 'msg-1',
+      mime: 'text/plain',
+      url: 'file:///src/main.py',
+      filename: 'main.py',
+      source: {
+        type: 'file' as const,
+        path: 'src/main.py',
+        text: {
+          value: 'file contents',
+        },
+      },
+    } as unknown as import('@opencode-ai/sdk/v2/client').Part;
+    const { container } = render(<PartRenderer part={part} />);
+    const chipElement = container.querySelector('.opencode-chip');
+    expect(chipElement).toBeInTheDocument();
+    expect(chipElement).toHaveClass('file-chip');
+    expect(screen.getByText('main.py')).toBeInTheDocument();
+    expect(screen.queryByText('main.py [1-1]')).not.toBeInTheDocument();
+    const iconElement = container.querySelector('.codicon-file-text');
+    expect(iconElement).toBeInTheDocument();
+  });
+
   describe('getToolIcon', () => {
     it('maps tools to correct icons in a case-insensitive manner', () => {
       expect(getToolIcon('BASH')).toBe('$(terminal)');

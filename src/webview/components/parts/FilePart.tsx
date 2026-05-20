@@ -5,7 +5,7 @@
  */
 
 import type { FilePart as SDKFilePart } from '@opencode-ai/sdk/v2/client';
-import { parseFileUrl } from '../../utils/chipUtils';
+import { parseFilenameLineRange, parseFileUrl } from '../../utils/chipUtils';
 import { Chip } from '../Chip';
 
 interface FilePartProps {
@@ -17,6 +17,7 @@ interface FilePartProps {
 export function FilePart({ part }: FilePartProps) {
   const { filename, mime, url } = part;
   const isImage = mime?.startsWith('image/') || url?.startsWith('data:image/');
+  const filenameRange = parseFilenameLineRange(filename);
 
   let chipType: 'file' | 'image' | 'code-selection' | 'terminal' = 'file';
   if (isImage) {
@@ -28,7 +29,7 @@ export function FilePart({ part }: FilePartProps) {
       part.source.path.startsWith('terminal-'))
   ) {
     chipType = 'terminal';
-  } else if (part.source && part.source.type === 'file' && part.source.text) {
+  } else if (mime !== 'directory' && mime !== 'application/x-directory' && filenameRange) {
     chipType = 'code-selection';
   }
 
@@ -58,14 +59,13 @@ export function FilePart({ part }: FilePartProps) {
   let endLine: number | undefined;
   let linesCount: number | undefined;
 
-  if (
-    chipType === 'code-selection' &&
-    part.source &&
-    part.source.type === 'file' &&
-    part.source.text
-  ) {
-    startLine = part.source.text.start;
-    endLine = part.source.text.end;
+  if (chipType === 'code-selection') {
+    startLine = filenameRange?.startLine;
+    endLine = filenameRange?.endLine;
+    if (part.source && part.source.type === 'file' && part.source.text) {
+      startLine = startLine ?? part.source.text.start;
+      endLine = endLine ?? part.source.text.end;
+    }
   } else if (
     chipType === 'terminal' &&
     part.source &&
