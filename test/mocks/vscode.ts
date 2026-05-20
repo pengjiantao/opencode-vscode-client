@@ -22,6 +22,7 @@ export const mockVscode = {
     showErrorMessage: vi.fn(),
     showWarningMessage: vi.fn(),
     showTextDocument: vi.fn(),
+    showOpenDialog: vi.fn(),
     registerWebviewViewProvider: vi.fn(() => ({ dispose: vi.fn() })),
     createStatusBarItem: vi.fn(() => ({
       show: vi.fn(),

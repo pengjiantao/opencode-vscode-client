@@ -5,6 +5,7 @@
 
 import { useCallback } from 'react';
 import type { WebviewToExt } from '../../shared/types';
+import { getMimeType } from '../../shared/utils';
 import { getIconClass, getTooltipHtml } from '../utils/chipUtils';
 
 /**
@@ -246,14 +247,7 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
       if (pastedText) {
         if (isPastedPath) {
           e.preventDefault();
-          const isImage =
-            pastedText.toLowerCase().endsWith('.png') ||
-            pastedText.toLowerCase().endsWith('.jpg') ||
-            pastedText.toLowerCase().endsWith('.jpeg') ||
-            pastedText.toLowerCase().endsWith('.gif') ||
-            pastedText.toLowerCase().endsWith('.webp');
-          const isPdf = pastedText.toLowerCase().endsWith('.pdf');
-          const resolvedMime = isImage ? 'image/png' : isPdf ? 'application/pdf' : 'text/plain';
+          const resolvedMime = getMimeType(pastedText);
           insertChip({
             id: `file-path-${Math.random().toString(36).substring(7)}`,
             type: 'file',

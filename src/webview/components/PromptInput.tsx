@@ -5,6 +5,8 @@
 
 import type { Part, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import React from 'react';
+import type { WebviewToExt } from '../../shared/types';
+import { getMimeType } from '../../shared/utils';
 import { useIPC } from '../hooks/useIPC';
 import { usePromptEditor } from '../hooks/usePromptEditor';
 import { usePromptSelectionIPC } from '../hooks/usePromptSelectionIPC';
@@ -146,12 +148,9 @@ export function PromptInput({
     }
   }, [isRunning, onAbort, activeSessionID, fileInfos, onSubmit]);
 
-  const { send } = useIPC((message) => {
-    if (message.type === 'workspace:search-files-response') {
-      setMentionResults(message.results);
-      setSelectedIndex(0);
-    }
-  });
+  const send = React.useCallback((message: WebviewToExt) => {
+    window.vscode.postMessage(message);
+  }, []);
 
   const handleInput = React.useCallback(() => {
     const { text } = getPromptData(editorRef.current, activeSessionID, fileInfos);
@@ -170,6 +169,30 @@ export function PromptInput({
     insertText,
     onSubmit: handleSubmit,
   });
+
+  useIPC((message) => {
+    if (message.type === 'workspace:search-files-response') {
+      setMentionResults(message.results);
+      setSelectedIndex(0);
+    } else if (message.type === 'file:selected') {
+      for (const file of message.files) {
+        const isImage = file.mime.startsWith('image/');
+        insertChip({
+          id: `${isImage ? 'img' : 'file-path'}-${Math.random().toString(36).substring(7)}`,
+          type: isImage ? 'image' : 'file',
+          path: file.fsPath,
+          filename: file.name,
+          size: file.size,
+          mime: file.mime,
+          dataUrl: file.dataUrl,
+        });
+      }
+    }
+  });
+
+  const handleSelectLocalFile = React.useCallback(() => {
+    send({ type: 'file:select' });
+  }, [send]);
 
   React.useEffect(() => {
     if (models.length > 0 && !selectedModel) {
@@ -286,17 +309,7 @@ export function PromptInput({
 
       const chipId = `file-${Math.random().toString(36).substring(7)}`;
       const chipType = 'file';
-      let mime = 'text/plain';
-      if (item.type === 'dir') {
-        mime = 'directory';
-      } else {
-        const ext = item.name.split('.').pop()?.toLowerCase();
-        if (ext === 'png' || ext === 'jpg' || ext === 'jpeg' || ext === 'gif' || ext === 'webp') {
-          mime = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
-        } else if (ext === 'pdf') {
-          mime = 'application/pdf';
-        }
-      }
+      const mime = item.type === 'dir' ? 'directory' : getMimeType(item.name);
 
       const chipNode = document.createElement('span');
       chipNode.className = `opencode-chip file-chip inline-chip`;
@@ -417,6 +430,14 @@ export function PromptInput({
 
         <div className="prompt-input-footer">
           <div className="selectors">
+            <IconButton
+              name="attach"
+              title="Add File Reference"
+              onClick={handleSelectLocalFile}
+              disabled={disabled}
+              size="medium"
+            />
+
             <ModelSelector
               models={models}
               value={activeModel}

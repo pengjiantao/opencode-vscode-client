@@ -16,6 +16,7 @@ import {
   window,
   workspace,
 } from 'vscode';
+import { getMimeType } from '../../shared/utils';
 import type { IPCBridge } from '../ipc';
 import { getConfiguration } from './config';
 import { isPathIgnored, loadGitignorePatterns } from './gitignore';
@@ -394,6 +395,65 @@ export function registerFileHandlers(ipc: IPCBridge): void {
           query,
           results: [],
         });
+      }
+    })();
+  });
+
+  // IPC command to select local files/images
+  ipc.on('file:select', () => {
+    return (async () => {
+      try {
+        const uris = await window.showOpenDialog({
+          canSelectFiles: true,
+          canSelectFolders: false,
+          canSelectMany: true,
+          openLabel: 'Select Files/Images',
+          title: 'Select Files/Images to Reference',
+        });
+
+        if (!uris || uris.length === 0) {
+          return;
+        }
+
+        const filesInfo = [];
+        for (const uri of uris) {
+          const fsPath = uri.fsPath;
+          const stat = await fs.promises.stat(fsPath);
+          const name = path.basename(fsPath);
+          const size = stat.size;
+
+          const mime = getMimeType(name);
+          let dataUrl: string | undefined;
+
+          if (mime.startsWith('image/')) {
+            if (size > 10 * 1024 * 1024) {
+              void window.showErrorMessage(`Image "${name}" exceeds the 10MB size limit.`);
+              continue;
+            }
+            try {
+              const buffer = await fs.promises.readFile(fsPath);
+              dataUrl = `data:${mime};base64,${buffer.toString('base64')}`;
+            } catch (readErr) {
+              console.error(`Failed to read image file ${fsPath}:`, readErr);
+            }
+          }
+
+          filesInfo.push({
+            name,
+            fsPath,
+            size,
+            mime,
+            dataUrl,
+          });
+        }
+
+        ipc.send({
+          type: 'file:selected',
+          files: filesInfo,
+        });
+      } catch (err) {
+        console.error('Error selecting local files:', err);
+        window.showErrorMessage(`Failed to select files: ${(err as Error).message}`);
       }
     })();
   });

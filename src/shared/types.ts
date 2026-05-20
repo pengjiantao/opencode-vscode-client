@@ -94,6 +94,16 @@ export type ExtToWebview =
       text: string;
       linesCount: number;
       action: 'insert' | 'explain-fix';
+    }
+  | {
+      type: 'file:selected';
+      files: Array<{
+        name: string;
+        fsPath: string;
+        size: number;
+        mime: string;
+        dataUrl?: string;
+      }>;
     };
 
 /** Messages sent from the webview to the extension host. */
@@ -113,5 +123,6 @@ export type WebviewToExt =
   | { type: 'file:open'; path: string; startLine?: number; endLine?: number }
   | { type: 'file:query'; path: string }
   | { type: 'workspace:search-files'; query: string }
+  | { type: 'file:select' }
   | { type: 'init' }
   | { type: 'pong' };

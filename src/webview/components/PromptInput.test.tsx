@@ -343,4 +343,61 @@ describe('PromptInput', () => {
     // Total Cost: 0.05
     expect(screen.getByTestId('footer-cost')).toHaveTextContent('$0.050');
   });
+
+  /** Regression: clicks attach button and posts file:select message */
+  it('regression: clicks attach button and posts file:select message', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const attachBtn = screen.getByRole('button', { name: /add file reference/i });
+    fireEvent.click(attachBtn);
+
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({ type: 'file:select' });
+  });
+
+  /** Regression: inserts chip when receiving file:selected message */
+  it('regression: inserts chip when receiving file:selected message', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const editor = screen.getByTestId('prompt-editor');
+
+    // Simulate IPC message from extension host
+    fireEvent(
+      window,
+      new MessageEvent('message', {
+        data: {
+          type: 'file:selected',
+          files: [
+            {
+              name: 'test.txt',
+              fsPath: '/workspace/test.txt',
+              size: 100,
+              mime: 'text/plain',
+            },
+          ],
+        },
+      }),
+    );
+
+    // Verify chip was inserted into editor
+    const chip = editor.querySelector('.opencode-chip');
+    expect(chip).toBeInTheDocument();
+    expect(chip).toHaveAttribute('data-chip-filename', 'test.txt');
+    expect(chip).toHaveAttribute('data-chip-path', '/workspace/test.txt');
+  });
 });

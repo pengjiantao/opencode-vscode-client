@@ -328,4 +328,146 @@ describe('Extension Status Bar Activation', () => {
       isWorkspace: true,
     });
   });
+
+  it('regression: handles file:select IPC event correctly', async () => {
+    await activate(mockContext);
+
+    const selectHandler = ipcHandlers.get('file:select');
+    expect(selectHandler).toBeDefined();
+
+    const mockUris = [Uri.file('/some/test.txt'), Uri.file('/some/image.png')];
+    vi.spyOn(window, 'showOpenDialog').mockResolvedValue(mockUris);
+
+    vi.mocked(fs.promises.stat).mockImplementation((filePath) => {
+      if (filePath.toString().endsWith('test.txt')) {
+        return Promise.resolve({
+          isFile: () => true,
+          isDirectory: () => false,
+          size: 100,
+        } as unknown as fs.Stats);
+      }
+      return Promise.resolve({
+        isFile: () => true,
+        isDirectory: () => false,
+        size: 200,
+      } as unknown as fs.Stats);
+    });
+
+    vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from('FakeImageData'));
+
+    if (selectHandler) {
+      await selectHandler();
+    }
+
+    expect(window.showOpenDialog).toHaveBeenCalledWith({
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: true,
+      openLabel: 'Select Files/Images',
+      title: 'Select Files/Images to Reference',
+    });
+
+    expect(mockIpcSend).toHaveBeenCalledWith({
+      type: 'file:selected',
+      files: [
+        {
+          name: 'test.txt',
+          fsPath: '/some/test.txt',
+          size: 100,
+          mime: 'text/plain',
+          dataUrl: undefined,
+        },
+        {
+          name: 'image.png',
+          fsPath: '/some/image.png',
+          size: 200,
+          mime: 'image/png',
+          dataUrl: 'data:image/png;base64,RmFrZUltYWdlRGF0YQ==',
+        },
+      ],
+    });
+  });
+
+  it('regression: handles file:select IPC event when user cancels dialog', async () => {
+    await activate(mockContext);
+
+    const selectHandler = ipcHandlers.get('file:select');
+    expect(selectHandler).toBeDefined();
+
+    vi.spyOn(window, 'showOpenDialog').mockResolvedValue(undefined);
+    mockIpcSend.mockClear();
+
+    if (selectHandler) {
+      await selectHandler();
+    }
+
+    expect(mockIpcSend).not.toHaveBeenCalled();
+  });
+
+  it('regression: skips images exceeding the 10MB size limit', async () => {
+    await activate(mockContext);
+
+    const selectHandler = ipcHandlers.get('file:select');
+    expect(selectHandler).toBeDefined();
+
+    const mockUris = [Uri.file('/some/large-image.png')];
+    vi.spyOn(window, 'showOpenDialog').mockResolvedValue(mockUris);
+    vi.spyOn(window, 'showErrorMessage').mockResolvedValue(undefined);
+
+    vi.mocked(fs.promises.stat).mockResolvedValue({
+      isFile: () => true,
+      isDirectory: () => false,
+      size: 15 * 1024 * 1024, // 15MB
+    } as unknown as fs.Stats);
+
+    mockIpcSend.mockClear();
+
+    if (selectHandler) {
+      await selectHandler();
+    }
+
+    expect(window.showErrorMessage).toHaveBeenCalledWith(
+      'Image "large-image.png" exceeds the 10MB size limit.',
+    );
+    expect(mockIpcSend).toHaveBeenCalledWith({
+      type: 'file:selected',
+      files: [],
+    });
+  });
+
+  it('regression: handles image read failure gracefully', async () => {
+    await activate(mockContext);
+
+    const selectHandler = ipcHandlers.get('file:select');
+    expect(selectHandler).toBeDefined();
+
+    const mockUris = [Uri.file('/some/bad-image.png')];
+    vi.spyOn(window, 'showOpenDialog').mockResolvedValue(mockUris);
+
+    vi.mocked(fs.promises.stat).mockResolvedValue({
+      isFile: () => true,
+      isDirectory: () => false,
+      size: 200,
+    } as unknown as fs.Stats);
+
+    vi.mocked(fs.promises.readFile).mockRejectedValue(new Error('Read error'));
+    mockIpcSend.mockClear();
+
+    if (selectHandler) {
+      await selectHandler();
+    }
+
+    expect(mockIpcSend).toHaveBeenCalledWith({
+      type: 'file:selected',
+      files: [
+        {
+          name: 'bad-image.png',
+          fsPath: '/some/bad-image.png',
+          size: 200,
+          mime: 'image/png',
+          dataUrl: undefined,
+        },
+      ],
+    });
+  });
 });
