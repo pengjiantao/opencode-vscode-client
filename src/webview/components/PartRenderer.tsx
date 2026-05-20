@@ -15,12 +15,23 @@ interface PartRendererProps {
   part: Part;
   allParts?: Part[];
   isAssistant?: boolean;
+  hasPredecessor?: boolean;
+  hasSuccessor?: boolean;
 }
 
 /** Routes a Part to its type-specific renderer component. */
-export function PartRenderer({ part, allParts, isAssistant = false }: PartRendererProps) {
+export function PartRenderer({
+  part,
+  allParts,
+  isAssistant = false,
+  hasPredecessor = false,
+  hasSuccessor = false,
+}: PartRendererProps) {
   switch (part.type) {
     case 'text':
+      if (!part.text || part.text.trim() === '') {
+        return null;
+      }
       if (part.metadata?.type === 'pasted-text') {
         const meta = part.metadata as { type: string; filename?: string; linesCount?: number };
         return (
@@ -61,12 +72,22 @@ export function PartRenderer({ part, allParts, isAssistant = false }: PartRender
             error,
             time,
           }}
+          hasPredecessor={hasPredecessor}
+          hasSuccessor={hasSuccessor}
         />
       );
     }
 
     case 'reasoning':
-      return <ReasoningPart text={part.text} time={part.time} metadata={part.metadata} />;
+      return (
+        <ReasoningPart
+          text={part.text}
+          time={part.time}
+          metadata={part.metadata}
+          hasPredecessor={hasPredecessor}
+          hasSuccessor={hasSuccessor}
+        />
+      );
 
     case 'file': {
       return <FilePart part={part} />;

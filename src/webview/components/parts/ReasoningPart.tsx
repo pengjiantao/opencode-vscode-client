@@ -10,6 +10,8 @@ interface ReasoningPartProps {
   text: string;
   time?: { start: number; end?: number };
   metadata?: Record<string, unknown>;
+  hasPredecessor?: boolean;
+  hasSuccessor?: boolean;
 }
 
 /**
@@ -32,7 +34,12 @@ function useCollapseOnComplete(hasEnd: boolean) {
 }
 
 /** Collapsible section displaying the model's internal reasoning text and duration. */
-export function ReasoningPart({ text, time }: ReasoningPartProps) {
+export function ReasoningPart({
+  text,
+  time,
+  hasPredecessor = false,
+  hasSuccessor = false,
+}: ReasoningPartProps) {
   const hasEnd = time?.end !== undefined;
   const [collapsed, setCollapsed] = useCollapseOnComplete(hasEnd);
   // Spinner icon during running state, static idea lightbulb on complete
@@ -47,8 +54,17 @@ export function ReasoningPart({ text, time }: ReasoningPartProps) {
     return 'Thinking...';
   };
 
+  const dotClassName = `timeline-dot reasoning-dot${!hasEnd ? ' status-running' : ''}`;
+  const showLine = hasPredecessor || hasSuccessor;
+
   return (
-    <div className={`part reasoning-part ${collapsed ? 'collapsed' : 'expanded'}`}>
+    <div className={`part reasoning-part timeline-item ${collapsed ? 'collapsed' : 'expanded'}`}>
+      <span className={dotClassName} />
+      {showLine && (
+        <span
+          className={`timeline-line${hasPredecessor ? ' has-predecessor' : ''}${hasSuccessor ? ' has-successor' : ''}`}
+        />
+      )}
       <div className="reasoning-header" onClick={() => setCollapsed(!collapsed)}>
         <Codicon name={iconName} className="reasoning-header-icon" />
         <span className="reasoning-label">{getDurationText()}</span>

@@ -6,7 +6,9 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createMockAssistantMessage,
+  createMockReasoningPart,
   createMockTextPart,
+  createMockToolPart,
   createMockUserMessage,
 } from '../../test/mocks/sdk';
 import { MessageTurn } from './MessageTurn';
@@ -452,5 +454,75 @@ describe('MessageTurn', () => {
     expect(screen.getByText('merges.txt')).toBeInTheDocument();
     expect(screen.getByText('这个文件是什么的')).toBeInTheDocument();
     expect(screen.queryByText('merges.txt [1-1]')).not.toBeInTheDocument();
+  });
+
+  it('correctly calculates hasPredecessor and hasSuccessor props ignoring empty/whitespace text parts', () => {
+    const userMsg = createMockUserMessage();
+    const assistantMsg = createMockAssistantMessage();
+
+    const reasoningPart = createMockReasoningPart('thinking...');
+    reasoningPart.id = 'part-reasoning-1';
+    reasoningPart.messageID = assistantMsg.id;
+
+    const emptyTextPart = createMockTextPart('   \n  \n ');
+    emptyTextPart.id = 'part-text-empty';
+    emptyTextPart.messageID = assistantMsg.id;
+
+    const toolPart = createMockToolPart('bash');
+    toolPart.id = 'part-tool-1';
+    toolPart.messageID = assistantMsg.id;
+
+    const { container } = render(
+      <MessageTurn
+        userMessage={userMsg}
+        assistantMessage={assistantMsg}
+        parts={{ [assistantMsg.id]: [reasoningPart, emptyTextPart, toolPart] }}
+      />,
+    );
+
+    const reasoningLine = container.querySelector('.reasoning-part .timeline-line');
+    expect(reasoningLine).toBeInTheDocument();
+    expect(reasoningLine).toHaveClass('has-successor');
+    expect(reasoningLine).not.toHaveClass('has-predecessor');
+
+    const toolLine = container.querySelector('.tool-part .timeline-line');
+    expect(toolLine).toBeInTheDocument();
+    expect(toolLine).toHaveClass('has-predecessor');
+    expect(toolLine).not.toHaveClass('has-successor');
+  });
+
+  it('correctly calculates hasPredecessor and hasSuccessor props across multiple assistant messages', () => {
+    const userMsg = createMockUserMessage();
+    const assistantMsg1 = { ...createMockAssistantMessage(), id: 'msg-1' };
+    const assistantMsg2 = { ...createMockAssistantMessage(), id: 'msg-2' };
+
+    const reasoningPart = createMockReasoningPart('thinking...');
+    reasoningPart.id = 'part-reasoning-1';
+    reasoningPart.messageID = assistantMsg1.id;
+
+    const toolPart = createMockToolPart('bash');
+    toolPart.id = 'part-tool-1';
+    toolPart.messageID = assistantMsg2.id;
+
+    const { container } = render(
+      <MessageTurn
+        userMessage={userMsg}
+        assistantMessages={[assistantMsg1, assistantMsg2]}
+        parts={{
+          [assistantMsg1.id]: [reasoningPart],
+          [assistantMsg2.id]: [toolPart],
+        }}
+      />,
+    );
+
+    const reasoningLine = container.querySelector('.reasoning-part .timeline-line');
+    expect(reasoningLine).toBeInTheDocument();
+    expect(reasoningLine).toHaveClass('has-successor');
+    expect(reasoningLine).not.toHaveClass('has-predecessor');
+
+    const toolLine = container.querySelector('.tool-part .timeline-line');
+    expect(toolLine).toBeInTheDocument();
+    expect(toolLine).toHaveClass('has-predecessor');
+    expect(toolLine).not.toHaveClass('has-successor');
   });
 });

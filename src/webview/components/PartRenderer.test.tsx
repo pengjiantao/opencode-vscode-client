@@ -26,7 +26,7 @@ describe('PartRenderer', () => {
   it('renders tool part', () => {
     const part = createMockToolPart('bash');
     render(<PartRenderer part={part} />);
-    expect(screen.getByText(/bash/)).toBeInTheDocument();
+    expect(screen.getByText(/bash/i)).toBeInTheDocument();
   });
 
   it('renders tool part with tool-specific icon and no Tool prefix', () => {
@@ -36,8 +36,8 @@ describe('PartRenderer', () => {
     const iconElement = container.querySelector('.codicon-terminal');
     expect(iconElement).toBeInTheDocument();
     // Check that the summary text doesn't have the "Tool: " prefix
-    expect(screen.getByText(/bash/)).toBeInTheDocument();
-    expect(screen.queryByText(/Tool: bash/)).not.toBeInTheDocument();
+    expect(screen.getByText(/bash/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Tool: bash/i)).not.toBeInTheDocument();
   });
 
   it('renders reasoning part', () => {
@@ -335,6 +335,45 @@ describe('PartRenderer', () => {
     expect(screen.queryByText('main.py [1-1]')).not.toBeInTheDocument();
     const iconElement = container.querySelector('.codicon-file-text');
     expect(iconElement).toBeInTheDocument();
+  });
+
+  describe('ToolPart display optimizations', () => {
+    it('renders tool name in UPPERCASE and does not append running/failed in header', () => {
+      const part = createMockToolPart('write_to_file');
+      part.state = {
+        status: 'running',
+        input: {},
+        title: 'Updating code',
+        time: { start: Date.now() },
+      };
+      render(<PartRenderer part={part} />);
+
+      // Name should be uppercase and contain the title, but no "(running...)"
+      expect(screen.getByText('WRITE_TO_FILE - Updating code')).toBeInTheDocument();
+      expect(screen.queryByText(/running/)).not.toBeInTheDocument();
+    });
+
+    it('expands JSON input to show as UPPERCASE_KEY value and omits INPUT character header', () => {
+      const part = createMockToolPart('grep_search');
+      part.state.input = {
+        filePath: '/workspace/src',
+        query: 'search-query',
+        matchCount: 10,
+      };
+
+      const { container } = render(<PartRenderer part={part} />);
+
+      // INPUT header should be removed
+      expect(screen.queryByText('Input')).not.toBeInTheDocument();
+      expect(screen.queryByText('INPUT')).not.toBeInTheDocument();
+
+      // JSON should be expanded to uppercase keys followed by spaces and values
+      const preElement = container.querySelector('.tool-input pre');
+      expect(preElement).toBeInTheDocument();
+      expect(preElement?.textContent).toContain('FILEPATH /workspace/src');
+      expect(preElement?.textContent).toContain('QUERY search-query');
+      expect(preElement?.textContent).toContain('MATCHCOUNT 10');
+    });
   });
 
   describe('getToolIcon', () => {

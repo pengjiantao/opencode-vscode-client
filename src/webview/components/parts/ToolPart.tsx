@@ -15,6 +15,8 @@ interface ToolPartProps {
     error?: string;
     time?: { start: number; end?: number };
   };
+  hasPredecessor?: boolean;
+  hasSuccessor?: boolean;
 }
 
 /**
@@ -66,20 +68,32 @@ export function getToolIcon(tool: string): string {
 }
 
 /** Displays a tool execution in a collapsible borderless box, default collapsed. */
-export function ToolPart({ tool, state }: ToolPartProps) {
+export function ToolPart({
+  tool,
+  state,
+  hasPredecessor = false,
+  hasSuccessor = false,
+}: ToolPartProps) {
   const [collapsed, setCollapsed] = useState(true);
 
   // Omit "Tool:" prefix to keep the sidebar presentation compact and developer-centric
   const getSummaryText = () => {
-    const statusText =
-      state.status === 'running' ? ' (running...)' : state.status === 'error' ? ' (failed)' : '';
-    return `${tool}${state.title ? ` - ${state.title}` : ''}${statusText}`;
+    return `${tool.toUpperCase()}${state.title ? ` - ${state.title}` : ''}`;
   };
+
+  const dotClassName = `timeline-dot tool-dot status-${state.status}`;
+  const showLine = hasPredecessor || hasSuccessor;
 
   return (
     <div
-      className={`part tool-part status-${state.status} ${collapsed ? 'collapsed' : 'expanded'}`}
+      className={`part tool-part timeline-item status-${state.status} ${collapsed ? 'collapsed' : 'expanded'}`}
     >
+      <span className={dotClassName} />
+      {showLine && (
+        <span
+          className={`timeline-line${hasPredecessor ? ' has-predecessor' : ''}${hasSuccessor ? ' has-successor' : ''}`}
+        />
+      )}
       <div className="tool-header" onClick={() => setCollapsed(!collapsed)}>
         <Codicon name={getToolIcon(tool)} className="tool-header-icon" />
         <span className="tool-name">{getSummaryText()}</span>
@@ -94,10 +108,20 @@ export function ToolPart({ tool, state }: ToolPartProps) {
         }}
       >
         <div className="tool-content">
-          {state.input && (
+          {state.input && Object.keys(state.input).length > 0 && (
             <div className="tool-input">
-              <span className="section-label">Input</span>
-              <pre>{JSON.stringify(state.input, null, 2)}</pre>
+              <pre>
+                {Object.entries(state.input)
+                  .map(([key, value]) => {
+                    const upperKey = key.toUpperCase();
+                    const displayVal =
+                      typeof value === 'object' && value !== null
+                        ? JSON.stringify(value)
+                        : String(value);
+                    return `${upperKey} ${displayVal}`;
+                  })
+                  .join('\n')}
+              </pre>
             </div>
           )}
 

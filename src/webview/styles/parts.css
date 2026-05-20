@@ -20,7 +20,7 @@
   border-radius: 6px;
   background-color: transparent;
   transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
+  overflow: visible;
   margin: 2px 0;
   padding: 2px 0;
 }
@@ -72,10 +72,10 @@
 
 /* Inward indentation for expanded content */
 .tool-part .tool-content {
-  padding: 8px 12px 8px 24px;
-  margin-left: 12px;
+  padding: 8px 12px 8px 12px;
+  margin-left: 0;
   margin-bottom: 4px;
-  border-left: 2px solid color-mix(in srgb, var(--webview-foreground) 10%, transparent);
+  border-left: none;
 }
 
 .tool-part .tool-input,
@@ -93,8 +93,7 @@
   margin-bottom: 4px;
 }
 
-.tool-part .tool-output pre,
-.tool-part .tool-input pre {
+.tool-part .tool-output pre {
   margin: 0;
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 12px;
@@ -108,6 +107,18 @@
   border: none;
   max-height: 250px;
   overflow: auto;
+  opacity: 0.6;
+}
+
+.tool-part .tool-input pre {
+  margin: 0;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+  white-space: pre-wrap;
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  border: none;
   opacity: 0.6;
 }
 
@@ -154,7 +165,7 @@
   border-radius: 6px;
   background-color: transparent;
   transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
+  overflow: visible;
   margin: 2px 0;
   padding: 2px 0;
 }
@@ -176,10 +187,10 @@
 
 /* Inward indentation for expanded content */
 .reasoning-part .reasoning-content {
-  padding: 8px 12px 8px 24px;
-  margin-left: 12px;
+  padding: 8px 12px 8px 12px;
+  margin-left: 0;
   margin-bottom: 4px;
-  border-left: 2px solid color-mix(in srgb, var(--webview-foreground) 10%, transparent);
+  border-left: none;
   max-height: 300px;
   overflow-y: auto;
   opacity: 0.6;
@@ -438,4 +449,84 @@ pre.code-block code {
 .markdown-table td code {
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Timeline dot & line styles */
+.timeline-item {
+  position: relative;
+  padding-left: 20px;
+}
+
+.timeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  position: absolute;
+  left: 6px;
+  top: 14px;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.timeline-dot.reasoning-dot {
+  background-color: #ffffff;
+  opacity: 0.5;
+}
+
+.timeline-dot.tool-dot.status-completed {
+  background-color: var(--vscode-textLink-foreground, var(--vscode-button-background, #0e639c));
+  opacity: 0.6;
+}
+
+.timeline-dot.tool-dot.status-error {
+  background-color: var(--vscode-error-foreground, #f48771);
+  opacity: 0.6;
+}
+
+.timeline-dot.tool-dot.status-running,
+.timeline-dot.tool-dot.status-pending {
+  background-color: var(--vscode-textLink-foreground, var(--vscode-button-background, #0e639c));
+  animation: timeline-blink 1.2s infinite ease-in-out;
+}
+
+.timeline-dot.reasoning-dot.status-running {
+  background-color: #ffffff;
+  animation: timeline-blink 1.2s infinite ease-in-out;
+}
+
+.timeline-line {
+  position: absolute;
+  left: 9px;
+  width: 1px;
+  background-color: var(--vscode-editor-foreground, #cccccc);
+  opacity: 0.15;
+  z-index: 1;
+}
+
+/* Intermediate items (predecessor and successor both exist) */
+.timeline-line.has-predecessor.has-successor {
+  top: -4px;
+  bottom: -4px;
+}
+
+/* First item in the sequence (no predecessor, has successor) */
+.timeline-line.has-successor:not(.has-predecessor) {
+  top: 14px;
+  bottom: -4px;
+}
+
+/* Last item in the sequence (has predecessor, no successor) */
+.timeline-line.has-predecessor:not(.has-successor) {
+  top: -4px;
+  bottom: calc(100% - 14px);
+}
+
+@keyframes timeline-blink {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.85;
+  }
 }
