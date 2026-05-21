@@ -11,11 +11,19 @@
   user-select: none;
 }
 
-.sub-footer-left,
+.sub-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
 .sub-footer-right {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .metadata-item {
@@ -42,12 +50,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0; /* Prevent icon from squeezing and overlapping with text */
 }
 
 .metadata-item.workspace {
   color: var(--vscode-textLink-foreground, #007fd4);
   font-weight: 500;
-  max-width: 120px;
+  max-width: 100%; /* Allow workspace to take full remaining width instead of fixed 120px */
   min-width: 0;
 }
 

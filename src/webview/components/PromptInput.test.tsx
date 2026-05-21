@@ -366,6 +366,35 @@ describe('PromptInput', () => {
     expect(textSpan).toHaveTextContent('TestWorkspace');
   });
 
+  /**
+   * Regression: Verify sub-footer containers and folder icon have layout classes preventing
+   * overlaps (flex-shrink: 0 on metadata-icon and sub-footer-right) and early truncation
+   * (flex: 1 on sub-footer-left).
+   */
+  it('regression: sub-footer elements have layout classes preventing overlap and early truncation', () => {
+    const { container } = render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    // Verify sub-footer-left and sub-footer-right structural elements exist for flex spacing layout
+    const leftFooter = container.querySelector('.sub-footer-left');
+    const rightFooter = container.querySelector('.sub-footer-right');
+    expect(leftFooter).toBeInTheDocument();
+    expect(rightFooter).toBeInTheDocument();
+
+    // Verify folder icon has metadata-icon class to guarantee flex-shrink: 0 applies to prevent icon overlap
+    const workspaceItem = screen.getByTestId('footer-workspace');
+    const icon = workspaceItem.querySelector('.codicon-folder');
+    expect(icon).toBeInTheDocument();
+    expect(icon).toHaveClass('metadata-icon');
+  });
+
   /** Regression: clicks attach button and posts file:select message */
   it('regression: clicks attach button and posts file:select message', () => {
     render(
