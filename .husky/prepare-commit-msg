@@ -17,6 +17,9 @@ check_amend_in_proc() {
     fi
     # Safely get PPID, fallback to empty string on command failure or OS incompatibility
     PID=$(ps -o ppid= -p "$PID" 2>/dev/null | tr -d ' ' || echo "")
+    case "$PID" in
+      "" | *[!0-9]*) PID="" ;;
+    esac
   done
   return 0
 }
