@@ -144,10 +144,9 @@ export function PartRenderer({
       return null;
 
     default:
-      return (
-        <div className="part unknown">
-          <span>Unknown part type: {(part as Part).type}</span>
-        </div>
-      );
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`[PartRenderer] Unknown part type: ${(part as Part).type}`);
+      }
+      return null;
   }
 }

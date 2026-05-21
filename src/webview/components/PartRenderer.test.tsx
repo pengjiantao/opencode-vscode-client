@@ -99,15 +99,17 @@ describe('PartRenderer', () => {
     expect(chipElement?.getAttribute('data-custom-title')).toContain('src/test_source.txt');
   });
 
-  it('renders unknown part type', () => {
+  it('renders unknown part type as null', () => {
     const part = {
       type: 'unknown' as unknown as 'text',
       id: 'part-1',
       sessionID: 'session-1',
       messageID: 'msg-1',
     };
-    render(<PartRenderer part={part as unknown as import('@opencode-ai/sdk/v2/client').Part} />);
-    expect(screen.getByText(/Unknown part type/)).toBeInTheDocument();
+    const { container } = render(
+      <PartRenderer part={part as unknown as import('@opencode-ai/sdk/v2/client').Part} />,
+    );
+    expect(container.firstChild).toBeNull();
   });
 
   it('renders step-start part as null', () => {
