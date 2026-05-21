@@ -35,6 +35,7 @@ export function ChatView({ sessionID, messages, parts, onPermissionReply }: Chat
   const activeSessionStatus = sessionID ? sessionStatus[sessionID] : undefined;
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
 
   /** Groups sequential messages into user→assistant turn pairs.
@@ -71,6 +72,32 @@ export function ChatView({ sessionID, messages, parts, onPermissionReply }: Chat
     setPendingPermission(null);
   };
 
+  /**
+   * Evaluates scroll position and container heights to dynamically toggle top/bottom shadow fades.
+   * Modifies classes directly on the wrapper ref to bypass React rendering cycles for performance.
+   */
+  const updateShadows = () => {
+    const container = scrollRef.current;
+    const wrapper = containerRef.current;
+    if (!container || !wrapper) return;
+
+    const showTop = container.scrollTop > 0;
+    // 1px buffer to account for rounding errors on high-DPI zoom/subpixel values
+    const showBottom = container.scrollTop + container.clientHeight < container.scrollHeight - 1;
+
+    if (showTop) {
+      wrapper.classList.add('has-top-shadow');
+    } else {
+      wrapper.classList.remove('has-top-shadow');
+    }
+
+    if (showBottom) {
+      wrapper.classList.add('has-bottom-shadow');
+    } else {
+      wrapper.classList.remove('has-bottom-shadow');
+    }
+  };
+
   const handleScroll = () => {
     const container = scrollRef.current;
     if (!container) return;
@@ -81,53 +108,75 @@ export function ChatView({ sessionID, messages, parts, onPermissionReply }: Chat
       container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
 
     setIsAutoScrollEnabled(isAtBottom);
+    updateShadows();
   };
 
   useEffect(() => {
-    if (isAutoScrollEnabled && scrollRef.current) {
-      // Use requestAnimationFrame to ensure the scroll happens after DOM layout updates
-      requestAnimationFrame(() => {
-        if (scrollRef.current) {
+    const runUpdate = () => {
+      if (scrollRef.current) {
+        if (isAutoScrollEnabled) {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-      });
-    }
+        updateShadows();
+      }
+    };
+    // Ensure updates run post-browser layout calculations
+    requestAnimationFrame(runUpdate);
   }, [turns, activeSessionStatus, isAutoScrollEnabled, parts, pendingPermission]);
 
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+
+    // Re-verify shadow layout when container is resized (e.g. side panel toggle)
+    const observer = new ResizeObserver(() => {
+      updateShadows();
+    });
+    observer.observe(container);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   return (
-    <div className="chat-view" ref={scrollRef} onScroll={handleScroll}>
-      {pendingPermission && (
-        <PermissionCard
-          id={pendingPermission.id}
-          type={pendingPermission.permission}
-          title={pendingPermission.permission}
-          metadata={pendingPermission.metadata}
-          onReply={handlePermissionReply}
-        />
-      )}
-
-      {turns.map((turn, index) => {
-        const isLastTurn = index === turns.length - 1;
-        const isGenerating =
-          isLastTurn &&
-          (activeSessionStatus?.type === 'busy' || activeSessionStatus?.type === 'retry');
-        return (
-          <MessageTurn
-            key={turn.user.id}
-            userMessage={turn.user}
-            assistantMessages={turn.assistantMessages}
-            parts={parts}
-            isGenerating={isGenerating}
-            isLastTurn={isLastTurn}
+    <div className="chat-view-container" ref={containerRef}>
+      <div className="chat-view-fade chat-view-fade-top" />
+      <div className="chat-view" ref={scrollRef} onScroll={handleScroll}>
+        {pendingPermission && (
+          <PermissionCard
+            id={pendingPermission.id}
+            type={pendingPermission.permission}
+            title={pendingPermission.permission}
+            metadata={pendingPermission.metadata}
+            onReply={handlePermissionReply}
           />
-        );
-      })}
+        )}
 
-      {turns.length === 0 && (
-        <div className="empty-chat">
-          <p>Start a conversation by typing a message below.</p>
-        </div>
-      )}
+        {turns.map((turn, index) => {
+          const isLastTurn = index === turns.length - 1;
+          const isGenerating =
+            isLastTurn &&
+            (activeSessionStatus?.type === 'busy' || activeSessionStatus?.type === 'retry');
+          return (
+            <MessageTurn
+              key={turn.user.id}
+              userMessage={turn.user}
+              assistantMessages={turn.assistantMessages}
+              parts={parts}
+              isGenerating={isGenerating}
+              isLastTurn={isLastTurn}
+            />
+          );
+        })}
+
+        {turns.length === 0 && (
+          <div className="empty-chat">
+            <p>Start a conversation by typing a message below.</p>
+          </div>
+        )}
+      </div>
+      <div className="chat-view-fade chat-view-fade-bottom" />
     </div>
   );
 }

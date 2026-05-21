@@ -1,4 +1,12 @@
 /* Chat message list, message turns, and user/assistant message styling */
+.chat-view-container {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .chat-view {
   flex: 1;
   overflow-y: auto;
@@ -6,6 +14,36 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Gradient shadows/fades at the top and bottom of the scroll container */
+.chat-view-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-view-fade-top {
+  top: 0;
+  background: linear-gradient(to bottom, var(--webview-background) 0%, transparent 100%);
+}
+
+.chat-view-fade-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, var(--webview-background) 0%, transparent 100%);
+}
+
+.chat-view-container.has-top-shadow .chat-view-fade-top {
+  opacity: 1;
+}
+
+.chat-view-container.has-bottom-shadow .chat-view-fade-bottom {
+  opacity: 1;
 }
 
 .message-turn {
