@@ -103,4 +103,17 @@ describe('CommandListPopover', () => {
     expect(container.querySelector('.codicon-lightbulb')).toBeInTheDocument();
     expect(container.querySelector('.codicon-server-process')).toBeInTheDocument();
   });
+
+  it('should apply command-list-popover class to the container', () => {
+    const { container } = render(
+      <CommandListPopover
+        show={true}
+        results={results}
+        selectedIndex={0}
+        onSelect={vi.fn()}
+        skillsOnly={false}
+      />,
+    );
+    expect(container.querySelector('.command-list-popover')).toBeInTheDocument();
+  });
 });

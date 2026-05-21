@@ -393,3 +393,8 @@
   text-align: center;
   user-select: none;
 }
+
+/* Ensure command names in the selection list are fully displayed (descriptions can be truncated) */
+.command-list-popover .item-name {
+  flex-shrink: 0;
+}

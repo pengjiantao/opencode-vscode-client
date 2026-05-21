@@ -42,6 +42,7 @@ export function CommandListPopover({
 }: CommandListPopoverProps) {
   return (
     <SearchListPopover
+      className="command-list-popover"
       show={show}
       items={results}
       selectedIndex={selectedIndex}
