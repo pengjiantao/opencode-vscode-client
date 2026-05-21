@@ -94,7 +94,11 @@
   width: 100%;
   height: 24px;
   padding: 0 8px;
-  background-color: var(--vscode-input-background, #3c3c3c);
+  background-color: color-mix(
+    in srgb,
+    var(--vscode-input-background, #3c3c3c) 90%,
+    var(--vscode-input-foreground, #cccccc) 10%
+  );
   color: var(--vscode-input-foreground, #cccccc);
   border: 1px solid var(--vscode-input-border, var(--vscode-border-color, #3c3c3c));
   border-radius: 3px;
