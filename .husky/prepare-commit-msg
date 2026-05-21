@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# Walk up the process tree to find if the initiating command contains the exact '--amend' argument
+PID=$$
+while [ -n "$PID" ] && [ "$PID" -ne 0 ] && [ "$PID" -ne 1 ]; do
+  if [ -f "/proc/$PID/cmdline" ]; then
+    if tr '\0' '\n' < "/proc/$PID/cmdline" | grep -qx -- "--amend"; then
+      echo "❌ [Security Lock] Amending commits is strictly disabled in this repository to prevent remote conflicts."
+      exit 1
+    fi
+  fi
+  PID=$(ps -o ppid= -p "$PID" 2>/dev/null | tr -d ' ')
+done
+
+
