@@ -79,6 +79,133 @@ export function getCommandIconClass(source?: string): string {
 }
 
 /**
+ * Simple markdown parser to convert markdown string to HTML string for tooltips.
+ * Supports headers (# to ######), unordered lists, bold (**), italics (*), inline code (`), and links.
+ *
+ * @param markdown The raw markdown string to parse.
+ * @returns The parsed HTML string.
+ */
+export function parseMarkdownToHtml(markdown: string): string {
+  const lines = markdown.split('\n');
+  const htmlLines: string[] = [];
+  let inList = false;
+  let inCodeBlock = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Handle code blocks (e.g. ```javascript ... ```)
+    if (line.trim().startsWith('```')) {
+      if (inCodeBlock) {
+        htmlLines.push('</code></pre>');
+        inCodeBlock = false;
+      } else {
+        htmlLines.push('<pre class="tooltip-markdown-code"><code>');
+        inCodeBlock = true;
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      htmlLines.push(escapeHtml(line) + '\n');
+      continue;
+    }
+
+    // Handle headers (# to ######)
+    const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
+    if (headingMatch) {
+      if (inList) {
+        htmlLines.push('</ul>');
+        inList = false;
+      }
+      const level = headingMatch[1].length;
+      const text = parseInlineMarkdown(headingMatch[2]);
+      htmlLines.push(`<h${level} class="tooltip-markdown-h${level}">${text}</h${level}>`);
+      continue;
+    }
+
+    // Handle lists starting with -, *, or +
+    const listMatch = line.match(/^[-*+]\s+(.*)$/);
+    if (listMatch) {
+      if (!inList) {
+        htmlLines.push('<ul class="tooltip-markdown-list">');
+        inList = true;
+      }
+      const text = parseInlineMarkdown(listMatch[1]);
+      htmlLines.push(`<li>${text}</li>`);
+      continue;
+    }
+
+    // Close active list if empty line or non-list line is encountered
+    if (inList && line.trim() === '') {
+      htmlLines.push('</ul>');
+      inList = false;
+      continue;
+    }
+
+    // Normal paragraph rendering
+    if (line.trim() !== '') {
+      if (inList) {
+        htmlLines.push('</ul>');
+        inList = false;
+      }
+      const text = parseInlineMarkdown(line);
+      htmlLines.push(`<p class="tooltip-markdown-p">${text}</p>`);
+    } else {
+      if (inList) {
+        htmlLines.push('</ul>');
+        inList = false;
+      }
+    }
+  }
+
+  // Gracefully close any unclosed lists or code blocks
+  if (inList) {
+    htmlLines.push('</ul>');
+  }
+  if (inCodeBlock) {
+    htmlLines.push('</code></pre>');
+  }
+
+  return htmlLines.join('');
+}
+
+/**
+ * Parses inline markdown markup like bold, italic, inline code, and links.
+ * Escapes input text first to prevent cross-site scripting (XSS) issues.
+ *
+ * @param text The plain text line to parse.
+ * @returns The HTML string with inline markup tags.
+ */
+function parseInlineMarkdown(text: string): string {
+  let escaped = escapeHtml(text);
+  // Bold-italic: ***text***
+  escaped = escaped.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  // Bold: **text**
+  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // Italic: *text*
+  escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  // Inline code: `code`
+  escaped = escaped.replace(/`(.*?)`/g, '<code class="tooltip-markdown-inline-code">$1</code>');
+  // Links: [text](url) with safe protocol check (only http:, https:, mailto:)
+  escaped = escaped.replace(
+    /\[(.*?)\]\((.*?)\)/g,
+    (match: string, textPart: string, urlPart: string): string => {
+      const trimmedUrl = urlPart.trim().toLowerCase();
+      const isSafe =
+        trimmedUrl.startsWith('http://') ||
+        trimmedUrl.startsWith('https://') ||
+        trimmedUrl.startsWith('mailto:');
+      if (isSafe) {
+        return `<a href="${urlPart}" target="_blank" rel="noopener noreferrer" class="markdown-link">${textPart}</a>`;
+      }
+      return textPart;
+    },
+  );
+  return escaped;
+}
+
+/**
  * Formats and generates the HTML string for the global custom tooltip engine.
  *
  * @param chip The chip metadata.
@@ -104,7 +231,7 @@ export const getTooltipHtml = (
     { exists: boolean; size: number; content?: string; isWorkspace: boolean }
   >,
 ): string => {
-  const { type, filename, path, text, size, dataUrl, linesCount, mime, startLine, endLine } = chip;
+  const { type, filename, path, text, size, dataUrl, mime } = chip;
 
   if (type === 'command') {
     return `<div class="tooltip-container">
@@ -116,27 +243,16 @@ export const getTooltipHtml = (
   if (type === 'skill') {
     return `<div class="tooltip-container">
       <strong>Skill: ${escapeHtml(filename || 'skill')}</strong><br/>
-      ${text ? `<pre class="tooltip-code">${escapeHtml(text)}</pre>` : ''}
+      ${text ? `<div class="tooltip-markdown-content">${parseMarkdownToHtml(text)}</div>` : ''}
     </div>`;
   }
 
   if (type === 'code-selection') {
-    let cleanFilename = filename || 'file';
-    if (FILENAME_LINE_RANGE_PATTERN.test(cleanFilename)) {
-      cleanFilename = cleanFilename.replace(FILENAME_LINE_RANGE_PATTERN, '');
-    }
-    return `<div class="tooltip-container">
-      <strong>Selected Code Snippet</strong> (${escapeHtml(cleanFilename)} [${startLine || 1}-${endLine || 1}])<br/>
-      ${path ? `<span class="tooltip-meta">Path: ${escapeHtml(path)}</span><br/>` : ''}
-      <pre class="tooltip-code">${escapeHtml(text || '')}</pre>
-    </div>`;
+    return `<div class="tooltip-text-direct">${escapeHtml(text || '')}</div>`;
   }
 
   if (type === 'terminal') {
-    return `<div class="tooltip-container">
-      <strong>Terminal Output</strong> (${linesCount || 1} lines)
-      <pre class="tooltip-code">${escapeHtml(text || '')}</pre>
-    </div>`;
+    return `<div class="tooltip-text-direct">${escapeHtml(text || '')}</div>`;
   }
 
   if (mime === 'directory' || mime === 'application/x-directory') {
@@ -157,11 +273,7 @@ export const getTooltipHtml = (
   }
 
   if (type === 'text') {
-    const lines = linesCount || text?.split('\n').length || 1;
-    return `<div class="tooltip-container">
-      <strong>Pasted Text Snippet</strong> (${lines} lines)
-      <pre class="tooltip-code">${escapeHtml(text || '')}</pre>
-    </div>`;
+    return `<div class="tooltip-text-direct">${escapeHtml(text || '')}</div>`;
   }
 
   const cachedInfo = path ? fileInfos[path] : undefined;
@@ -171,27 +283,17 @@ export const getTooltipHtml = (
     content: text,
     isWorkspace: chip.isWorkspace || false,
   };
-  const displayPath = path || '';
-  const displaySize = resolvedInfo.size ? `${(resolvedInfo.size / 1024).toFixed(1)} KB` : '0 KB';
 
-  let contentHtml: string;
   if (resolvedInfo.exists || text) {
     const fileContent = resolvedInfo.content !== undefined ? resolvedInfo.content : text;
     if (fileContent !== undefined) {
-      contentHtml = `<pre class="tooltip-code">${escapeHtml(fileContent)}</pre>`;
+      return `<div class="tooltip-text-direct">${escapeHtml(fileContent)}</div>`;
     } else {
-      contentHtml = `<div class="tooltip-meta">Preview unavailable (binary or &gt;30KB)</div>`;
+      return `<div class="tooltip-meta">Preview unavailable (binary or &gt;30KB)</div>`;
     }
   } else {
-    contentHtml = `<div class="tooltip-error">Querying file contents...</div>`;
+    return `<div class="tooltip-error">Querying file contents...</div>`;
   }
-
-  return `<div class="tooltip-container">
-    <strong>${escapeHtml(filename || 'file')}</strong><br/>
-    ${path ? `<span class="tooltip-meta">Path: ${escapeHtml(displayPath)}</span><br/>` : ''}
-    <span class="tooltip-meta">Size: ${displaySize}</span>
-    ${contentHtml}
-  </div>`;
 };
 
 /** Parsed result of a file URL containing decoded path and text content. */

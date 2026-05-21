@@ -85,3 +85,81 @@
   opacity: 1;
   transform: translateY(0);
 }
+
+/* Direct text display for tooltips without border containers */
+.tooltip-text-direct {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  text-align: left;
+  color: var(--vscode-editor-foreground, #cccccc);
+}
+
+/* Markdown styling inside custom tooltips */
+.tooltip-markdown-content {
+  margin-top: 6px;
+  font-family: var(--vscode-font-family, system-ui, sans-serif);
+  font-size: calc(var(--vscode-font-size, 13px) - 1px);
+  color: var(--vscode-editor-foreground, #cccccc);
+}
+
+.tooltip-markdown-h1 {
+  font-size: 1.35em;
+  margin: 8px 0 4px 0;
+  font-weight: 600;
+  color: var(--vscode-editor-foreground, #ffffff);
+}
+
+.tooltip-markdown-h2 {
+  font-size: 1.2em;
+  margin: 8px 0 4px 0;
+  font-weight: 600;
+  color: var(--vscode-editor-foreground, #ffffff);
+}
+
+.tooltip-markdown-h3 {
+  font-size: 1.1em;
+  margin: 6px 0 3px 0;
+  font-weight: 600;
+  color: var(--vscode-editor-foreground, #ffffff);
+}
+
+.tooltip-markdown-h4,
+.tooltip-markdown-h5,
+.tooltip-markdown-h6 {
+  font-size: 1em;
+  margin: 6px 0 3px 0;
+  font-weight: 600;
+  color: var(--vscode-editor-foreground, #ffffff);
+}
+
+.tooltip-markdown-p {
+  margin: 4px 0;
+  line-height: 1.4;
+}
+
+.tooltip-markdown-list {
+  margin: 4px 0 4px 16px;
+  padding: 0;
+  list-style-type: disc;
+}
+
+.tooltip-markdown-inline-code {
+  font-family: var(--vscode-editor-font-family, monospace);
+  background-color: var(--vscode-editor-background, #1e1e1e);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid var(--vscode-editor-widget-border, #454545);
+}
+
+.tooltip-markdown-code {
+  font-family: var(--vscode-editor-font-family, monospace);
+  background-color: var(--vscode-editor-background, #1e1e1e);
+  border: 1px solid var(--vscode-editor-widget-border, #454545);
+  padding: 6px;
+  border-radius: 4px;
+  margin: 6px 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

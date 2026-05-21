@@ -96,7 +96,7 @@ describe('PartRenderer', () => {
     const { container } = render(<PartRenderer part={part} />);
     const chipElement = container.querySelector('.opencode-chip');
     expect(chipElement).toBeInTheDocument();
-    expect(chipElement?.getAttribute('data-custom-title')).toContain('src/test_source.txt');
+    expect(chipElement?.getAttribute('data-custom-title')).toContain('hello');
   });
 
   it('renders unknown part type as null', () => {

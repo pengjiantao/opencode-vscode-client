@@ -308,7 +308,7 @@ describe('Markdown Component', () => {
 
     const chipElement = container.querySelector('.opencode-chip');
     expect(chipElement).toBeInTheDocument();
-    expect(chipElement?.getAttribute('data-custom-title')).toContain('relative/CHANGELOG.md');
+    expect(chipElement?.getAttribute('data-custom-title')).toContain('hello');
   });
 
   it('regression: renders custom Code Selection inline chips with range and text values', () => {
