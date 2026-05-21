@@ -533,4 +533,62 @@ describe('MessageTurn', () => {
     expect(toolLine).toHaveClass('has-predecessor');
     expect(toolLine).not.toHaveClass('has-successor');
   });
+
+  describe('ThinkingDots Indicator', () => {
+    it('renders thinking dots when generating and no parts exist', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+
+      const { container } = render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessage={assistantMsg}
+          parts={{}}
+          isGenerating={true}
+        />,
+      );
+
+      const dots = container.querySelector('.thinking-dots');
+      expect(dots).toBeInTheDocument();
+      expect(dots?.querySelectorAll('.dot')).toHaveLength(3);
+    });
+
+    it('renders thinking dots when generating even if parts exist', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+      const textPart = createMockTextPart('Hello!');
+      textPart.messageID = assistantMsg.id;
+
+      const { container } = render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessage={assistantMsg}
+          parts={{ [assistantMsg.id]: [textPart] }}
+          isGenerating={true}
+        />,
+      );
+
+      const dots = container.querySelector('.thinking-dots');
+      expect(dots).toBeInTheDocument();
+      expect(dots?.querySelectorAll('.dot')).toHaveLength(3);
+    });
+
+    it('does not render thinking dots when not generating', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+      const textPart = createMockTextPart('Hello!');
+      textPart.messageID = assistantMsg.id;
+
+      const { container } = render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessage={assistantMsg}
+          parts={{ [assistantMsg.id]: [textPart] }}
+          isGenerating={false}
+        />,
+      );
+
+      expect(container.querySelector('.thinking-dots')).not.toBeInTheDocument();
+    });
+  });
 });

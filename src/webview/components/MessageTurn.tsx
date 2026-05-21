@@ -7,6 +7,7 @@ import type { Message, Part } from '@opencode-ai/sdk/v2/client';
 import { useEffect, useState } from 'react';
 import { Codicon } from './Codicon';
 import { PartRenderer } from './PartRenderer';
+import { ThinkingDots } from './ThinkingDots';
 
 const ATTACHMENT_PLACEHOLDER_PATTERN =
   /\[(?:File|Text|Image|Terminal|Command|Skill):\s*.*?\]|\[\[Code Selection:\s*.*?\]\]/;
@@ -319,26 +320,30 @@ export function MessageTurn({
         </div>
       )}
 
-      {messagesToRender.map((msg) => (
-        <div key={msg.id} className="assistant-message">
-          <div className="message-content">
-            {parts[msg.id]?.map((part, _index, arr) => {
-              const { hasPredecessor, hasSuccessor } = getTimelineConnection(part, visibleParts);
+      {messagesToRender.map((msg, msgIndex) => {
+        const isLastMsg = msgIndex === messagesToRender.length - 1;
+        return (
+          <div key={msg.id} className="assistant-message">
+            <div className="message-content">
+              {parts[msg.id]?.map((part, _index, arr) => {
+                const { hasPredecessor, hasSuccessor } = getTimelineConnection(part, visibleParts);
 
-              return (
-                <PartRenderer
-                  key={part.id}
-                  part={part}
-                  allParts={arr}
-                  hasPredecessor={hasPredecessor}
-                  hasSuccessor={hasSuccessor}
-                  isAssistant={true}
-                />
-              );
-            }) || <span className="streaming">Thinking...</span>}
+                return (
+                  <PartRenderer
+                    key={part.id}
+                    part={part}
+                    allParts={arr}
+                    hasPredecessor={hasPredecessor}
+                    hasSuccessor={hasSuccessor}
+                    isAssistant={true}
+                  />
+                );
+              })}
+              {isGenerating && isLastMsg && <ThinkingDots />}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {showActionsFinal && (
         <div className="message-actions">
