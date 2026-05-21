@@ -1,15 +1,31 @@
 #!/bin/sh
 
-# Walk up the process tree to find if the initiating command contains the exact '--amend' argument
-PID=$$
-while [ -n "$PID" ] && [ "$PID" -ne 0 ] && [ "$PID" -ne 1 ]; do
-  if [ -f "/proc/$PID/cmdline" ]; then
-    if tr '\0' '\n' < "/proc/$PID/cmdline" | grep -qx -- "--amend"; then
-      echo "❌ [Security Lock] Amending commits is strictly disabled in this repository to prevent remote conflicts."
-      exit 1
+# 1. Fallback check: if Git natively tells us it's an amend (e.g. git commit --amend without -m)
+if [ "$2" = "commit" ]; then
+  echo "❌ [Security Lock] Amending commits is strictly disabled in this repository to prevent remote conflicts."
+  exit 1
+fi
+
+# 2. Try the advanced process tree check (Linux/macOS/Windows friendly)
+check_amend_in_proc() {
+  PID=$$
+  while [ -n "$PID" ] && [ "$PID" -ne 0 ] && [ "$PID" -ne 1 ]; do
+    if [ -f "/proc/$PID/cmdline" ]; then
+      if tr '\0' '\n' < "/proc/$PID/cmdline" 2>/dev/null | grep -qx -- "--amend" 2>/dev/null; then
+        return 1
+      fi
     fi
-  fi
-  PID=$(ps -o ppid= -p "$PID" 2>/dev/null | tr -d ' ')
-done
+    # Safely get PPID, fallback to empty string on command failure or OS incompatibility
+    PID=$(ps -o ppid= -p "$PID" 2>/dev/null | tr -d ' ' || echo "")
+  done
+  return 0
+}
+
+# Run the check and abort commit if --amend was detected in the process ancestry
+if ! check_amend_in_proc; then
+  echo "❌ [Security Lock] Amending commits is strictly disabled in this repository to prevent remote conflicts."
+  exit 1
+fi
+
 
 
