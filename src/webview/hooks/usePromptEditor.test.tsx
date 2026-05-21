@@ -195,4 +195,21 @@ describe('usePromptEditor', () => {
     expect(chip).toHaveAttribute('data-chip-lines-count', '3');
     expect(screen.getByText('Pasted 3 Lines')).toBeInTheDocument();
   });
+
+  it('should parse pasted single-line plain text and insert it as plain text', () => {
+    const onInputSpy = vi.fn();
+    render(<TestComponent fileInfos={{}} sendSpy={vi.fn()} onInputSpy={onInputSpy} />);
+
+    const editor = screen.getByTestId('editor');
+
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: new MockClipboardData('hello world'),
+    });
+
+    fireEvent(editor, pasteEvent);
+
+    expect(editor.textContent).toBe('hello world');
+    expect(onInputSpy).toHaveBeenCalled();
+  });
 });

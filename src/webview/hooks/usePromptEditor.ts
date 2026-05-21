@@ -44,6 +44,20 @@ export interface EditorChip {
 }
 
 /**
+ * Sets the cursor selection immediately after the specified node.
+ *
+ * @param node The DOM node to place the cursor after.
+ */
+function setCursorAfter(node: Node) {
+  const selection = window.getSelection();
+  const range = document.createRange();
+  range.setStartAfter(node);
+  range.setEndAfter(node);
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+}
+
+/**
  * Hook providing chip insertion and clipboard paste parsing logic for the prompt input editor.
  */
 export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UsePromptEditorProps) {
@@ -128,25 +142,51 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
       if (range) {
         range.deleteContents();
         range.insertNode(chipNode);
-
-        const newRange = document.createRange();
-        newRange.setStartAfter(chipNode);
-        newRange.setEndAfter(chipNode);
-        selection?.removeAllRanges();
-        selection?.addRange(newRange);
+        setCursorAfter(chipNode);
       } else if (editorRef.current) {
         editorRef.current.appendChild(chipNode);
-
-        const newRange = document.createRange();
-        newRange.setStartAfter(chipNode);
-        newRange.setEndAfter(chipNode);
-        selection?.removeAllRanges();
-        selection?.addRange(newRange);
+        setCursorAfter(chipNode);
       }
 
       onInput();
     },
     [editorRef, fileInfos, send, onInput],
+  );
+
+  /**
+   * Inserts a plain text node at the current cursor selection position in the editor.
+   * If there is no active selection inside the editor, appends the text node at the end.
+   *
+   * @param text The plain text content to insert.
+   */
+  const insertText = useCallback(
+    (text: string) => {
+      const selection = window.getSelection();
+      let range: Range | null = null;
+      if (selection && selection.rangeCount > 0) {
+        const potentialRange = selection.getRangeAt(0);
+        if (
+          editorRef.current &&
+          editorRef.current.contains(potentialRange.commonAncestorContainer)
+        ) {
+          range = potentialRange;
+        }
+      }
+
+      const textNode = document.createTextNode(text);
+
+      if (range) {
+        range.deleteContents();
+        range.insertNode(textNode);
+        setCursorAfter(textNode);
+      } else if (editorRef.current) {
+        editorRef.current.appendChild(textNode);
+        setCursorAfter(textNode);
+      }
+
+      onInput();
+    },
+    [editorRef, onInput],
   );
 
   const handlePaste = useCallback(
@@ -272,57 +312,11 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
         }
 
         e.preventDefault();
-        document.execCommand('insertText', false, pastedText);
-        onInput();
+        // Use custom DOM text insertion instead of deprecated document.execCommand to support sandboxed VS Code webview environments.
+        insertText(pastedText);
       }
     },
-    [insertChip, onInput],
-  );
-
-  /**
-   * Inserts a plain text node at the current cursor selection position in the editor.
-   * If there is no active selection inside the editor, appends the text node at the end.
-   *
-   * @param text The plain text content to insert.
-   */
-  const insertText = useCallback(
-    (text: string) => {
-      const selection = window.getSelection();
-      let range: Range | null = null;
-      if (selection && selection.rangeCount > 0) {
-        const potentialRange = selection.getRangeAt(0);
-        if (
-          editorRef.current &&
-          editorRef.current.contains(potentialRange.commonAncestorContainer)
-        ) {
-          range = potentialRange;
-        }
-      }
-
-      const textNode = document.createTextNode(text);
-
-      if (range) {
-        range.deleteContents();
-        range.insertNode(textNode);
-
-        const newRange = document.createRange();
-        newRange.setStartAfter(textNode);
-        newRange.setEndAfter(textNode);
-        selection?.removeAllRanges();
-        selection?.addRange(newRange);
-      } else if (editorRef.current) {
-        editorRef.current.appendChild(textNode);
-
-        const newRange = document.createRange();
-        newRange.setStartAfter(textNode);
-        newRange.setEndAfter(textNode);
-        selection?.removeAllRanges();
-        selection?.addRange(newRange);
-      }
-
-      onInput();
-    },
-    [editorRef, onInput],
+    [insertChip, insertText],
   );
 
   return { insertChip, insertText, handlePaste };
