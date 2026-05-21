@@ -19,6 +19,7 @@ import type {
 } from '@opencode-ai/sdk/v2/client';
 import { createOpencodeClient } from '@opencode-ai/sdk/v2/client';
 import type { SDKClient, ServerHandle } from './sdk-client';
+import type { AgentInfo, CommandInfo, ModelInfo, SkillInfo } from './types';
 
 /** Creates a configured SDK client, attempting to reuse an existing server on localhost:4096. */
 export function createSDKClient(directory?: string): SDKClient {
@@ -202,27 +203,11 @@ export function createSDKClient(directory?: string): SDKClient {
       };
     },
     /** Aggregates models from all providers, filtering out deprecated ones. */
-    getModels: async (): Promise<
-      Array<{
-        id: string;
-        name: string;
-        providerId?: string;
-        providerName?: string;
-        isConnected?: boolean;
-        contextLimit?: number;
-      }>
-    > => {
+    getModels: async (): Promise<ModelInfo[]> => {
       const result = await client.provider.list();
       const providers = result.data?.all ?? [];
       const connected = result.data?.connected ?? [];
-      const modelsList: Array<{
-        id: string;
-        name: string;
-        providerId?: string;
-        providerName?: string;
-        isConnected?: boolean;
-        contextLimit?: number;
-      }> = [];
+      const modelsList: ModelInfo[] = [];
       for (const p of providers) {
         const isConnected = connected.includes(p.id);
         for (const mId of Object.keys(p.models || {})) {
@@ -241,9 +226,7 @@ export function createSDKClient(directory?: string): SDKClient {
       return modelsList;
     },
     /** Fetches the available agent list from the server. */
-    getAgents: async (): Promise<
-      Array<{ id: string; name: string; mode?: string; hidden?: boolean }>
-    > => {
+    getAgents: async (): Promise<AgentInfo[]> => {
       const result = await client.app.agents();
       const agents = result.data ?? [];
       return agents.map((a) => ({
@@ -254,9 +237,7 @@ export function createSDKClient(directory?: string): SDKClient {
       }));
     },
     /** Fetches the available skill list from the server. */
-    getSkills: async (): Promise<
-      Array<{ name: string; description?: string; location: string; content?: string }>
-    > => {
+    getSkills: async (): Promise<SkillInfo[]> => {
       try {
         const result = await client.app.skills();
         return result.data ?? [];
@@ -266,16 +247,7 @@ export function createSDKClient(directory?: string): SDKClient {
       }
     },
     /** Fetches the available command list from the server. */
-    getCommands: async (): Promise<
-      Array<{
-        name: string;
-        description?: string;
-        source?: 'command' | 'mcp' | 'skill';
-        agent?: string;
-        model?: string;
-        hints?: string[];
-      }>
-    > => {
+    getCommands: async (): Promise<CommandInfo[]> => {
       try {
         const result = await client.command.list();
         return (result.data ?? []).map((c) => ({

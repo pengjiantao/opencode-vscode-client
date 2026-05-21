@@ -5,7 +5,7 @@
 
 import type { Part, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import React from 'react';
-import type { WebviewToExt } from '../../shared/types';
+import type { AgentInfo, ModelInfo, WebviewToExt } from '../../shared/types';
 import { useCommandEditor } from '../hooks/useCommandEditor';
 import { useIPC } from '../hooks/useIPC';
 import { useMentionEditor } from '../hooks/useMentionEditor';
@@ -30,16 +30,9 @@ interface PromptInputProps {
   /** Active session generation status */
   status?: SessionStatus;
   /** Supported model models */
-  models: Array<{
-    id: string;
-    name: string;
-    providerId?: string;
-    providerName?: string;
-    isConnected?: boolean;
-    contextLimit?: number;
-  }>;
+  models: ModelInfo[];
   /** List of primary agents */
-  agents: Array<{ id: string; name: string }>;
+  agents: AgentInfo[];
   /** Active model ID override */
   activeModel?: string;
   /** Active agent ID override */

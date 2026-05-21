@@ -3,20 +3,12 @@
  * Filters out subagents and hidden agents, showing only primary agents.
  */
 
+import type { AgentInfo } from '../../shared/types';
 import { Codicon } from './Codicon';
 import { Select } from './Select';
 
 /** Structure representing an Agent object. */
-export interface Agent {
-  /** Unique agent identifier. */
-  id: string;
-  /** Human-readable display name. */
-  name: string;
-  /** Run mode (e.g. 'subagent', 'primary'). */
-  mode?: string;
-  /** If true, the agent is hidden from standard selectors. */
-  hidden?: boolean;
-}
+export type Agent = AgentInfo;
 
 /** Props for the AgentSelector component. */
 export interface AgentSelectorProps {

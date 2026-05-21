@@ -18,6 +18,7 @@ import {
 } from 'vscode';
 import { getMimeType } from '../../shared/utils';
 import type { IPCBridge } from '../ipc';
+import type { SelectedFileInfo, WorkspaceSearchResult } from '../types';
 import { getConfiguration } from './config';
 import { isPathIgnored, loadGitignorePatterns } from './gitignore';
 
@@ -53,14 +54,7 @@ export function resolveFilePath(filePath: string): string {
   return resolved;
 }
 
-interface WorkspaceItem {
-  name: string;
-  relativePath: string;
-  type: 'file' | 'dir';
-  fsPath: string;
-}
-
-let cachedWorkspaceItems: WorkspaceItem[] | null = null;
+let cachedWorkspaceItems: WorkspaceSearchResult[] | null = null;
 let lastCacheTime = 0;
 const CACHE_DURATION = 10000; // 10 seconds
 
@@ -78,13 +72,13 @@ export function clearWorkspaceCache(): void {
  *
  * @returns A promise resolving to the list of all workspace items.
  */
-async function getWorkspaceItems(): Promise<WorkspaceItem[]> {
+async function getWorkspaceItems(): Promise<WorkspaceSearchResult[]> {
   const now = Date.now();
   if (cachedWorkspaceItems && now - lastCacheTime < CACHE_DURATION) {
     return cachedWorkspaceItems;
   }
 
-  const items: WorkspaceItem[] = [];
+  const items: WorkspaceSearchResult[] = [];
   const seenDirs = new Set<string>();
   const config = getConfiguration();
 
@@ -186,7 +180,7 @@ function fuzzyMatch(text: string, query: string): boolean {
  * @param query The search query.
  * @returns A sorted list of matching workspace items.
  */
-function sortMatches(items: WorkspaceItem[], query: string): WorkspaceItem[] {
+function sortMatches(items: WorkspaceSearchResult[], query: string): WorkspaceSearchResult[] {
   if (!query) {
     // If query is empty, sort by relativePath length and then alphabetically
     return [...items].sort((a, b) => {
@@ -415,7 +409,7 @@ export function registerFileHandlers(ipc: IPCBridge): void {
           return;
         }
 
-        const filesInfo = [];
+        const filesInfo: SelectedFileInfo[] = [];
         for (const uri of uris) {
           const fsPath = uri.fsPath;
           const stat = await fs.promises.stat(fsPath);

@@ -5,7 +5,7 @@
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
 import { useEffect, useState } from 'react';
-import type { ExtToWebview } from '../shared/types';
+import type { AgentInfo, ExtToWebview, ModelInfo } from '../shared/types';
 import { ChatView } from './components/ChatView';
 import { PromptInput } from './components/PromptInput';
 import { SessionTabs } from './components/SessionTabs';
@@ -29,18 +29,8 @@ declare global {
 /** Main application component — orchestrates IPC, session state, and child components. */
 export function App() {
   const [showSettings, setShowSettings] = useState(false);
-  const [models, setModels] = useState<
-    Array<{
-      id: string;
-      name: string;
-      providerId?: string;
-      providerName?: string;
-      isConnected?: boolean;
-    }>
-  >([]);
-  const [agents, setAgents] = useState<
-    Array<{ id: string; name: string; mode?: string; hidden?: boolean }>
-  >([]);
+  const [models, setModels] = useState<ModelInfo[]>([]);
+  const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [activeModel, setActiveModel] = useState<string>('');
   const [activeAgent, setActiveAgent] = useState<string>('');
 

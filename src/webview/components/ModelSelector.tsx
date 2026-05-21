@@ -3,22 +3,12 @@
  * Supports search, grouping by provider, and filtering disconnected models.
  */
 
+import type { ModelInfo } from '../../shared/types';
 import { Codicon } from './Codicon';
 import { Select } from './Select';
 
 /** Structure representing a language model. */
-export interface Model {
-  /** Unique model identifier. */
-  id: string;
-  /** Human-readable model name. */
-  name: string;
-  /** Unique identifier for the provider (optional). */
-  providerId?: string;
-  /** Display name of the provider (optional). */
-  providerName?: string;
-  /** If false, the model connection is disabled or disconnected. */
-  isConnected?: boolean;
-}
+export type Model = ModelInfo;
 
 /** Props for the ModelSelector component. */
 export interface ModelSelectorProps {

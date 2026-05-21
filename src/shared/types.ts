@@ -7,35 +7,127 @@ import type { Event, Message, Part, Session } from '@opencode-ai/sdk/v2/client';
 
 export type { Event };
 
+/**
+ * Status information for an active Language Server Protocol (LSP) server.
+ */
 export interface LspServerInfo {
+  /** Name of the language server. */
   name: string;
+  /** Running status of the language server. */
   status: string;
+  /** Active workspace folder associated with the server. */
   workspaceFolder?: string;
 }
 
+/**
+ * Status information for a Model Context Protocol (MCP) server.
+ */
 export interface McpServerInfo {
+  /** Name of the MCP server. */
   name: string;
+  /** Current connection or running status. */
   status: string;
+  /** Optional error message if the server failed to start or connect. */
   error?: string;
 }
 
+/**
+ * Details of a discovered skill.
+ */
 export interface SkillInfo {
+  /** Unique name of the skill. */
   name: string;
+  /** Short description explaining what the skill does. */
   description?: string;
+  /** Path or location where the skill definition resides. */
   location: string;
+  /** Optional source code or configuration content of the skill. */
   content?: string;
 }
 
+/**
+ * Information on an executable command.
+ */
 export interface CommandInfo {
+  /** Executable command identifier. */
   name: string;
+  /** Brief description of the command function. */
   description?: string;
+  /** Origin source of the command. */
   source?: 'command' | 'mcp' | 'skill';
+  /** Associated target agent name (optional). */
   agent?: string;
+  /** Target model (optional). */
   model?: string;
+  /** Usage hints or example parameter patterns (optional). */
   hints?: string[];
 }
 
-/** Messages sent from the extension host to the webview. */
+/**
+ * Info about a language model provider and its capability limits.
+ */
+export interface ModelInfo {
+  /** Unique model identifier. */
+  id: string;
+  /** Human-readable model name. */
+  name: string;
+  /** Unique identifier for the provider (optional). */
+  providerId?: string;
+  /** Display name of the provider (optional). */
+  providerName?: string;
+  /** If false, the model connection is disabled or disconnected. */
+  isConnected?: boolean;
+  /** Maximum token limit supported by the model (optional). */
+  contextLimit?: number;
+}
+
+/**
+ * Info about an AI agent.
+ */
+export interface AgentInfo {
+  /** Unique agent identifier. */
+  id: string;
+  /** Human-readable display name. */
+  name: string;
+  /** Run mode (e.g. 'subagent', 'primary'). */
+  mode?: string;
+  /** If true, the agent is hidden from standard selectors. */
+  hidden?: boolean;
+}
+
+/**
+ * Result structure of a workspace file/directory search.
+ */
+export interface WorkspaceSearchResult {
+  /** File or directory name. */
+  name: string;
+  /** Relative path from workspace root. */
+  relativePath: string;
+  /** Whether the entry is a file or a directory. */
+  type: 'file' | 'dir';
+  /** Absolute file system path. */
+  fsPath: string;
+}
+
+/**
+ * Represents metadata of a selected file from a dialog.
+ */
+export interface SelectedFileInfo {
+  /** Base filename. */
+  name: string;
+  /** Absolute file system path. */
+  fsPath: string;
+  /** File size in bytes. */
+  size: number;
+  /** MIME type of the file. */
+  mime: string;
+  /** Optional base64 data URL representation. */
+  dataUrl?: string;
+}
+
+/**
+ * Protocol messages sent from the extension host to the webview.
+ */
 export type ExtToWebview =
   | { type: 'session:created'; session: Session }
   | { type: 'session:switched'; sessionID: string }
@@ -46,21 +138,8 @@ export type ExtToWebview =
   | { type: 'error'; message: string }
   | { type: 'init'; sessions: Session[]; activeModel?: string; activeAgent?: string }
   | { type: 'settings:open' }
-  | {
-      type: 'models:list';
-      models: Array<{
-        id: string;
-        name: string;
-        providerId?: string;
-        providerName?: string;
-        isConnected?: boolean;
-        contextLimit?: number;
-      }>;
-    }
-  | {
-      type: 'agents:list';
-      agents: Array<{ id: string; name: string; mode?: string; hidden?: boolean }>;
-    }
+  | { type: 'models:list'; models: ModelInfo[] }
+  | { type: 'agents:list'; agents: AgentInfo[] }
   | { type: 'messages:list'; sessionID: string; messages: Message[]; parts: Part[] }
   | {
       type: 'file:query-response';
@@ -74,12 +153,7 @@ export type ExtToWebview =
   | {
       type: 'workspace:search-files-response';
       query: string;
-      results: Array<{
-        name: string;
-        relativePath: string;
-        type: 'file' | 'dir';
-        fsPath: string;
-      }>;
+      results: WorkspaceSearchResult[];
     }
   | {
       type: 'metadata:sync';
@@ -108,16 +182,12 @@ export type ExtToWebview =
     }
   | {
       type: 'file:selected';
-      files: Array<{
-        name: string;
-        fsPath: string;
-        size: number;
-        mime: string;
-        dataUrl?: string;
-      }>;
+      files: SelectedFileInfo[];
     };
 
-/** Messages sent from the webview to the extension host. */
+/**
+ * Protocol messages sent from the webview to the extension host.
+ */
 export type WebviewToExt =
   | { type: 'session:create' }
   | { type: 'session:switch'; sessionID: string }

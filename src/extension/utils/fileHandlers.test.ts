@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Uri, workspace } from 'vscode';
 import type { IPCBridge } from '../ipc';
+import type { WorkspaceSearchResult } from '../types';
 import { clearWorkspaceCache, registerFileHandlers, resolveFilePath } from './fileHandlers';
 
 vi.mock('fs', () => ({
@@ -101,40 +102,38 @@ describe('fileHandlers', () => {
         '# comments\nnode_modules/\ndist/\n*.log\n/root-only.txt\n',
       );
 
-      const mockFindFiles = vi
-        .spyOn(workspace, 'findFiles')
-        .mockResolvedValue([
-          {
-            fsPath: '/home/workspace/package.json',
-            path: '/home/workspace/package.json',
-            scheme: 'file',
-          } as unknown as Uri,
-          {
-            fsPath: '/home/workspace/node_modules/lodash/index.js',
-            path: '/home/workspace/node_modules/lodash/index.js',
-            scheme: 'file',
-          } as unknown as Uri,
-          {
-            fsPath: '/home/workspace/dist/bundle.js',
-            path: '/home/workspace/dist/bundle.js',
-            scheme: 'file',
-          } as unknown as Uri,
-          {
-            fsPath: '/home/workspace/debug.log',
-            path: '/home/workspace/debug.log',
-            scheme: 'file',
-          } as unknown as Uri,
-          {
-            fsPath: '/home/workspace/src/app.ts',
-            path: '/home/workspace/src/app.ts',
-            scheme: 'file',
-          } as unknown as Uri,
-          {
-            fsPath: '/home/workspace/src/root-only.txt',
-            path: '/home/workspace/src/root-only.txt',
-            scheme: 'file',
-          } as unknown as Uri,
-        ]);
+      const mockFindFiles = vi.spyOn(workspace, 'findFiles').mockResolvedValue([
+        {
+          fsPath: '/home/workspace/package.json',
+          path: '/home/workspace/package.json',
+          scheme: 'file',
+        } as unknown as Uri,
+        {
+          fsPath: '/home/workspace/node_modules/lodash/index.js',
+          path: '/home/workspace/node_modules/lodash/index.js',
+          scheme: 'file',
+        } as unknown as Uri,
+        {
+          fsPath: '/home/workspace/dist/bundle.js',
+          path: '/home/workspace/dist/bundle.js',
+          scheme: 'file',
+        } as unknown as Uri,
+        {
+          fsPath: '/home/workspace/debug.log',
+          path: '/home/workspace/debug.log',
+          scheme: 'file',
+        } as unknown as Uri,
+        {
+          fsPath: '/home/workspace/src/app.ts',
+          path: '/home/workspace/src/app.ts',
+          scheme: 'file',
+        } as unknown as Uri,
+        {
+          fsPath: '/home/workspace/src/root-only.txt',
+          path: '/home/workspace/src/root-only.txt',
+          scheme: 'file',
+        } as unknown as Uri,
+      ]);
 
       const onSpy = vi.fn();
       const sendSpy = vi.fn();
@@ -156,7 +155,7 @@ describe('fileHandlers', () => {
       expect(sendSpy).toHaveBeenCalled();
       const response = sendSpy.mock.calls[0][0] as {
         type: string;
-        results: Array<{ name: string; relativePath: string; type: string; fsPath: string }>;
+        results: WorkspaceSearchResult[];
       };
       expect(response.type).toBe('workspace:search-files-response');
       const results = response.results;

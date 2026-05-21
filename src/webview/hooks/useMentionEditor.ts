@@ -3,7 +3,7 @@
  */
 
 import React, { useCallback, useRef, useState } from 'react';
-import type { WebviewToExt } from '../../shared/types';
+import type { WebviewToExt, WorkspaceSearchResult } from '../../shared/types';
 import { getMimeType } from '../../shared/utils';
 import { getIconClass, getTooltipHtml } from '../utils/chipUtils';
 import { createInlineChipElement, insertInlineChipNode } from '../utils/inlineChipDom';
@@ -47,14 +47,7 @@ export function useMentionEditor({ editorRef, fileInfos, send, onInput }: UseMen
     textNode: null,
   });
 
-  const [mentionResults, setMentionResults] = useState<
-    Array<{
-      name: string;
-      relativePath: string;
-      type: 'file' | 'dir';
-      fsPath: string;
-    }>
-  >([]);
+  const [mentionResults, setMentionResults] = useState<WorkspaceSearchResult[]>([]);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const mentionTimeoutRef = useRef<number | null>(null);
@@ -92,7 +85,7 @@ export function useMentionEditor({ editorRef, fileInfos, send, onInput }: UseMen
    * @param item The file search result selected from the popover.
    */
   const insertMentionChip = useCallback(
-    (item: { name: string; relativePath: string; type: 'file' | 'dir'; fsPath: string }) => {
+    (item: WorkspaceSearchResult) => {
       if (!mentionState.textNode) return;
 
       const chipId = `file-${Math.random().toString(36).substring(7)}`;

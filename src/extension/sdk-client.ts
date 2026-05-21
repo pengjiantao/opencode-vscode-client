@@ -11,6 +11,7 @@ import type {
   Part,
   Session,
 } from '@opencode-ai/sdk/v2/client';
+import type { AgentInfo, CommandInfo, ModelInfo, SkillInfo } from './types';
 
 /** Handle for a managed OpenCode server instance. */
 export interface ServerHandle {
@@ -53,31 +54,11 @@ export interface SDKClient {
   /** Subscribes to SSE events from the server. Returns an unsubscribe function. */
   subscribeEvents(handler: (event: unknown) => void): () => void;
   /** Retrieves the list of available models from connected providers. */
-  getModels(): Promise<
-    Array<{
-      id: string;
-      name: string;
-      providerId?: string;
-      providerName?: string;
-      isConnected?: boolean;
-      contextLimit?: number;
-    }>
-  >;
+  getModels(): Promise<ModelInfo[]>;
   /** Retrieves the list of available agent configurations. */
-  getAgents(): Promise<Array<{ id: string; name: string; mode?: string; hidden?: boolean }>>;
+  getAgents(): Promise<AgentInfo[]>;
   /** Retrieves the list of available skills. */
-  getSkills(): Promise<
-    Array<{ name: string; description?: string; location: string; content?: string }>
-  >;
+  getSkills(): Promise<SkillInfo[]>;
   /** Retrieves the list of available built-in and user-defined commands. */
-  getCommands(): Promise<
-    Array<{
-      name: string;
-      description?: string;
-      source?: 'command' | 'mcp' | 'skill';
-      agent?: string;
-      model?: string;
-      hints?: string[];
-    }>
-  >;
+  getCommands(): Promise<CommandInfo[]>;
 }

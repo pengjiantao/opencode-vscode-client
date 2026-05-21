@@ -3,6 +3,7 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
+import type { CommandInfo, SkillInfo } from '../../shared/types';
 import type { CommandListItem } from '../components/CommandListPopover';
 import { getCommandIconClass, getIconClass, getTooltipHtml } from '../utils/chipUtils';
 import { createInlineChipElement, insertInlineChipNode } from '../utils/inlineChipDom';
@@ -26,9 +27,9 @@ export interface UseCommandEditorProps {
   /** React ref pointing to the contenteditable prompt input container */
   editorRef: React.RefObject<HTMLDivElement>;
   /** Complete list of commands registered on the backend server */
-  commands: Array<{ name: string; description?: string; source?: 'command' | 'mcp' | 'skill' }>;
+  commands: CommandInfo[];
   /** Complete list of skills registered on the backend server */
-  skills: Array<{ name: string; description?: string; content?: string }>;
+  skills: SkillInfo[];
   /** File caching structure to pass down to chip tooltip constructor */
   fileInfos: Record<
     string,

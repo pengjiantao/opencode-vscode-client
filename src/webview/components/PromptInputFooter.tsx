@@ -5,6 +5,7 @@
 
 import type { AssistantMessage, Message } from '@opencode-ai/sdk/v2/client';
 import React from 'react';
+import type { ModelInfo } from '../../shared/types';
 import { useSessionStore } from '../store/sessionStore';
 import { escapeHtml } from '../utils/chipUtils';
 import { Codicon } from './Codicon';
@@ -12,14 +13,7 @@ import { Codicon } from './Codicon';
 /** Props interface for PromptInputFooter component */
 export interface PromptInputFooterProps {
   /** List of available models to resolve context limit metadata. */
-  models: Array<{
-    id: string;
-    name: string;
-    providerId?: string;
-    providerName?: string;
-    isConnected?: boolean;
-    contextLimit?: number;
-  }>;
+  models: ModelInfo[];
   /** Currently selected active model ID. */
   activeModel: string;
 }
