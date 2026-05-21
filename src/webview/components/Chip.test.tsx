@@ -5,6 +5,8 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Chip } from './Chip';
 
@@ -23,6 +25,13 @@ vi.mock('../store/sessionStore', () => ({
     return selector(state);
   }),
 }));
+
+function mountChipStyles(): HTMLStyleElement {
+  const style = document.createElement('style');
+  style.textContent = readFileSync(resolve(process.cwd(), 'src/webview/styles/chip.css'), 'utf8');
+  document.head.appendChild(style);
+  return style;
+}
 
 describe('Chip', () => {
   beforeEach(() => {
@@ -88,5 +97,33 @@ describe('Chip', () => {
 
     expect(screen.getByText('terminal[5 lines]')).toBeInTheDocument();
     expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('regression: aligns chip icon, label, and adjacent text in inline flows', () => {
+    const style = mountChipStyles();
+    const { container } = render(
+      <p>
+        <Chip type="code-selection" filename="PromptInput.tsx" startLine={15} endLine={16} />
+        <span>Cannot find module or type declarations</span>
+      </p>,
+    );
+
+    const chip = container.querySelector<HTMLElement>('.opencode-chip');
+    const icon = container.querySelector<HTMLElement>('.chip-icon');
+    const label = container.querySelector<HTMLElement>('.chip-label');
+
+    if (!chip || !icon || !label) {
+      throw new Error('Expected chip, icon, and label elements to render.');
+    }
+
+    expect(window.getComputedStyle(chip).display).toBe('inline-flex');
+    expect(window.getComputedStyle(chip).alignItems).toBe('center');
+    expect(window.getComputedStyle(chip).verticalAlign).toBe('middle');
+    expect(window.getComputedStyle(icon).display).toBe('inline-flex');
+    expect(window.getComputedStyle(icon).alignItems).toBe('center');
+    expect(window.getComputedStyle(label).display).toBe('inline-flex');
+    expect(window.getComputedStyle(label).alignItems).toBe('center');
+
+    style.remove();
   });
 });

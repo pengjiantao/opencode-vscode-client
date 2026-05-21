@@ -93,11 +93,7 @@ export function parseAndRenderInlineChip(
   if (chipType === 'Text' && matchedPart.type === 'text') {
     const meta = matchedPart.metadata as { filename?: string; linesCount?: number } | undefined;
     return (
-      <span
-        key={`chip-${keyIdx}`}
-        className="opencode-chip-inline-wrapper"
-        style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
-      >
+      <span key={`chip-${keyIdx}`} className="opencode-chip-inline-wrapper">
         <Chip
           type="text"
           filename={meta?.filename || chipName}
@@ -111,11 +107,7 @@ export function parseAndRenderInlineChip(
   if (chipType === 'Command' && matchedPart.type === 'text') {
     const meta = matchedPart.metadata as { command?: string; source?: string } | undefined;
     return (
-      <span
-        key={`chip-${keyIdx}`}
-        className="opencode-chip-inline-wrapper"
-        style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
-      >
+      <span key={`chip-${keyIdx}`} className="opencode-chip-inline-wrapper">
         <Chip type="command" filename={meta?.command || chipName} mime={meta?.source} />
       </span>
     );
@@ -124,11 +116,7 @@ export function parseAndRenderInlineChip(
   if (chipType === 'Skill' && matchedPart.type === 'text') {
     const meta = matchedPart.metadata as { name?: string } | undefined;
     return (
-      <span
-        key={`chip-${keyIdx}`}
-        className="opencode-chip-inline-wrapper"
-        style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
-      >
+      <span key={`chip-${keyIdx}`} className="opencode-chip-inline-wrapper">
         <Chip type="skill" filename={meta?.name || chipName} text={matchedPart.text} />
       </span>
     );
@@ -184,11 +172,7 @@ export function parseAndRenderInlineChip(
     }
 
     return (
-      <span
-        key={`chip-${keyIdx}`}
-        className="opencode-chip-inline-wrapper"
-        style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
-      >
+      <span key={`chip-${keyIdx}`} className="opencode-chip-inline-wrapper">
         <Chip
           type={chipTypeToRender}
           filename={matchedPart.filename}

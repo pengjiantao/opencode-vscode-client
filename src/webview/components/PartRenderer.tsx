@@ -32,10 +32,7 @@ export function PartRenderer({
       if (part.metadata?.type === 'pasted-text') {
         const meta = part.metadata as { type: string; filename?: string; linesCount?: number };
         return (
-          <span
-            className="opencode-chip-inline-wrapper"
-            style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
-          >
+          <span className="opencode-chip-inline-wrapper">
             <Chip
               type="text"
               filename={meta.filename || 'Pasted Text'}
@@ -48,10 +45,7 @@ export function PartRenderer({
       if (part.metadata?.type === 'command') {
         const meta = part.metadata as { type: string; command?: string; source?: string };
         return (
-          <span
-            className="opencode-chip-inline-wrapper"
-            style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
-          >
+          <span className="opencode-chip-inline-wrapper">
             <Chip type="command" filename={meta.command || part.text} mime={meta.source} />
           </span>
         );
@@ -59,10 +53,7 @@ export function PartRenderer({
       if (part.metadata?.type === 'skill') {
         const meta = part.metadata as { type: string; name?: string; description?: string };
         return (
-          <span
-            className="opencode-chip-inline-wrapper"
-            style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}
-          >
+          <span className="opencode-chip-inline-wrapper">
             <Chip type="skill" filename={meta.name || part.text} text={part.text} />
           </span>
         );

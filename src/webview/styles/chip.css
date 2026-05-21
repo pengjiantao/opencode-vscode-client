@@ -1,8 +1,12 @@
-/* Premium, VS Code Fluent Design compliant Chip styling */
+/**
+ * @file VS Code Fluent-style attachment chip styling shared by chat and prompt input.
+ */
 
 .opencode-chip {
   display: inline-flex;
-  align-items: end;
+  align-items: center;
+  gap: 3px;
+  vertical-align: middle;
   background-color: transparent;
   color: var(--vscode-textLink-foreground, #3794ff);
   border: 1px solid transparent;
@@ -10,9 +14,11 @@
   padding: 3px 1px;
   font-family: var(--vscode-editor-font-family, monospace);
   font-weight: 800;
-  line-height: 1.2;
+  line-height: 1;
   user-select: none;
   max-width: 300px;
+  min-width: 0;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background-color 0.12s ease-in-out,
@@ -31,17 +37,37 @@
 }
 
 .chip-icon {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
   color: var(--vscode-textLink-foreground, #3794ff);
   font-size: 14px;
+  line-height: 1;
+  width: 1em;
+  height: 1em;
+}
+
+.chip-icon .codicon,
+.chip-icon i.codicon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: inherit;
+  line-height: 1;
+  width: 1em;
+  height: 1em;
 }
 
 .chip-label {
+  display: inline-flex;
+  align-items: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+  min-width: 0;
+  line-height: 1.2;
 }
 
 /* Tooltip internal components styling */
@@ -101,6 +127,18 @@
 }
 
 .opencode-chip.inline-chip {
-  margin: 1px 2px;
+  margin: 0 2px;
   vertical-align: middle;
+}
+
+.opencode-chip-inline-wrapper {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin: 0 2px;
+  max-width: 100%;
+}
+
+.opencode-chip-inline-wrapper .opencode-chip {
+  max-width: min(300px, 100%);
 }
