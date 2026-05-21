@@ -327,7 +327,7 @@ describe('PromptInput - Editor & Mention Popover', () => {
     const textarea = screen.getByPlaceholderText('Type a message... (Shift+Enter for new line)');
 
     // Paste file with potentially dangerous name/metadata to trigger XSS if innerHTML was used
-    const dangerousName = '<img src=x onerror="window.xss=true">';
+    const dangerousName = '<img src=x onerror=xss()>';
     const pathPasteEvent = {
       clipboardData: {
         files: [],

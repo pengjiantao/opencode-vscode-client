@@ -7,7 +7,12 @@
 import React, { useEffect } from 'react';
 import { useIPC } from '../hooks/useIPC';
 import { useSessionStore } from '../store/sessionStore';
-import { getCommandIconClass, getIconClass, getTooltipHtml } from '../utils/chipUtils';
+import {
+  getChipDisplayLabel,
+  getCommandIconClass,
+  getIconClass,
+  getTooltipHtml,
+} from '../utils/chipUtils';
 import { Codicon } from './Codicon';
 
 /**
@@ -90,26 +95,7 @@ export function Chip({
     (type === 'file' && (cachedInfo?.isWorkspace || isWorkspace)) ||
     (type === 'code-selection' && !!path);
 
-  let displayLabel = filename || 'file';
-  if (type === 'text') {
-    displayLabel = `Pasted ${linesCount || text?.split('\n').length || 1} Lines`;
-  } else if (type === 'code-selection') {
-    if (filename && /\[\d+-\d+\]/.test(filename)) {
-      displayLabel = filename;
-    } else {
-      displayLabel = `${filename} [${startLine || 1}-${endLine || 1}]`;
-    }
-  } else if (type === 'terminal') {
-    if (filename && /terminal\s*\[\d+/.test(filename)) {
-      displayLabel = filename;
-    } else {
-      displayLabel = `terminal[${linesCount || 1} lines]`;
-    }
-  } else if (type === 'command') {
-    displayLabel = filename || 'command';
-  } else if (type === 'skill') {
-    displayLabel = filename || 'skill';
-  }
+  const displayLabel = getChipDisplayLabel(type, filename, linesCount, startLine, endLine, text);
 
   return (
     <span

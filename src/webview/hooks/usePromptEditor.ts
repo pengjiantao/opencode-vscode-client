@@ -6,7 +6,7 @@
 import { useCallback } from 'react';
 import type { WebviewToExt } from '../../shared/types';
 import { getMimeType } from '../../shared/utils';
-import { getIconClass, getTooltipHtml } from '../utils/chipUtils';
+import { getChipDisplayLabel, getIconClass, getTooltipHtml } from '../utils/chipUtils';
 
 /**
  * Interface representing the properties required by the usePromptEditor hook.
@@ -82,14 +82,14 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
       }
 
       const iconClass = getIconClass(chip.type, chip.mime);
-      let displayLabel = chip.filename || 'file';
-      if (chip.type === 'text') {
-        displayLabel = `Pasted ${chip.linesCount} Lines`;
-      } else if (chip.type === 'code-selection') {
-        displayLabel = `${chip.filename} [${chip.startLine || 1}-${chip.endLine || 1}]`;
-      } else if (chip.type === 'terminal') {
-        displayLabel = `terminal[${chip.linesCount || 1} lines]`;
-      }
+      const displayLabel = getChipDisplayLabel(
+        chip.type,
+        chip.filename,
+        chip.linesCount,
+        chip.startLine,
+        chip.endLine,
+        chip.text,
+      );
 
       const iconSpan = document.createElement('span');
       iconSpan.className = 'chip-icon';

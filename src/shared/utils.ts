@@ -18,3 +18,6 @@ export function getMimeType(filename: string): string {
   }
   return 'text/plain';
 }
+
+/** Regular expression pattern to match line range suffixes at the end of filenames, e.g. " [10-20]". */
+export const FILENAME_LINE_RANGE_PATTERN = /\s*\[(\d+)-(\d+)\]$/;

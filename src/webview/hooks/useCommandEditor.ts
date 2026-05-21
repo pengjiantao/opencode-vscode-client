@@ -5,7 +5,12 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import type { CommandInfo, SkillInfo } from '../../shared/types';
 import type { CommandListItem } from '../components/CommandListPopover';
-import { getCommandIconClass, getIconClass, getTooltipHtml } from '../utils/chipUtils';
+import {
+  getChipDisplayLabel,
+  getCommandIconClass,
+  getIconClass,
+  getTooltipHtml,
+} from '../utils/chipUtils';
 import { createInlineChipElement, insertInlineChipNode } from '../utils/inlineChipDom';
 
 /** State shape for tracking the active autocomplete slash trigger session. */
@@ -161,7 +166,7 @@ export function useCommandEditor({
           'data-chip-command-source': item.source,
         },
         iconClass,
-        label: item.name,
+        label: getChipDisplayLabel('command', item.name),
         tooltipHtml,
       });
 
@@ -209,7 +214,7 @@ export function useCommandEditor({
           'data-chip-skill-description': item.description || '',
         },
         iconClass,
-        label: item.name,
+        label: getChipDisplayLabel('skill', item.name),
         tooltipHtml,
       });
 

@@ -3,41 +3,64 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { getPromptData } from './chipUtils';
+import { getChipDisplayLabel, truncateMiddle } from './chipUtils';
 
-describe('getPromptData', () => {
-  it('regression: serializes skill chips at their inline prompt placeholder position', () => {
-    const editor = document.createElement('div');
-    const chip = document.createElement('span');
-    chip.className = 'opencode-chip skill-chip inline-chip';
-    chip.setAttribute('data-chip-id', 'skill-1');
-    chip.setAttribute('data-chip-type', 'skill');
-    chip.setAttribute('data-chip-filename', 'code-review');
-    chip.setAttribute('data-chip-text', 'Review the selected code for quality issues.');
-    chip.setAttribute('data-chip-skill-description', 'Review quality');
+describe('truncateMiddle', () => {
+  it('does not truncate strings shorter than or equal to maxLength', () => {
+    expect(truncateMiddle('short.ts', 15)).toBe('short.ts');
+    expect(truncateMiddle('exactly-15-chars.ts', 19)).toBe('exactly-15-chars.ts');
+  });
 
-    editor.appendChild(document.createTextNode('Use '));
-    editor.appendChild(chip);
-    editor.appendChild(document.createTextNode(' to review vm-module'));
+  it('truncates long strings in the middle, preserving extension', () => {
+    // 59 characters
+    const longName = 'very-long-filename-that-needs-truncation-to-fit-perfectly.ts';
+    // Max length 32: prefix=15, suffix=14
+    // prefix: "very-long-filen" (15 chars)
+    // suffix: "t-perfectly.ts" (14 chars)
+    expect(truncateMiddle(longName, 32)).toBe('very-long-filen...t-perfectly.ts');
+  });
+});
 
-    const result = getPromptData(editor, 'session-1', {});
-    const skillPart = result.parts[0] as {
-      type: 'text';
-      text: string;
-      metadata?: { type?: string; name?: string; description?: string };
-    };
+describe('getChipDisplayLabel', () => {
+  it('formats short file chip labels normally', () => {
+    expect(getChipDisplayLabel('file', 'file.txt')).toBe('file.txt');
+  });
 
-    expect(result.text).toBe('Use [Skill: code-review] to review vm-module');
-    expect(result.parts).toHaveLength(1);
-    expect(skillPart.type).toBe('text');
-    expect(skillPart.text).toBe('Review the selected code for quality issues.');
-    expect(skillPart.metadata).toEqual({
-      type: 'skill',
-      name: 'code-review',
-      description: 'Review quality',
-      placeholder: '[Skill: code-review]',
-      startOffset: 4,
-      endOffset: 24,
-    });
+  it('middle-truncates long file and image chip labels', () => {
+    const longName = 'very-long-filename-that-needs-truncation-to-fit-perfectly.ts';
+    expect(getChipDisplayLabel('file', longName)).toBe('very-long-filen...t-perfectly.ts');
+    expect(getChipDisplayLabel('image', longName)).toBe('very-long-filen...t-perfectly.ts');
+  });
+
+  it('formats text chips with line counts', () => {
+    expect(getChipDisplayLabel('text', undefined, 5)).toBe('Pasted 5 Lines');
+  });
+
+  it('formats code-selection chips, preserving line ranges and middle-truncating filename', () => {
+    const longName = 'very-long-filename-that-needs-truncation-to-fit-perfectly.ts';
+    // Filename portion max length 24: prefix=11 ("very-long-f"), suffix=10 ("rfectly.ts")
+    // Total label should be "very-long-f...rfectly.ts [10-20]"
+    expect(getChipDisplayLabel('code-selection', longName, undefined, 10, 20)).toBe(
+      'very-long-f...rfectly.ts [10-20]',
+    );
+
+    // If filename already contains line range
+    expect(
+      getChipDisplayLabel(
+        'code-selection',
+        'very-long-filename-that-needs-truncation-to-fit-perfectly.ts [10-20]',
+      ),
+    ).toBe('very-long-f...rfectly.ts [10-20]');
+  });
+
+  it('formats terminal chips', () => {
+    expect(getChipDisplayLabel('terminal', undefined, 15)).toBe('terminal[15 lines]');
+    expect(getChipDisplayLabel('terminal', 'terminal [20 lines]')).toBe('terminal [20 lines]');
+  });
+
+  it('middle-truncates long command and skill chip labels', () => {
+    const longCommand = '/explain-this-extremely-long-command-name-to-me-please';
+    expect(getChipDisplayLabel('command', longCommand)).toBe('/explain-this-e...e-to-me-please');
+    expect(getChipDisplayLabel('skill', longCommand)).toBe('/explain-this-e...e-to-me-please');
   });
 });

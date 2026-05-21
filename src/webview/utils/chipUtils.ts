@@ -2,9 +2,7 @@
  * @file Utility helpers for parsing, formatting, and serializing inline attachment chips.
  */
 
-import type { Part } from '@opencode-ai/sdk/v2/client';
-
-const FILENAME_LINE_RANGE_PATTERN = /\s*\[(\d+)-(\d+)\]$/;
+import { FILENAME_LINE_RANGE_PATTERN } from '../../shared/utils';
 
 /** Line range parsed from an explicit code-selection chip label. */
 export interface ParsedLineRange {
@@ -196,250 +194,6 @@ export const getTooltipHtml = (
   </div>`;
 };
 
-/**
- * Traverses the editor DOM tree and extracts text (with inline placeholders) and parts.
- *
- * @param element The editor element.
- * @param activeSessionID The active session ID.
- * @param fileInfos The current session file cache.
- * @returns An object containing the serialized prompt text and parts list.
- */
-export const getPromptData = (
-  element: HTMLDivElement | null,
-  activeSessionID: string | null,
-  fileInfos: Record<
-    string,
-    { exists: boolean; size: number; content?: string; isWorkspace: boolean }
-  >,
-): { text: string; parts: Part[] } => {
-  if (!element) return { text: '', parts: [] };
-
-  // Fallback for jsdom tests that fire input event with target.value on the div
-  if (element.childNodes.length === 0 && 'value' in element) {
-    const textVal = (element as unknown as { value: string }).value;
-    return {
-      text: textVal,
-      parts: [],
-    };
-  }
-
-  let promptText = '';
-  const parts: Part[] = [];
-
-  const traverse = (node: Node) => {
-    if (node.nodeType === 3) {
-      promptText += (node.textContent || '').replace(/\u00A0/g, ' ');
-    } else if (node.nodeType === 1) {
-      const el = node as HTMLElement;
-      if (el.classList.contains('opencode-chip')) {
-        const type = el.getAttribute('data-chip-type') as
-          | 'file'
-          | 'image'
-          | 'text'
-          | 'code-selection'
-          | 'terminal'
-          | 'command'
-          | 'skill';
-        const id = el.getAttribute('data-chip-id') || '';
-        const filename = el.getAttribute('data-chip-filename') || 'file';
-        const path = el.getAttribute('data-chip-path') || undefined;
-        const chipText = el.getAttribute('data-chip-text') || '';
-        const mime = el.getAttribute('data-chip-mime') || 'text/plain';
-        const dataUrl = el.getAttribute('data-chip-data-url') || undefined;
-        const linesCount = Number(el.getAttribute('data-chip-lines-count') || '0');
-        const startLine = Number(el.getAttribute('data-chip-start-line') || '1');
-        const endLine = Number(el.getAttribute('data-chip-end-line') || '1');
-
-        if (type === 'image') {
-          promptText += `[Image: ${filename}]`;
-          parts.push({
-            type: 'file',
-            id,
-            sessionID: activeSessionID || 'temp',
-            messageID: 'temp',
-            mime: mime || 'image/png',
-            filename,
-            url: dataUrl || '',
-          } as unknown as Part);
-        } else if (type === 'text') {
-          promptText += `[Text: ${filename}]`;
-          parts.push({
-            type: 'text',
-            id,
-            sessionID: activeSessionID || 'temp',
-            messageID: 'temp',
-            text: chipText,
-            metadata: {
-              type: 'pasted-text',
-              linesCount,
-              filename,
-            },
-          } as unknown as Part);
-        } else if (type === 'code-selection') {
-          const displayRange = `[${startLine}-${endLine}]`;
-          let cleanFilename = filename || 'file';
-          if (FILENAME_LINE_RANGE_PATTERN.test(cleanFilename)) {
-            cleanFilename = cleanFilename.replace(FILENAME_LINE_RANGE_PATTERN, '');
-          }
-          promptText += `[Code Selection: ${cleanFilename} ${displayRange}]`;
-          let finalUrl: string;
-          if (path) {
-            let cleanPath = path.replace(/\\/g, '/');
-            if (!cleanPath.startsWith('/')) {
-              cleanPath = '/' + cleanPath;
-            }
-            finalUrl = `file://${cleanPath}`;
-          } else {
-            const MAX_DATA_URL_LIMIT = 50 * 1024;
-            const truncatedText =
-              chipText.length > MAX_DATA_URL_LIMIT
-                ? chipText.slice(0, MAX_DATA_URL_LIMIT) + '\n... (truncated due to size limit)'
-                : chipText;
-            const base64Content = btoa(unescape(encodeURIComponent(truncatedText)));
-            finalUrl = `data:${mime || 'text/plain'};base64,${base64Content}`;
-          }
-          const source = {
-            type: 'file' as const,
-            path: path || cleanFilename,
-            text: {
-              value: chipText,
-              start: startLine,
-              end: endLine,
-            },
-          };
-          parts.push({
-            type: 'file',
-            id,
-            sessionID: activeSessionID || 'temp',
-            messageID: 'temp',
-            mime: mime || 'text/plain',
-            filename: `${cleanFilename} ${displayRange}`,
-            url: finalUrl,
-            source,
-          } as unknown as Part);
-        } else if (type === 'terminal') {
-          promptText += `[Terminal: ${linesCount} lines]`;
-          const MAX_DATA_URL_LIMIT = 50 * 1024;
-          const truncatedText =
-            chipText.length > MAX_DATA_URL_LIMIT
-              ? chipText.slice(0, MAX_DATA_URL_LIMIT) + '\n... (truncated due to size limit)'
-              : chipText;
-          const base64Content = btoa(unescape(encodeURIComponent(truncatedText)));
-          const finalUrl = `data:text/plain;base64,${base64Content}`;
-          const source = {
-            type: 'file' as const,
-            path: `terminal-${id}`,
-            text: {
-              value: chipText,
-              start: 1,
-              end: linesCount,
-            },
-          };
-          parts.push({
-            type: 'file',
-            id,
-            sessionID: activeSessionID || 'temp',
-            messageID: 'temp',
-            mime: 'text/plain',
-            filename: `terminal [${linesCount} lines]`,
-            url: finalUrl,
-            source,
-          } as unknown as Part);
-        } else if (type === 'command') {
-          const commandName = el.getAttribute('data-chip-command-name') || filename;
-          const commandSource = el.getAttribute('data-chip-command-source') || undefined;
-          const placeholder = `[Command: ${commandName}]`;
-          const startOffset = promptText.length;
-          promptText += placeholder;
-          parts.push({
-            type: 'text',
-            id,
-            sessionID: activeSessionID || 'temp',
-            messageID: 'temp',
-            text: commandName,
-            metadata: {
-              type: 'command',
-              command: commandName,
-              source: commandSource,
-              placeholder,
-              startOffset,
-              endOffset: startOffset + placeholder.length,
-            },
-          } as unknown as Part);
-        } else if (type === 'skill') {
-          const skillContent = chipText || '';
-          const skillDesc = el.getAttribute('data-chip-skill-description') || '';
-          const placeholder = `[Skill: ${filename}]`;
-          const startOffset = promptText.length;
-          promptText += placeholder;
-          parts.push({
-            type: 'text',
-            id,
-            sessionID: activeSessionID || 'temp',
-            messageID: 'temp',
-            text: skillContent,
-            metadata: {
-              type: 'skill',
-              name: filename,
-              description: skillDesc,
-              placeholder,
-              startOffset,
-              endOffset: startOffset + placeholder.length,
-            },
-          } as unknown as Part);
-        } else if (type === 'file') {
-          promptText += `[File: ${filename}]`;
-          const cached = path ? fileInfos[path] : undefined;
-          let finalUrl: string;
-          if (path) {
-            let cleanPath = path.replace(/\\/g, '/');
-            if (!cleanPath.startsWith('/')) {
-              cleanPath = '/' + cleanPath;
-            }
-            finalUrl = `file://${cleanPath}`;
-          } else {
-            const fileContent = chipText || cached?.content || '';
-            const MAX_DATA_URL_LIMIT = 50 * 1024;
-            const truncatedText =
-              fileContent.length > MAX_DATA_URL_LIMIT
-                ? fileContent.slice(0, MAX_DATA_URL_LIMIT) + '\n... (truncated due to size limit)'
-                : fileContent;
-            const base64Content = btoa(unescape(encodeURIComponent(truncatedText)));
-            finalUrl = `data:${mime || 'text/plain'};base64,${base64Content}`;
-          }
-          // Do not create source object for whole files and directories to avoid backend schema validation errors
-          // and to prevent rendering them as code selections with line ranges (e.g. [1-1]) in the chat history.
-          // Code selection parts (which have a defined line range) are handled separately under type === 'code-selection'.
-          parts.push({
-            type: 'file',
-            id,
-            sessionID: activeSessionID || 'temp',
-            messageID: 'temp',
-            mime,
-            filename,
-            url: finalUrl,
-          } as unknown as Part);
-        }
-      } else {
-        for (let i = 0; i < node.childNodes.length; i++) {
-          traverse(node.childNodes[i]);
-        }
-        if (el.tagName === 'DIV' || el.tagName === 'P' || el.tagName === 'BR') {
-          if (node.nextSibling) {
-            promptText += '\n';
-          }
-        }
-      }
-    }
-  };
-
-  for (let i = 0; i < element.childNodes.length; i++) {
-    traverse(element.childNodes[i]);
-  }
-
-  return { text: promptText, parts };
-};
-
 /** Parsed result of a file URL containing decoded path and text content. */
 export interface ParsedFileUrl {
   path?: string;
@@ -486,4 +240,74 @@ export function parseFileUrl(url: string, mime?: string): ParsedFileUrl {
   }
 
   return { path, text };
+}
+
+/**
+ * Truncates a string in the middle if its length exceeds maxLength, preserving the start and end.
+ *
+ * @param str The string to truncate.
+ * @param maxLength The maximum allowed length before truncation occurs.
+ * @returns The truncated string with ellipsis in the middle, or the original string.
+ */
+export function truncateMiddle(str: string, maxLength: number = 32): string {
+  if (!str || str.length <= maxLength) return str;
+  const ellipsis = '...';
+  // Compute lengths for prefix and suffix segments so that total length equals maxLength
+  const prefixLength = Math.ceil((maxLength - ellipsis.length) / 2);
+  const suffixLength = Math.floor((maxLength - ellipsis.length) / 2);
+  return str.slice(0, prefixLength) + ellipsis + str.slice(str.length - suffixLength);
+}
+
+/**
+ * Returns the optimized, truncated display label for a chip based on its type and filename.
+ * Guarantees that essential suffixes like line ranges and file extensions are preserved.
+ *
+ * @param type The chip's target attachment type.
+ * @param filename Optional name of the file, image, command, or skill.
+ * @param linesCount Optional lines count for pasted text or terminal logs.
+ * @param startLine Optional starting line number for code selection.
+ * @param endLine Optional ending line number for code selection.
+ * @param text Optional text body used for fallback line count calculation.
+ * @returns The formatted and optionally middle-truncated display label.
+ */
+export function getChipDisplayLabel(
+  type: 'file' | 'image' | 'text' | 'code-selection' | 'terminal' | 'command' | 'skill',
+  filename?: string,
+  linesCount?: number,
+  startLine?: number,
+  endLine?: number,
+  text?: string,
+): string {
+  if (type === 'file' || type === 'image') {
+    return truncateMiddle(filename || 'file', 32);
+  }
+  if (type === 'text') {
+    return `Pasted ${linesCount || text?.split('\n').length || 1} Lines`;
+  }
+  if (type === 'code-selection') {
+    let cleanFilename = filename || 'file';
+    const match = cleanFilename.match(/\s*\[(\d+)-(\d+)\]$/);
+    let rangeStr: string;
+    if (match) {
+      cleanFilename = cleanFilename.replace(/\s*\[(\d+)-(\d+)\]$/, '');
+      rangeStr = ` [${match[1]}-${match[2]}]`;
+    } else {
+      rangeStr = ` [${startLine || 1}-${endLine || 1}]`;
+    }
+    // Truncate the filename portion specifically to preserve the line range suffix intact
+    return truncateMiddle(cleanFilename, 24) + rangeStr;
+  }
+  if (type === 'terminal') {
+    if (filename && /terminal\s*\[\d+/.test(filename)) {
+      return filename;
+    }
+    return `terminal[${linesCount || 1} lines]`;
+  }
+  if (type === 'command') {
+    return truncateMiddle(filename || 'command', 32);
+  }
+  if (type === 'skill') {
+    return truncateMiddle(filename || 'skill', 32);
+  }
+  return truncateMiddle(filename || 'chip', 32);
 }

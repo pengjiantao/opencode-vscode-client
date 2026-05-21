@@ -5,7 +5,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import type { WebviewToExt, WorkspaceSearchResult } from '../../shared/types';
 import { getMimeType } from '../../shared/utils';
-import { getIconClass, getTooltipHtml } from '../utils/chipUtils';
+import { getChipDisplayLabel, getIconClass, getTooltipHtml } from '../utils/chipUtils';
 import { createInlineChipElement, insertInlineChipNode } from '../utils/inlineChipDom';
 
 /** State shape for tracking the active autocomplete mention trigger session. */
@@ -119,7 +119,7 @@ export function useMentionEditor({ editorRef, fileInfos, send, onInput }: UseMen
           'data-chip-is-workspace': 'true',
         },
         iconClass,
-        label: item.name,
+        label: getChipDisplayLabel('file', item.name),
         tooltipHtml,
       });
 
