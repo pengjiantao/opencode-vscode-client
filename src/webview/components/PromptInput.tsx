@@ -12,7 +12,6 @@ import { useMentionEditor } from '../hooks/useMentionEditor';
 import { usePromptEditor } from '../hooks/usePromptEditor';
 import { usePromptSelectionIPC } from '../hooks/usePromptSelectionIPC';
 import { useSessionStore } from '../store/sessionStore';
-import '../styles/footer.css';
 import { getTooltipHtml } from '../utils/chipUtils';
 import { getPromptData } from '../utils/promptSerializer';
 import { AgentSelector } from './AgentSelector';
