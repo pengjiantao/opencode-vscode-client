@@ -20,6 +20,7 @@ import { IconButton } from './IconButton';
 import { MentionPopover } from './MentionPopover';
 import { ModelSelector } from './ModelSelector';
 import { PromptInputFooter } from './PromptInputFooter';
+import { PromptInputHeader } from './PromptInputHeader';
 
 /** Props interface for PromptInput component */
 interface PromptInputProps {
@@ -388,6 +389,8 @@ export function PromptInput({
         onSelect={onSelectCommandItem}
         skillsOnly={commandState.skillsOnly}
       />
+
+      <PromptInputHeader />
 
       <div className={`prompt-input-container ${isFocused ? 'focused' : ''}`}>
         <div

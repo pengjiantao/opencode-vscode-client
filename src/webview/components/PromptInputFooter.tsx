@@ -1,5 +1,5 @@
 /**
- * @file PromptInputFooter component rendering active workspace metadata, LSP/MCP status, and context/cost metrics.
+ * @file PromptInputFooter component rendering active workspace metadata and context/cost metrics.
  * Extracted from PromptInput to maintain readability and comply with file length constraints.
  */
 
@@ -19,16 +19,12 @@ export interface PromptInputFooterProps {
 }
 
 /**
- * Renders the bottom metadata footer displaying active workspace folder, LSP/MCP metrics, and tokens/cost usage.
+ * Renders the bottom metadata footer displaying the active workspace folder, and token/cost metrics.
  */
 export function PromptInputFooter({ models, activeModel }: PromptInputFooterProps) {
   // Retrieve session state details directly from zustand store
   const workspaceName = useSessionStore((s) => s.workspaceName);
-  const lspServers = useSessionStore((s) => s.lspServers);
-  const mcpServers = useSessionStore((s) => s.mcpServers);
-  const skills = useSessionStore((s) => s.skills);
   const plugins = useSessionStore((s) => s.plugins);
-  const extensionVersion = useSessionStore((s) => s.extensionVersion);
   const activeSessionID = useSessionStore((s) => s.activeSessionID);
   const messages = useSessionStore((s) => s.messages);
 
@@ -100,94 +96,6 @@ export function PromptInputFooter({ models, activeModel }: PromptInputFooterProp
     `;
   }, [workspaceName, activeSessionID, plugins]);
 
-  const lspTooltip = React.useMemo(() => {
-    return `
-      <strong>Language Servers (LSP)</strong><br/>
-      ${
-        lspServers.length === 0
-          ? 'No language servers active.'
-          : `
-        <table>
-          ${lspServers
-            .map(
-              (lsp) => `
-            <tr>
-              <td>${escapeHtml(lsp.name)}:</td>
-              <td><span style="color: ${lsp.status === 'running' ? '#89d185' : '#cca700'}">${escapeHtml(lsp.status)}</span></td>
-            </tr>
-          `,
-            )
-            .join('')}
-        </table>
-      `
-      }
-    `;
-  }, [lspServers]);
-
-  const mcpTooltip = React.useMemo(() => {
-    return `
-      <strong>Model Context Protocol (MCP)</strong><br/>
-      ${
-        mcpServers.length === 0
-          ? 'No MCP servers configured.'
-          : `
-        <table>
-          ${mcpServers
-            .map(
-              (mcp) => `
-            <tr>
-              <td>${escapeHtml(mcp.name)}:</td>
-              <td>
-                <span style="color: ${mcp.status === 'connected' || mcp.status === 'running' ? '#89d185' : '#f48771'}">
-                  ${escapeHtml(mcp.status)}
-                </span>
-                ${mcp.error ? `<br/><span style="font-size:10px;color:#f48771">${escapeHtml(mcp.error)}</span>` : ''}
-              </td>
-            </tr>
-          `,
-            )
-            .join('')}
-        </table>
-      `
-      }
-    `;
-  }, [mcpServers]);
-
-  const skillsTooltip = React.useMemo(() => {
-    return `
-      <strong>Discovered Skills</strong><br/>
-      ${
-        skills.length === 0
-          ? 'No custom skills discovered.'
-          : `
-        <ul>
-          ${skills
-            .map(
-              (s) => `
-            <li>
-              <strong>${escapeHtml(s.name)}</strong>
-              ${s.description ? `<br/><span style="font-size: 11px; color: var(--vscode-descriptionForeground)">${escapeHtml(s.description)}</span>` : ''}
-            </li>
-          `,
-            )
-            .join('')}
-        </ul>
-      `
-      }
-    `;
-  }, [skills]);
-
-  const versionTooltip = React.useMemo(() => {
-    return `
-      <strong>OpenCode Extension</strong><br/>
-      <table>
-        <tr><td>Version:</td><td>v${escapeHtml(extensionVersion)}</td></tr>
-        <tr><td>Publisher:</td><td>Google DeepMind</td></tr>
-        <tr><td>Core SDK:</td><td>@opencode-ai/sdk</td></tr>
-      </table>
-    `;
-  }, [extensionVersion]);
-
   const metricsTooltip = React.useMemo(() => {
     return `
       <strong>Context & Session Metrics</strong><br/>
@@ -233,46 +141,6 @@ export function PromptInputFooter({ models, activeModel }: PromptInputFooterProp
         >
           <Codicon name="folder" className="metadata-icon" />
           <span>{workspaceName || 'No Workspace'}</span>
-        </div>
-
-        <div className="metadata-item lsp" data-custom-title={lspTooltip} data-testid="footer-lsp">
-          <Codicon name="combine" className="metadata-icon" />
-          <span>
-            <span className="metadata-label">LSP: </span>
-            {lspServers.length}
-          </span>
-        </div>
-
-        <div className="metadata-item mcp" data-custom-title={mcpTooltip} data-testid="footer-mcp">
-          <Codicon name="plug" className="metadata-icon" />
-          <span>
-            <span className="metadata-label">MCP: </span>
-            {mcpServers.length}
-          </span>
-        </div>
-
-        <div
-          className="metadata-item skills"
-          data-custom-title={skillsTooltip}
-          data-testid="footer-skills"
-        >
-          <Codicon name="workspace-trusted" className="metadata-icon" />
-          <span>
-            <span className="metadata-label">Skills: </span>
-            {skills.length}
-          </span>
-        </div>
-
-        <div
-          className="metadata-item version"
-          data-custom-title={versionTooltip}
-          data-testid="footer-version"
-        >
-          <Codicon name="info" className="metadata-icon" />
-          <span>
-            <span className="metadata-label">v</span>
-            {extensionVersion}
-          </span>
         </div>
       </div>
 

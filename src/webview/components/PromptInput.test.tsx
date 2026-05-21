@@ -6,6 +6,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PromptInput } from './PromptInput';
+import { PromptInputHeader } from './PromptInputHeader';
 
 vi.mock('@vscode/webview-ui-toolkit/react', () => ({
   VSCodeButton: ({
@@ -320,8 +321,8 @@ describe('PromptInput', () => {
     );
   });
 
-  /** Regression: footer row displays Workspace, LSP count, MCP count, Skills, extension version, context percentage, and cumulative cost. */
-  it('regression: status footer row renders correct Workspace, LSP, MCP, Skills, version, context tokens, and cost', () => {
+  /** Regression: status elements render correctly, split between header and footer rows. */
+  it('regression: status header and footer rows render correct Workspace, LSP, MCP, Skills, version, context tokens, and cost', () => {
     render(
       <PromptInput
         onSubmit={mockOnSubmit}
@@ -332,17 +333,37 @@ describe('PromptInput', () => {
       />,
     );
 
-    // Verify footer items are present in the DOM
+    // Verify footer and header items are present in the DOM
     expect(screen.getByTestId('footer-workspace')).toHaveTextContent('TestWorkspace');
-    expect(screen.getByTestId('footer-lsp')).toHaveTextContent('LSP: 1');
-    expect(screen.getByTestId('footer-mcp')).toHaveTextContent('MCP: 1');
-    expect(screen.getByTestId('footer-skills')).toHaveTextContent('Skills: 1');
-    expect(screen.getByTestId('footer-version')).toHaveTextContent('v0.1.2');
+    expect(screen.getByTestId('header-lsp')).toHaveTextContent('LSP: 1');
+    expect(screen.getByTestId('header-mcp')).toHaveTextContent('MCP: 1');
+    expect(screen.getByTestId('header-skills')).toHaveTextContent('Skills: 1');
+    expect(screen.getByTestId('header-version')).toHaveTextContent('v0.1.2');
 
     // Context Total: 1000 + 500 + 200 + 100 + 50 = 1850. Limit: 100000. Usage: Math.round(1850 / 100000 * 100) = 2%
     expect(screen.getByTestId('footer-context')).toHaveTextContent('1,850 / 100,000 (2%)');
     // Total Cost: 0.05
     expect(screen.getByTestId('footer-cost')).toHaveTextContent('$0.050');
+  });
+
+  /** Regression: workspace name container has correct DOM structure and classes to prevent visual overlapping. */
+  it('regression: workspace metadata item has correct CSS classes and structure to prevent layout overlap', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const workspaceItem = screen.getByTestId('footer-workspace');
+    expect(workspaceItem).toHaveClass('metadata-item', 'workspace');
+
+    const textSpan = workspaceItem.querySelector('span:not(.codicon)');
+    expect(textSpan).toBeInTheDocument();
+    expect(textSpan).toHaveTextContent('TestWorkspace');
   });
 
   /** Regression: clicks attach button and posts file:select message */
@@ -400,5 +421,50 @@ describe('PromptInput', () => {
     expect(chip).toBeInTheDocument();
     expect(chip).toHaveAttribute('data-chip-filename', 'test.txt');
     expect(chip).toHaveAttribute('data-chip-path', '/workspace/test.txt');
+  });
+});
+
+describe('PromptInputHeader', () => {
+  it('renders correctly with custom props and uses CSS theme variables for tooltip styling', () => {
+    const lspServers = [{ name: 'python-lsp', status: 'running' }];
+    const mcpServers = [{ name: 'postgres-mcp', status: 'failed', error: 'Port bind error' }];
+    const skills = [
+      { name: 'git-expert', description: 'Advanced git skill', location: '/skills/git' },
+    ];
+    const extensionVersion = '1.0.4';
+
+    render(
+      <PromptInputHeader
+        lspServers={lspServers}
+        mcpServers={mcpServers}
+        skills={skills}
+        extensionVersion={extensionVersion}
+      />,
+    );
+
+    // Verify header status elements render custom props values correctly
+    const lspEl = screen.getByTestId('header-lsp');
+    const mcpEl = screen.getByTestId('header-mcp');
+    const skillsEl = screen.getByTestId('header-skills');
+    const versionEl = screen.getByTestId('header-version');
+
+    expect(lspEl).toHaveTextContent('LSP: 1');
+    expect(mcpEl).toHaveTextContent('MCP: 1');
+    expect(skillsEl).toHaveTextContent('Skills: 1');
+    expect(versionEl).toHaveTextContent('v1.0.4');
+
+    // Retrieve tooltips
+    const lspTooltip = lspEl.getAttribute('data-custom-title') || '';
+    const mcpTooltip = mcpEl.getAttribute('data-custom-title') || '';
+
+    // Verify tooltip contents do not use hardcoded hex values (#89d185 / #cca700 / #f48771) for status colors
+    expect(lspTooltip).not.toContain('#89d185');
+    expect(lspTooltip).not.toContain('#cca700');
+    expect(mcpTooltip).not.toContain('#f48771');
+
+    // Verify they use standard VS Code theme variables instead
+    expect(lspTooltip).toContain('var(--vscode-charts-green)');
+    expect(mcpTooltip).toContain('var(--vscode-charts-red)');
+    expect(mcpTooltip).toContain('Port bind error');
   });
 });
