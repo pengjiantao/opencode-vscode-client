@@ -4,6 +4,7 @@
 @import './styles/status-bar.css';
 @import './styles/session-tabs.css';
 @import './styles/chat-view.css';
+@import './styles/scroll-fade-container.css';
 @import './styles/parts.css';
 @import './styles/permission-card.css';
 @import './styles/prompt-input.css';

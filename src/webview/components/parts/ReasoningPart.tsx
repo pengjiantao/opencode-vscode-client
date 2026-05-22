@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import { Codicon } from '../Codicon';
 import { Markdown } from '../Markdown';
+import { ScrollFadeContainer } from '../ScrollFadeContainer';
 
 interface ReasoningPartProps {
   text: string;
@@ -77,9 +78,13 @@ export function ReasoningPart({
           overflow: 'hidden',
         }}
       >
-        <div className="reasoning-content">
+        <ScrollFadeContainer
+          contentClassName="reasoning-content"
+          autoScroll={true}
+          dependencies={[text]}
+        >
           <Markdown text={text} />
-        </div>
+        </ScrollFadeContainer>
       </div>
     </div>
   );

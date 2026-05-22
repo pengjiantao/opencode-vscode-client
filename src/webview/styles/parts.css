@@ -186,13 +186,15 @@
 }
 
 /* Inward indentation for expanded content */
+.reasoning-part .scroll-fade-container {
+  max-height: 300px;
+}
+
 .reasoning-part .reasoning-content {
   padding: 8px 12px 8px 12px;
   margin-left: 0;
   margin-bottom: 4px;
   border-left: none;
-  max-height: 300px;
-  overflow-y: auto;
   opacity: 0.6;
 }
 
