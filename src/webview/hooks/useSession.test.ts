@@ -187,15 +187,19 @@ describe('useSession', () => {
 
     it('handles permission.asked event', () => {
       const { result } = renderHook(() => useSession());
-      const permission = {
+      const permission: PermissionRequest = {
         id: 'perm-1',
+        sessionID: 'session-1',
         permission: 'run_command',
-      } as unknown as PermissionRequest;
+        patterns: ['ls'],
+        metadata: {},
+        always: [],
+      };
 
       act(() => {
         result.current.handleEvent({
           type: 'permission.asked',
-          properties: { permission },
+          properties: permission,
         } as unknown as Event);
       });
 

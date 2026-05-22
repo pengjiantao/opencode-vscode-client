@@ -4,7 +4,7 @@
  * Registers all IPC message handlers for session lifecycle and prompt operations.
  */
 
-import type { Part, PermissionRequest, SessionStatus } from '@opencode-ai/sdk/v2/client';
+import type { Part, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import { StatusBarAlignment, ThemeColor, window, workspace, type ExtensionContext } from 'vscode';
 import { registerExtensionCommands } from './commands';
 import { IPCBridge } from './ipc';
@@ -407,30 +407,28 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     ipc.on('permission:reply', (msg) => {
       const { permissionID, allow } = msg as { permissionID: string; allow: boolean };
-      void sdk.permission.reply(permissionID, allow);
+      sdk.permission.reply(permissionID, allow).catch((err) => {
+        ipc.send({
+          type: 'error',
+          message: `Permission reply failed: ${(err as Error).message}`,
+        });
+      });
     });
 
     // Subscribe to events and register disposable to prevent memory leaks
     const unsubscribeEvents = sdk.subscribeEvents((event: unknown) => {
-      // Forward SSE events to webview and handle permission prompts
+      // Forward SSE events to webview
       ipc.send({ type: 'event:received', event } as ExtToWebview);
 
       const evt = event as {
         type?: string;
         properties?: {
-          permission?: PermissionRequest;
           sessionID?: string;
           status?: SessionStatus;
           info?: { id?: string };
         };
       };
-      if (evt.type === 'permission.asked' && evt.properties?.permission) {
-        handlePermissionRequest(evt.properties.permission);
-      } else if (
-        evt.type === 'session.status' &&
-        evt.properties?.sessionID &&
-        evt.properties?.status
-      ) {
+      if (evt.type === 'session.status' && evt.properties?.sessionID && evt.properties?.status) {
         sessionStatuses.set(evt.properties.sessionID, evt.properties.status);
         updateStatusBar();
       } else if (evt.type === 'session.deleted' && evt.properties?.info?.id) {
@@ -448,24 +446,4 @@ export async function activate(context: ExtensionContext): Promise<void> {
     const message = err instanceof Error ? err.message : String(err);
     window.showErrorMessage(`OpenCode Sidebar activation failed: ${message}`);
   }
-}
-
-/**
- * Shows a VS Code modal dialog for permission requests (Allow/Deny).
- */
-function handlePermissionRequest(permission: PermissionRequest): void {
-  void window
-    .showInformationMessage(
-      `OpenCode Permission: ${permission.permission}`,
-      { modal: false },
-      'Allow',
-      'Deny',
-    )
-    .then((choice) => {
-      if (choice === 'Allow') {
-        void sdk.permission.reply(permission.id, true);
-      } else if (choice === 'Deny') {
-        void sdk.permission.reply(permission.id, false);
-      }
-    });
 }

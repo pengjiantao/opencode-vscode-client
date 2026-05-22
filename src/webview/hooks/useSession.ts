@@ -92,7 +92,6 @@ export function useSession() {
         sessionID?: string;
         info?: Session | Message | Part | SessionStatus;
         part?: Part;
-        permission?: PermissionRequest;
       };
 
       switch (event.type as string) {
@@ -141,7 +140,7 @@ export function useSession() {
           );
           break;
         case 'permission.asked':
-          setPendingPermission((props as { permission: PermissionRequest }).permission);
+          setPendingPermission(props as unknown as PermissionRequest);
           break;
         default:
           break;

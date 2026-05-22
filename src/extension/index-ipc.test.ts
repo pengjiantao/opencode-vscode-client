@@ -310,102 +310,64 @@ describe('Extension IPC & Permission Event Handlers', () => {
     });
   });
 
-  it('regression: handles permission.asked event when user selects Allow', async () => {
+  it('regression: forwards permission.asked event to webview and does not show native dialog', async () => {
     await activate(mockContext);
 
-    const showInfoMock = vi.mocked(window.showInformationMessage) as unknown as {
-      mockResolvedValue: (value: string | undefined) => unknown;
-      mockClear: () => void;
-    };
-    showInfoMock.mockResolvedValue('Allow');
+    const showInfoMock = vi.mocked(window.showInformationMessage);
+    mockIpcSend.mockClear();
     mockSdk.permission.reply.mockClear();
 
     if (sseHandlerCallback) {
       sseHandlerCallback({
         type: 'permission.asked',
         properties: {
-          permission: {
-            id: 'perm-1',
-            permission: 'write_file',
-          },
+          id: 'perm-1',
+          sessionID: 'session-1',
+          permission: 'write_file',
+          patterns: ['ls'],
+          metadata: {},
+          always: [],
         },
       });
     }
 
-    expect(showInfoMock).toHaveBeenCalledWith(
-      'OpenCode Permission: write_file',
-      { modal: false },
-      'Allow',
-      'Deny',
+    // Event should be forwarded to webview
+    const sendCalls = mockIpcSend.mock.calls;
+    const permissionEventForwarded = sendCalls.some(
+      ([msg]) =>
+        msg &&
+        (msg as { type: string }).type === 'event:received' &&
+        (msg as { event: { type: string } }).event?.type === 'permission.asked',
     );
-    // Wait for the Promise handler (.then()) to execute in the event loop
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(mockSdk.permission.reply).toHaveBeenCalledWith('perm-1', true);
-  });
-
-  it('regression: handles permission.asked event when user selects Deny', async () => {
-    await activate(mockContext);
-
-    const showInfoMock = vi.mocked(window.showInformationMessage) as unknown as {
-      mockResolvedValue: (value: string | undefined) => unknown;
-      mockClear: () => void;
-    };
-    showInfoMock.mockResolvedValue('Deny');
-    mockSdk.permission.reply.mockClear();
-
-    if (sseHandlerCallback) {
-      sseHandlerCallback({
-        type: 'permission.asked',
-        properties: {
-          permission: {
-            id: 'perm-2',
-            permission: 'read_file',
-          },
-        },
-      });
-    }
-
-    expect(showInfoMock).toHaveBeenCalledWith(
-      'OpenCode Permission: read_file',
-      { modal: false },
-      'Allow',
-      'Deny',
-    );
-    // Wait for the Promise handler (.then()) to execute in the event loop
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(mockSdk.permission.reply).toHaveBeenCalledWith('perm-2', false);
-  });
-
-  it('regression: handles permission.asked event when user dismisses the dialog', async () => {
-    await activate(mockContext);
-
-    const showInfoMock = vi.mocked(window.showInformationMessage) as unknown as {
-      mockResolvedValue: (value: string | undefined) => unknown;
-      mockClear: () => void;
-    };
-    showInfoMock.mockResolvedValue(undefined);
-    mockSdk.permission.reply.mockClear();
-
-    if (sseHandlerCallback) {
-      sseHandlerCallback({
-        type: 'permission.asked',
-        properties: {
-          permission: {
-            id: 'perm-3',
-            permission: 'execute_url',
-          },
-        },
-      });
-    }
-
-    expect(showInfoMock).toHaveBeenCalledWith(
-      'OpenCode Permission: execute_url',
-      { modal: false },
-      'Allow',
-      'Deny',
-    );
-    // Wait for the Promise handler (.then()) to execute in the event loop
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(permissionEventForwarded).toBe(true);
+    // Native dialog must NOT be shown
+    expect(showInfoMock).not.toHaveBeenCalled();
+    // SDK permission.reply must NOT be called directly (handled via webview IPC)
     expect(mockSdk.permission.reply).not.toHaveBeenCalled();
+  });
+
+  it('regression: handles permission:reply IPC with error feedback on failure', async () => {
+    await activate(mockContext);
+
+    mockSdk.permission.reply.mockRejectedValueOnce(new Error('Network error'));
+    mockIpcSend.mockClear();
+
+    const replyHandler = ipcHandlers.get('permission:reply');
+    expect(replyHandler).toBeDefined();
+
+    if (replyHandler) {
+      void replyHandler({ permissionID: 'perm-1', allow: true });
+      // Wait for the async catch handler
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    expect(mockSdk.permission.reply).toHaveBeenCalledWith('perm-1', true);
+
+    const errorCalls = mockIpcSend.mock.calls.filter(
+      ([msg]) => msg && (msg as { type: string }).type === 'error',
+    );
+    expect(errorCalls.length).toBeGreaterThan(0);
+    const errorMsg = (errorCalls[0]?.[0] as { message: string })?.message;
+    expect(errorMsg).toContain('Network error');
   });
 });
