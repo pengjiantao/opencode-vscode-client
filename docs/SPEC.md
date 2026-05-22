@@ -312,7 +312,7 @@ Webview: 渲染完成
 ```
 Agent 请求权限
   ↓
-SSE: permission.updated
+SSE: permission.asked
   ↓
 Webview: 显示 PermissionCard
   ↓

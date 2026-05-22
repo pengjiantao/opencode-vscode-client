@@ -185,7 +185,7 @@ describe('useSession', () => {
       expect(updatedPart?.text).toBe('Hello World');
     });
 
-    it('handles permission.updated event', () => {
+    it('handles permission.asked event', () => {
       const { result } = renderHook(() => useSession());
       const permission = {
         id: 'perm-1',
@@ -194,7 +194,7 @@ describe('useSession', () => {
 
       act(() => {
         result.current.handleEvent({
-          type: 'permission.updated',
+          type: 'permission.asked',
           properties: { permission },
         } as unknown as Event);
       });

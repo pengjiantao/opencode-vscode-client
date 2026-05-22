@@ -140,7 +140,7 @@ export function useSession() {
             (props as { status: SessionStatus }).status,
           );
           break;
-        case 'permission.updated':
+        case 'permission.asked':
           setPendingPermission((props as { permission: PermissionRequest }).permission);
           break;
         default:

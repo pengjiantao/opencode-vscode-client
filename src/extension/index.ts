@@ -424,7 +424,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
           info?: { id?: string };
         };
       };
-      if (evt.type === 'permission.updated' && evt.properties?.permission) {
+      if (evt.type === 'permission.asked' && evt.properties?.permission) {
         handlePermissionRequest(evt.properties.permission);
       } else if (
         evt.type === 'session.status' &&
@@ -454,7 +454,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
  * Shows a VS Code modal dialog for permission requests (Allow/Deny).
  */
 function handlePermissionRequest(permission: PermissionRequest): void {
-  window
+  void window
     .showInformationMessage(
       `OpenCode Permission: ${permission.permission}`,
       { modal: false },

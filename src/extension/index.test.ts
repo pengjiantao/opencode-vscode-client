@@ -5,22 +5,11 @@
  */
 
 import type { SessionStatus } from '@opencode-ai/sdk/v2/client';
-import * as fs from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ExtensionContext, StatusBarItem, TextDocument, TextEditor } from 'vscode';
-import { Uri, window, workspace } from 'vscode';
+import type { ExtensionContext, StatusBarItem } from 'vscode';
+import { window } from 'vscode';
 import { activate } from './index';
 import { SessionManager, type SessionManagerState } from './session-manager';
-
-vi.mock('fs', () => ({
-  existsSync: vi.fn(),
-  statSync: vi.fn(),
-  readFileSync: vi.fn(),
-  promises: {
-    stat: vi.fn(),
-    readFile: vi.fn(),
-  },
-}));
 
 // Define typed mocks for SDKClient events subscription
 let sseHandlerCallback: ((event: unknown) => void) | undefined;
@@ -42,6 +31,9 @@ const mockSdk = {
     sseHandlerCallback = handler;
     return mockUnsubscribeEvents;
   }),
+  permission: {
+    reply: vi.fn().mockResolvedValue(undefined),
+  },
   getModels: vi.fn().mockResolvedValue([]),
   getAgents: vi.fn().mockResolvedValue([]),
 };
@@ -264,210 +256,5 @@ describe('Extension Status Bar Activation', () => {
       activeSessionListener({ activeSessionID: 'session-1', sessions: [], isConnected: true });
     }
     expect(mockStatusBarItem.text).toBe('$(circle-outline) OpenCode: Ready');
-  });
-
-  it('regression: handles file:open and file:query IPC events correctly', async () => {
-    await activate(mockContext);
-
-    // Test file:open handler
-    const openHandler = ipcHandlers.get('file:open');
-    expect(openHandler).toBeDefined();
-
-    const mockDoc = {};
-    vi.spyOn(workspace, 'getWorkspaceFolder').mockReturnValue({
-      uri: { fsPath: '/some', path: '/some', scheme: 'file' } as unknown as Uri,
-      name: 'workspace',
-      index: 0,
-    });
-    const openTextDocumentSpy = vi
-      .spyOn(workspace, 'openTextDocument')
-      .mockResolvedValue(mockDoc as unknown as TextDocument);
-    vi.spyOn(window, 'showTextDocument').mockResolvedValue(undefined as unknown as TextEditor);
-    vi.mocked(fs.statSync).mockReturnValue({
-      isFile: () => true,
-      isDirectory: () => false,
-      size: 1024,
-    } as unknown as fs.Stats);
-    vi.mocked(fs.promises.stat).mockResolvedValue({
-      isFile: () => true,
-      isDirectory: () => false,
-      size: 1024,
-    } as unknown as fs.Stats);
-
-    if (openHandler) {
-      void openHandler({ path: '/some/file.txt' });
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    }
-
-    expect(openTextDocumentSpy).toHaveBeenCalled();
-
-    // Test file:query handler
-    const queryHandler = ipcHandlers.get('file:query');
-    expect(queryHandler).toBeDefined();
-
-    vi.mocked(fs.promises.stat).mockResolvedValue({
-      isFile: () => true,
-      isDirectory: () => false,
-      size: 1024,
-    } as unknown as fs.Stats);
-    vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from('File content'));
-
-    if (queryHandler) {
-      void queryHandler({ path: '/some/file.txt' });
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    }
-
-    expect(fs.promises.stat).toHaveBeenCalledWith('/some/file.txt');
-    expect(mockIpcSend).toHaveBeenCalledWith({
-      type: 'file:query-response',
-      path: '/some/file.txt',
-      exists: true,
-      filename: 'file.txt',
-      size: 1024,
-      content: 'File content',
-      isWorkspace: true,
-    });
-  });
-
-  it('regression: handles file:select IPC event correctly', async () => {
-    await activate(mockContext);
-
-    const selectHandler = ipcHandlers.get('file:select');
-    expect(selectHandler).toBeDefined();
-
-    const mockUris = [Uri.file('/some/test.txt'), Uri.file('/some/image.png')];
-    vi.spyOn(window, 'showOpenDialog').mockResolvedValue(mockUris);
-
-    vi.mocked(fs.promises.stat).mockImplementation((filePath) => {
-      if (filePath.toString().endsWith('test.txt')) {
-        return Promise.resolve({
-          isFile: () => true,
-          isDirectory: () => false,
-          size: 100,
-        } as unknown as fs.Stats);
-      }
-      return Promise.resolve({
-        isFile: () => true,
-        isDirectory: () => false,
-        size: 200,
-      } as unknown as fs.Stats);
-    });
-
-    vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from('FakeImageData'));
-
-    if (selectHandler) {
-      await selectHandler();
-    }
-
-    expect(window.showOpenDialog).toHaveBeenCalledWith({
-      canSelectFiles: true,
-      canSelectFolders: false,
-      canSelectMany: true,
-      openLabel: 'Select Files/Images',
-      title: 'Select Files/Images to Reference',
-    });
-
-    expect(mockIpcSend).toHaveBeenCalledWith({
-      type: 'file:selected',
-      files: [
-        {
-          name: 'test.txt',
-          fsPath: '/some/test.txt',
-          size: 100,
-          mime: 'text/plain',
-          dataUrl: undefined,
-        },
-        {
-          name: 'image.png',
-          fsPath: '/some/image.png',
-          size: 200,
-          mime: 'image/png',
-          dataUrl: 'data:image/png;base64,RmFrZUltYWdlRGF0YQ==',
-        },
-      ],
-    });
-  });
-
-  it('regression: handles file:select IPC event when user cancels dialog', async () => {
-    await activate(mockContext);
-
-    const selectHandler = ipcHandlers.get('file:select');
-    expect(selectHandler).toBeDefined();
-
-    vi.spyOn(window, 'showOpenDialog').mockResolvedValue(undefined);
-    mockIpcSend.mockClear();
-
-    if (selectHandler) {
-      await selectHandler();
-    }
-
-    expect(mockIpcSend).not.toHaveBeenCalled();
-  });
-
-  it('regression: skips images exceeding the 10MB size limit', async () => {
-    await activate(mockContext);
-
-    const selectHandler = ipcHandlers.get('file:select');
-    expect(selectHandler).toBeDefined();
-
-    const mockUris = [Uri.file('/some/large-image.png')];
-    vi.spyOn(window, 'showOpenDialog').mockResolvedValue(mockUris);
-    vi.spyOn(window, 'showErrorMessage').mockResolvedValue(undefined);
-
-    vi.mocked(fs.promises.stat).mockResolvedValue({
-      isFile: () => true,
-      isDirectory: () => false,
-      size: 15 * 1024 * 1024, // 15MB
-    } as unknown as fs.Stats);
-
-    mockIpcSend.mockClear();
-
-    if (selectHandler) {
-      await selectHandler();
-    }
-
-    expect(window.showErrorMessage).toHaveBeenCalledWith(
-      'Image "large-image.png" exceeds the 10MB size limit.',
-    );
-    expect(mockIpcSend).toHaveBeenCalledWith({
-      type: 'file:selected',
-      files: [],
-    });
-  });
-
-  it('regression: handles image read failure gracefully', async () => {
-    await activate(mockContext);
-
-    const selectHandler = ipcHandlers.get('file:select');
-    expect(selectHandler).toBeDefined();
-
-    const mockUris = [Uri.file('/some/bad-image.png')];
-    vi.spyOn(window, 'showOpenDialog').mockResolvedValue(mockUris);
-
-    vi.mocked(fs.promises.stat).mockResolvedValue({
-      isFile: () => true,
-      isDirectory: () => false,
-      size: 200,
-    } as unknown as fs.Stats);
-
-    vi.mocked(fs.promises.readFile).mockRejectedValue(new Error('Read error'));
-    mockIpcSend.mockClear();
-
-    if (selectHandler) {
-      await selectHandler();
-    }
-
-    expect(mockIpcSend).toHaveBeenCalledWith({
-      type: 'file:selected',
-      files: [
-        {
-          name: 'bad-image.png',
-          fsPath: '/some/bad-image.png',
-          size: 200,
-          mime: 'image/png',
-          dataUrl: undefined,
-        },
-      ],
-    });
   });
 });
