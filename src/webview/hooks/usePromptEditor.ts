@@ -192,8 +192,33 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLDivElement>) => {
       const pastedText = e.clipboardData.getData('text/plain')?.trim();
-      const pathPattern = /^(file:\/\/|\/|[a-zA-Z]:\\).+/;
-      const isPastedPath = pastedText && pathPattern.test(pastedText);
+
+      let isPastedPath = false;
+      if (pastedText) {
+        // A valid path should be a single line (no newlines).
+        const isSingleLine = !pastedText.includes('\n') && !pastedText.includes('\r');
+        if (isSingleLine) {
+          // Check if it is a file:// URL.
+          if (pastedText.startsWith('file://')) {
+            isPastedPath = true;
+          }
+          // Check if it is a Windows absolute path (e.g. C:\path or D:/path).
+          else if (/^[a-zA-Z]:[\\/]/.test(pastedText)) {
+            isPastedPath = true;
+          }
+          // Check if it is a Unix absolute path.
+          // It must start with a single slash (not double slashes like '//' for comments, or '/*' for block comments).
+          // To prevent mistaking slash commands (e.g. /goal, /help) as paths, we ensure it contains
+          // either another directory separator or an extension dot.
+          else if (/^\/(?![\\/*\s])/.test(pastedText)) {
+            const hasAdditionalSeparator = pastedText.indexOf('/', 1) !== -1;
+            const hasExtension = /\.[a-zA-Z0-9]+$/.test(pastedText);
+            if (hasAdditionalSeparator || hasExtension) {
+              isPastedPath = true;
+            }
+          }
+        }
+      }
 
       if (e.clipboardData.files && e.clipboardData.files.length > 0) {
         const files = Array.from(e.clipboardData.files);

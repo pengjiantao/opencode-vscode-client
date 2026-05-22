@@ -212,4 +212,74 @@ describe('usePromptEditor', () => {
     expect(editor.textContent).toBe('hello world');
     expect(onInputSpy).toHaveBeenCalled();
   });
+
+  it('regression: should not parse multiline code block comments starting with // as file paths', () => {
+    const sendSpy = vi.fn();
+    render(<TestComponent fileInfos={{}} sendSpy={sendSpy} onInputSpy={vi.fn()} />);
+
+    const editor = screen.getByTestId('editor');
+
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: new MockClipboardData(
+        "// ── 路径 A：转发到 webview PermissionCard ──\nipc.send({ type: 'event:received', event } as ExtToWebview);",
+      ),
+    });
+
+    fireEvent(editor, pasteEvent);
+
+    // It should NOT insert a file chip
+    const fileChip = editor.querySelector('.opencode-chip.file-chip');
+    expect(fileChip).not.toBeInTheDocument();
+
+    // It should insert it as a text chip (since it is multiline text)
+    const textChip = editor.querySelector('.opencode-chip.text-chip');
+    expect(textChip).toBeInTheDocument();
+    expect(textChip).toHaveAttribute(
+      'data-chip-text',
+      "// ── 路径 A：转发到 webview PermissionCard ──\nipc.send({ type: 'event:received', event } as ExtToWebview);",
+    );
+  });
+
+  it('regression: should not parse single-line comments starting with // as file paths', () => {
+    const sendSpy = vi.fn();
+    render(<TestComponent fileInfos={{}} sendSpy={sendSpy} onInputSpy={vi.fn()} />);
+
+    const editor = screen.getByTestId('editor');
+
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: new MockClipboardData('// ── 路径 A ──'),
+    });
+
+    fireEvent(editor, pasteEvent);
+
+    // It should NOT insert a file chip
+    const fileChip = editor.querySelector('.opencode-chip.file-chip');
+    expect(fileChip).not.toBeInTheDocument();
+
+    // It should insert it as plain text in the editor
+    expect(editor.textContent).toBe('// ── 路径 A ──');
+  });
+
+  it('regression: should not parse slash commands as file paths', () => {
+    const sendSpy = vi.fn();
+    render(<TestComponent fileInfos={{}} sendSpy={sendSpy} onInputSpy={vi.fn()} />);
+
+    const editor = screen.getByTestId('editor');
+
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: new MockClipboardData('/goal'),
+    });
+
+    fireEvent(editor, pasteEvent);
+
+    // It should NOT insert a file chip
+    const fileChip = editor.querySelector('.opencode-chip.file-chip');
+    expect(fileChip).not.toBeInTheDocument();
+
+    // It should insert it as plain text
+    expect(editor.textContent).toBe('/goal');
+  });
 });
