@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.6](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.5...v0.1.6) (2026-05-22)
+
+### Bug Fixes
+
+- **webview:** measure tooltip height offscreen when switching targets ([c1fef49](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c1fef4943e33a7f79775ad375163af6fa6244bbb))
+- **webview:** prevent paste handler from misclassifying // comments and / commands as file paths ([4ed4dcb](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/4ed4dcb9aecce813178f8f4b0d817cdfc72f69eb))
+
 ### [0.1.5](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.3...v0.1.5) (2026-05-21)
 
 ### Features
