@@ -49,6 +49,13 @@ export function Tooltip() {
   const updatePosition = useCallback(() => {
     if (!activeTarget || !tooltipRef.current) return;
 
+    // Temporarily position offscreen to prevent existing viewport constraints (e.g. right edge wrapping)
+    // from skewing the height calculation of the new content.
+    const originalLeft = tooltipRef.current.style.left;
+    const originalTop = tooltipRef.current.style.top;
+    tooltipRef.current.style.left = '-9999px';
+    tooltipRef.current.style.top = '-9999px';
+
     const triggerRect = activeTarget.getBoundingClientRect();
     const tooltipRect = tooltipRef.current.getBoundingClientRect();
 
@@ -69,6 +76,10 @@ export function Tooltip() {
 
     // Keep vertical coordinate strictly within viewport margins
     top = Math.max(8, Math.min(top, viewportHeight - tooltipRect.height - 8));
+
+    // Restore original positions temporarily before state update triggers the React render pass
+    tooltipRef.current.style.left = originalLeft;
+    tooltipRef.current.style.top = originalTop;
 
     setStyle({
       left: `${left}px`,

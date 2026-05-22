@@ -483,4 +483,74 @@ describe('Tooltip Component', () => {
     expect(tooltip.style.left).toBe('195px');
     expect(tooltip.style.top).toBe('162px');
   });
+
+  it('should measure unconstrained height offscreen when switching targets directly', () => {
+    render(
+      <div>
+        <Tooltip />
+        <button data-testid="btn-a" data-custom-title="Tall Content">
+          Button A
+        </button>
+        <button data-testid="btn-b" data-custom-title="Short Content">
+          Button B
+        </button>
+      </div>,
+    );
+
+    const btnA = screen.getByTestId('btn-a');
+    const btnB = screen.getByTestId('btn-b');
+
+    // Position Button A at top: 200px
+    btnA.getBoundingClientRect = () =>
+      ({
+        left: 100,
+        top: 200,
+        width: 50,
+        height: 20,
+      }) as DOMRect;
+
+    // Position Button B at top: 300px
+    btnB.getBoundingClientRect = () =>
+      ({
+        left: 100,
+        top: 300,
+        width: 50,
+        height: 20,
+      }) as DOMRect;
+
+    // Hover over A and show tooltip
+    fireEvent.mouseOver(btnA);
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    const tooltip = screen.getByTestId('custom-tooltip');
+    expect(tooltip).toBeInTheDocument();
+
+    // Mock tooltip getBoundingClientRect
+    // If it is positioned offscreen (left/top is -9999px), return the true unconstrained height (30px).
+    // Otherwise, if it is at the old constrained position (which simulates screen collision/restriction), return 100px.
+    tooltip.getBoundingClientRect = function (this: HTMLElement) {
+      if (this.style.left === '-9999px' && this.style.top === '-9999px') {
+        return {
+          width: 60,
+          height: 30,
+        } as DOMRect;
+      }
+      return {
+        width: 60,
+        height: 100, // Constrained height
+      } as DOMRect;
+    };
+
+    // Move directly from A to B
+    fireEvent.mouseOut(btnA, { relatedTarget: btnB });
+    fireEvent.mouseOver(btnB);
+
+    // If the fix works, it will temporarily position the tooltip offscreen,
+    // measure the height as 30px, and place it at top: 300 (btnB.top) - 30 (height) - 8 = 262px.
+    // If the fix did NOT work, it would measure it as 100px (the constrained height),
+    // and place it at top: 300 - 100 - 8 = 192px.
+    expect(tooltip.style.top).toBe('262px');
+  });
 });
