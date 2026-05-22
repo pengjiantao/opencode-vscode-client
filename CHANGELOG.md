@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.7](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.6...v0.1.7) (2026-05-22)
+
+### Bug Fixes
+
+- **webview:** improve tooltip code block styling and fix word-break ([9eb2ffb](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/9eb2ffb4818579ef3b37189e574c9524f97c2767))
+
 ### [0.1.6](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.5...v0.1.6) (2026-05-22)
 
 ### Bug Fixes
