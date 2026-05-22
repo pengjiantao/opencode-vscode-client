@@ -12,8 +12,8 @@
   font-family: var(--vscode-font-family, system-ui, sans-serif);
   line-height: 1.4;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  max-width: 320px;
-  max-height: 260px;
+  max-width: 500px;
+  max-height: 380px;
   overflow-y: auto;
   white-space: normal;
   word-break: break-word;
@@ -91,7 +91,8 @@
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 11px;
   white-space: pre-wrap;
-  word-break: break-all;
+  word-break: normal;
+  overflow-wrap: break-word;
   text-align: left;
   color: var(--vscode-editor-foreground, #cccccc);
 }
@@ -147,7 +148,7 @@
 
 .tooltip-markdown-inline-code {
   font-family: var(--vscode-editor-font-family, monospace);
-  background-color: var(--vscode-editor-background, #1e1e1e);
+  background-color: var(--vscode-editor-widget-background, #252526);
   padding: 1px 4px;
   border-radius: 3px;
   border: 1px solid var(--vscode-editor-widget-border, #454545);
@@ -155,11 +156,27 @@
 
 .tooltip-markdown-code {
   font-family: var(--vscode-editor-font-family, monospace);
-  background-color: var(--vscode-editor-background, #1e1e1e);
+  background-color: var(--vscode-editor-widget-background, #252526);
   border: 1px solid var(--vscode-editor-widget-border, #454545);
-  padding: 6px;
+  padding: 8px 10px;
   border-radius: 4px;
   margin: 6px 0;
-  white-space: pre-wrap;
-  word-break: break-all;
+  white-space: pre;
+  overflow-x: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.tooltip-markdown-code::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.tooltip-markdown-code::-webkit-scrollbar-thumb {
+  background-color: var(--vscode-scrollbarSlider-background, rgba(121, 121, 121, 0.4));
+  border-radius: 3px;
+}
+
+.tooltip-markdown-code::-webkit-scrollbar-thumb:hover {
+  background-color: var(--vscode-scrollbarSlider-activeBackground, rgba(121, 121, 121, 0.7));
 }
