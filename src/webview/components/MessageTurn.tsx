@@ -335,7 +335,6 @@ export function MessageTurn({
                     allParts={arr}
                     hasPredecessor={hasPredecessor}
                     hasSuccessor={hasSuccessor}
-                    isAssistant={true}
                   />
                 );
               })}

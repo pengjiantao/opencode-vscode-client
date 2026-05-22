@@ -3,6 +3,8 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import fs from 'fs';
+import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createMockReasoningPart,
@@ -138,20 +140,13 @@ describe('PartRenderer', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('suppresses streaming dot for user text parts', () => {
-    const part = createMockTextPart('Hello user message text');
-    part.time = { start: Date.now() };
+  it('regression: layout.css does not define a streaming dot or styling for .streaming', () => {
+    const cssPath = path.resolve(__dirname, '../styles/layout.css');
+    const cssContent = fs.readFileSync(cssPath, 'utf8');
 
-    const { container } = render(<PartRenderer part={part} isAssistant={false} />);
-    expect(container.querySelector('.streaming')).not.toBeInTheDocument();
-  });
-
-  it('shows streaming dot for assistant text parts', () => {
-    const part = createMockTextPart('Hello assistant message text');
-    part.time = { start: Date.now() };
-
-    const { container } = render(<PartRenderer part={part} isAssistant={true} />);
-    expect(container.querySelector('.streaming')).toBeInTheDocument();
+    // Ensure .streaming classes and pulse keyframes are not defined
+    expect(cssContent).not.toContain('.streaming');
+    expect(cssContent).not.toContain('pulse');
   });
 
   it('renders markdown code block without native title on the copy button to support custom tooltips', () => {

@@ -25,32 +25,6 @@
   opacity: 0.7;
 }
 
-/* Streaming shimmer — pulsing dot appended to active text parts via TextPart */
-.streaming {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.streaming::after {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--vscode-textLink-foreground);
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
-}
-
 /* Thinking indicator — 3-dot ripple shown while assistant is generating.
    Uses the same gutter as .timeline-item so the leftmost dot aligns
    with the timeline dots in tool/reasoning parts. */

@@ -14,7 +14,6 @@ import { ToolPart } from './parts/ToolPart';
 interface PartRendererProps {
   part: Part;
   allParts?: Part[];
-  isAssistant?: boolean;
   hasPredecessor?: boolean;
   hasSuccessor?: boolean;
 }
@@ -23,7 +22,6 @@ interface PartRendererProps {
 export function PartRenderer({
   part,
   allParts,
-  isAssistant = false,
   hasPredecessor = false,
   hasSuccessor = false,
 }: PartRendererProps) {
@@ -61,9 +59,7 @@ export function PartRenderer({
       if (!part.text || part.text.trim() === '') {
         return null;
       }
-      return (
-        <TextPart text={part.text} streaming={isAssistant && !part.time?.end} allParts={allParts} />
-      );
+      return <TextPart text={part.text} allParts={allParts} />;
 
     case 'tool': {
       const state = part.state;

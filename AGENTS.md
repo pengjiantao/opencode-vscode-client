@@ -24,7 +24,6 @@
 ## Commands
 
 ```sh
-npm run typecheck     # tsc --noEmit
 npm run build         # webview + extension (prod)
 npm run dev:webview   # Vite dev server for webview only
 npm run lint          # run lint check

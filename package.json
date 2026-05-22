@@ -15,7 +15,6 @@
     "vscode": "^1.120.0"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
     "test": "npm run test:extension && npm run test:webview",
     "test:extension": "vitest run --config vitest.config.extension.ts",
     "test:webview": "vitest run --config vitest.config.webview.ts",

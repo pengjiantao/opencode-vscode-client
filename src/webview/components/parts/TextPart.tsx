@@ -1,20 +1,21 @@
 /**
- * @file Renders a text message part with optional streaming indicator.
+ * @file Renders a text message part.
  */
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
 import { Markdown } from '../Markdown';
 
 interface TextPartProps {
+  /** The text content to display, which may contain Markdown. */
   text: string;
-  streaming?: boolean;
+  /** All message parts in the current turn, used for context. */
   allParts?: Part[];
 }
 
-/** Displays text content with a shimmer/animation when streaming. */
-export function TextPart({ text, streaming = false, allParts }: TextPartProps) {
+/** Displays static or streamed Markdown text content. */
+export function TextPart({ text, allParts }: TextPartProps) {
   return (
-    <div className={`part text-part ${streaming ? 'streaming' : ''}`}>
+    <div className="part text-part">
       <div className="markdown-content">
         <Markdown text={text} allParts={allParts} />
       </div>
