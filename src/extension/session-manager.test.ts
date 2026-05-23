@@ -109,6 +109,7 @@ describe('SessionManager', () => {
         ],
         'openai/gpt-4o',
         'coder',
+        undefined,
       );
     });
 
@@ -202,6 +203,54 @@ describe('SessionManager', () => {
       }>;
       expect(passedParts[0].mime).toBe('application/x-directory');
       expect(passedParts[0].url).toBe('file:///workspace/memory');
+    });
+
+    it('should propagate variant argument to promptAsync', async () => {
+      const mockPromptAsync = vi.fn().mockResolvedValue(undefined);
+      const mockSdk = {
+        session: {
+          promptAsync: mockPromptAsync,
+        },
+      } as unknown as SDKClient;
+      const manager = new SessionManager(mockSdk);
+
+      const parts = [
+        {
+          type: 'text',
+          text: 'Hello',
+        } as unknown as Part,
+      ];
+
+      await manager.sendPrompt('s1', parts, 'openai/gpt-4o', 'coder', 'high');
+
+      expect(mockPromptAsync).toHaveBeenCalledWith(
+        's1',
+        expect.any(Array),
+        'openai/gpt-4o',
+        'coder',
+        'high',
+      );
+    });
+
+    it('should propagate variant argument to sendCommand', async () => {
+      const mockCommand = vi.fn().mockResolvedValue(undefined);
+      const mockSdk = {
+        session: {
+          command: mockCommand,
+        },
+      } as unknown as SDKClient;
+      const manager = new SessionManager(mockSdk);
+
+      await manager.sendCommand('s1', '/explain', 'some code', 'openai/gpt-4o', 'coder', 'medium');
+
+      expect(mockCommand).toHaveBeenCalledWith(
+        's1',
+        '/explain',
+        'some code',
+        'openai/gpt-4o',
+        'coder',
+        'medium',
+      );
     });
   });
 });

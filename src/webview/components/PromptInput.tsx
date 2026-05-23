@@ -21,6 +21,7 @@ import { MentionPopover } from './MentionPopover';
 import { ModelSelector } from './ModelSelector';
 import { PromptInputFooter } from './PromptInputFooter';
 import { PromptInputHeader } from './PromptInputHeader';
+import { VariantSelector } from './VariantSelector';
 
 /** Props interface for PromptInput component */
 interface PromptInputProps {
@@ -38,10 +39,14 @@ interface PromptInputProps {
   activeModel?: string;
   /** Active agent ID override */
   activeAgent?: string;
+  /** Active model variants mapping */
+  modelVariants?: Record<string, string>;
   /** Callback triggered on model selection change */
   onModelChange: (model: string) => void;
   /** Callback triggered on agent selection change */
   onAgentChange: (agent: string) => void;
+  /** Callback triggered when a model variant selection changes */
+  onVariantChange?: (model: string, variant: string) => void;
   /** Disable input state */
   disabled?: boolean;
 }
@@ -55,8 +60,10 @@ export function PromptInput({
   agents,
   activeModel: controlledModel,
   activeAgent: controlledAgent,
+  modelVariants = {},
   onModelChange,
   onAgentChange,
+  onVariantChange,
   disabled = false,
 }: PromptInputProps) {
   const [isFocused, setIsFocused] = React.useState(false);
@@ -77,6 +84,12 @@ export function PromptInput({
 
   const activeModel = selectedModel || (models.length > 0 ? models[0].id : '');
   const activeAgent = selectedAgent || (agents.length > 0 ? agents[0].id : '');
+
+  // Find variants and resolved selected variant for active model
+  const currentModelVariants = models.find((m) => m.id === activeModel)?.variants || [];
+  const savedVariant = modelVariants[activeModel];
+  const activeVariant =
+    savedVariant && currentModelVariants.includes(savedVariant) ? savedVariant : 'default';
 
   const activeSessionID = useSessionStore((s) => s.activeSessionID);
 
@@ -440,6 +453,16 @@ export function PromptInput({
                 onModelChange(m);
               }}
             />
+
+            {currentModelVariants.length > 0 && onVariantChange && (
+              <VariantSelector
+                variants={currentModelVariants}
+                value={activeVariant}
+                onChange={(v) => {
+                  onVariantChange(activeModel, v);
+                }}
+              />
+            )}
 
             <AgentSelector
               agents={agents}

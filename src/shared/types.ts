@@ -79,6 +79,8 @@ export interface ModelInfo {
   isConnected?: boolean;
   /** Maximum token limit supported by the model (optional). */
   contextLimit?: number;
+  /** Available variants/reasoning profiles for the model (optional). */
+  variants?: string[];
 }
 
 /**
@@ -136,7 +138,14 @@ export type ExtToWebview =
   | { type: 'session:deleted'; sessionID: string }
   | { type: 'event:received'; event: Event }
   | { type: 'error'; message: string }
-  | { type: 'init'; sessions: Session[]; activeModel?: string; activeAgent?: string }
+  | {
+      type: 'init';
+      sessions: Session[];
+      activeModel?: string;
+      activeAgent?: string;
+      /** Map of model ID to last selected variant. */
+      modelVariants?: Record<string, string>;
+    }
   | { type: 'settings:open' }
   | { type: 'models:list'; models: ModelInfo[] }
   | { type: 'agents:list'; agents: AgentInfo[] }
@@ -203,6 +212,7 @@ export type WebviewToExt =
   | { type: 'prompt:abort'; sessionID: string }
   | { type: 'model:switch'; model: string }
   | { type: 'agent:switch'; agent: string }
+  | { type: 'variant:switch'; model: string; variant: string }
   | { type: 'permission:reply'; permissionID: string; allow: boolean }
   | { type: 'sessions:select-history' }
   | { type: 'file:open'; path: string; startLine?: number; endLine?: number }

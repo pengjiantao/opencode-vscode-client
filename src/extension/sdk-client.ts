@@ -32,12 +32,31 @@ export interface SDKClient {
     messages(id: string): Promise<Message[]>;
     messagesWithParts(id: string): Promise<Array<{ info: Message; parts: Part[] }>>;
     /** Sends a prompt and waits for completion (blocking). */
-    prompt(id: string, parts: Part[], model?: string, agent?: string): Promise<void>;
+    prompt(
+      id: string,
+      parts: Part[],
+      model?: string,
+      agent?: string,
+      variant?: string,
+    ): Promise<void>;
     /** Sends a prompt without waiting for completion (non-blocking). */
-    promptAsync(id: string, parts: Part[], model?: string, agent?: string): Promise<void>;
+    promptAsync(
+      id: string,
+      parts: Part[],
+      model?: string,
+      agent?: string,
+      variant?: string,
+    ): Promise<void>;
     abort(id: string): Promise<void>;
     /** Sends a built-in command for execution. */
-    command(id: string, cmd: string, args?: string, model?: string, agent?: string): Promise<void>;
+    command(
+      id: string,
+      cmd: string,
+      args?: string,
+      model?: string,
+      agent?: string,
+      variant?: string,
+    ): Promise<void>;
   };
   lsp: {
     status(): Promise<LspStatus[]>;

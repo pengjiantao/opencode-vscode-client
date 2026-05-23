@@ -497,6 +497,55 @@ describe('PromptInput', () => {
     // Verify plain text was inserted into editor
     expect(editor.textContent).toBe('hello from clipboard');
   });
+
+  /** Regression: VariantSelector is rendered only when active model has variants. */
+  it('regression: VariantSelector is rendered only when active model has variants', () => {
+    const models = [
+      {
+        id: 'model-with-variants',
+        name: 'Model V',
+        providerName: 'OpenAI',
+        isConnected: true,
+        variants: ['low', 'high'],
+      },
+      { id: 'model-no-variants', name: 'Model N', providerName: 'OpenAI', isConnected: true },
+    ];
+    const mockOnVariantChange = vi.fn();
+    const { rerender } = render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={models}
+        agents={[]}
+        activeModel="model-no-variants"
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+        onVariantChange={mockOnVariantChange}
+      />,
+    );
+
+    expect(screen.queryByRole('combobox', { name: /select model variant/i })).toBeNull();
+
+    rerender(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={models}
+        agents={[]}
+        activeModel="model-with-variants"
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+        onVariantChange={mockOnVariantChange}
+      />,
+    );
+
+    const variantTrigger = screen.getByRole('combobox', { name: /select model variant/i });
+    expect(variantTrigger).toBeInTheDocument();
+    expect(variantTrigger).toHaveTextContent('Default');
+
+    fireEvent.click(variantTrigger);
+    const option = screen.getByText('high');
+    fireEvent.click(option);
+    expect(mockOnVariantChange).toHaveBeenCalledWith('model-with-variants', 'high');
+  });
 });
 
 describe('PromptInputHeader', () => {

@@ -33,6 +33,7 @@ export function App() {
   const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [activeModel, setActiveModel] = useState<string>('');
   const [activeAgent, setActiveAgent] = useState<string>('');
+  const [modelVariants, setModelVariants] = useState<Record<string, string>>({});
 
   const sessions = useSessionStore((s) => s.sessions);
   const activeSessionID = useSessionStore((s) => s.activeSessionID);
@@ -120,6 +121,9 @@ export function App() {
           if (message.activeAgent) {
             setActiveAgent(message.activeAgent);
           }
+          if (message.modelVariants) {
+            setModelVariants(message.modelVariants);
+          }
           break;
       }
     };
@@ -186,6 +190,11 @@ export function App() {
     send({ type: 'agent:switch', agent } as never);
   };
 
+  const handleVariantChange = (model: string, variant: string) => {
+    setModelVariants((prev) => ({ ...prev, [model]: variant }));
+    send({ type: 'variant:switch', model, variant } as never);
+  };
+
   const handlePermissionReply = (permissionID: string, allow: boolean) => {
     send({ type: 'permission:reply', permissionID, allow } as never);
   };
@@ -228,8 +237,10 @@ export function App() {
         agents={agents}
         activeModel={activeModel}
         activeAgent={activeAgent}
+        modelVariants={modelVariants}
         onModelChange={handleModelChange}
         onAgentChange={handleAgentChange}
+        onVariantChange={handleVariantChange}
         disabled={!activeSessionID}
       />
 

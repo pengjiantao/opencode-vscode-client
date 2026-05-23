@@ -128,6 +128,7 @@ export class SessionManager {
     parts: Part[],
     model?: string,
     agent?: string,
+    variant?: string,
   ): Promise<void> {
     /* Clean parts array to strictly adhere to the backend's PromptInput schema
        (removing ambient/extra fields like sessionID and messageID to avoid Schema validation errors) */
@@ -184,7 +185,7 @@ export class SessionManager {
       return part;
     });
 
-    await this.sdk.session.promptAsync(sessionID, cleanedParts, model, agent);
+    await this.sdk.session.promptAsync(sessionID, cleanedParts, model, agent, variant);
   }
 
   /** Sends a built-in command for execution with optional arguments. */
@@ -194,8 +195,9 @@ export class SessionManager {
     args?: string,
     model?: string,
     agent?: string,
+    variant?: string,
   ): Promise<void> {
-    await this.sdk.session.command(sessionID, command, args, model, agent);
+    await this.sdk.session.command(sessionID, command, args, model, agent, variant);
   }
 
   /** Aborts a running prompt for the given session. */

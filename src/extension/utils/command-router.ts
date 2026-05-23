@@ -20,6 +20,8 @@ export interface HandleCommandPartOptions {
   activeModel: string | undefined;
   /** The currently active agent selection */
   activeAgent: string | undefined;
+  /** The currently selected model variant (e.g. thinking profile) */
+  activeVariant: string | undefined;
   /** The core session manager instance */
   sessionManager: SessionManager;
   /** The extension IPC communication bridge to the webview */
@@ -33,7 +35,8 @@ export interface HandleCommandPartOptions {
  * @returns true if a command part was detected and routed; false otherwise.
  */
 export function handleCommandPart(params: HandleCommandPartOptions): boolean {
-  const { parts, text, activeID, activeModel, activeAgent, sessionManager, ipc } = params;
+  const { parts, text, activeID, activeModel, activeAgent, activeVariant, sessionManager, ipc } =
+    params;
 
   const commandPart = parts?.find(
     (p) =>
@@ -80,7 +83,14 @@ export function handleCommandPart(params: HandleCommandPartOptions): boolean {
   // throwing. Always fetching messages ensures these responses are shown.
   void (async () => {
     try {
-      await sessionManager.sendCommand(activeID, commandName, args, activeModel, activeAgent);
+      await sessionManager.sendCommand(
+        activeID,
+        commandName,
+        args,
+        activeModel,
+        activeAgent,
+        activeVariant,
+      );
     } catch (err) {
       console.error('[prompt:send] command endpoint error (messages may still exist):', err);
     }

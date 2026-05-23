@@ -29,6 +29,8 @@ let provider: OpencodeSidebarViewProvider;
 export async function activate(context: ExtensionContext): Promise<void> {
   let activeModel = context.globalState.get<string>('lastUsedModel');
   let activeAgent = context.globalState.get<string>('lastUsedAgent');
+  // Load saved variant selections for all models
+  const modelVariants = context.globalState.get<Record<string, string>>('modelVariants') || {};
   const sessionStatuses = new Map<string, SessionStatus>();
 
   try {
@@ -201,7 +203,13 @@ export async function activate(context: ExtensionContext): Promise<void> {
             .then((session) => {
               openIDs = [session.id];
               void context.workspaceState.update('openSessionIDs', openIDs);
-              ipc.send({ type: 'init', sessions: [session], activeModel, activeAgent });
+              ipc.send({
+                type: 'init',
+                sessions: [session],
+                activeModel,
+                activeAgent,
+                modelVariants,
+              });
               ipc.send({ type: 'session:switched', sessionID: session.id });
               ipc.send({ type: 'messages:list', sessionID: session.id, messages: [], parts: [] });
             })
@@ -213,7 +221,13 @@ export async function activate(context: ExtensionContext): Promise<void> {
           void context.workspaceState.update('openSessionIDs', openIDs);
 
           const openSessions = activeSessions.filter((s) => openIDs.includes(s.id));
-          ipc.send({ type: 'init', sessions: openSessions, activeModel, activeAgent });
+          ipc.send({
+            type: 'init',
+            sessions: openSessions,
+            activeModel,
+            activeAgent,
+            modelVariants,
+          });
           ipc.send({ type: 'session:switched', sessionID: activeID });
 
           void sessionManager
@@ -357,6 +371,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
         return;
       }
 
+      // Resolve the active variant for the currently selected model
+      const activeVariant = activeModel ? modelVariants[activeModel] || 'default' : 'default';
+      const sdkVariant = activeVariant === 'default' ? undefined : activeVariant;
+
       // Detect command parts and route to the dedicated command execution endpoint
       const handled = handleCommandPart({
         parts,
@@ -364,6 +382,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         activeID,
         activeModel,
         activeAgent,
+        activeVariant: sdkVariant,
         sessionManager,
         ipc,
       });
@@ -381,9 +400,11 @@ export async function activate(context: ExtensionContext): Promise<void> {
         } as unknown as Part,
       ];
 
-      sessionManager.sendPrompt(activeID, promptParts, activeModel, activeAgent).catch((err) => {
-        ipc.send({ type: 'error', message: (err as Error).message });
-      });
+      sessionManager
+        .sendPrompt(activeID, promptParts, activeModel, activeAgent, sdkVariant)
+        .catch((err) => {
+          ipc.send({ type: 'error', message: (err as Error).message });
+        });
     });
 
     registerFileHandlers(ipc);
@@ -407,6 +428,14 @@ export async function activate(context: ExtensionContext): Promise<void> {
       activeAgent = agent || undefined;
       void context.globalState.update('lastUsedAgent', agent || undefined);
       void syncMetadata();
+    });
+
+    ipc.on('variant:switch', (msg) => {
+      const { model, variant } = msg as { model: string; variant: string };
+      if (model) {
+        modelVariants[model] = variant || 'default';
+        void context.globalState.update('modelVariants', modelVariants);
+      }
     });
 
     ipc.on('permission:reply', (msg) => {

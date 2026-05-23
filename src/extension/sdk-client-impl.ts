@@ -94,7 +94,13 @@ export function createSDKClient(directory?: string): SDKClient {
         return result.data ?? [];
       },
       /** Sends a prompt and blocks until the response is complete. */
-      prompt: async (id: string, parts: Part[], model?: string, agent?: string) => {
+      prompt: async (
+        id: string,
+        parts: Part[],
+        model?: string,
+        agent?: string,
+        variant?: string,
+      ) => {
         let modelObj: { providerID: string; modelID: string } | undefined;
         if (model) {
           const [providerID, modelID] = model.split('/');
@@ -105,10 +111,17 @@ export function createSDKClient(directory?: string): SDKClient {
           parts: parts as Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>,
           model: modelObj,
           agent,
+          variant, // Pass reasoning variant configuration to SDK prompt call
         });
       },
       /** Sends a prompt and returns immediately (non-blocking). */
-      promptAsync: async (id: string, parts: Part[], model?: string, agent?: string) => {
+      promptAsync: async (
+        id: string,
+        parts: Part[],
+        model?: string,
+        agent?: string,
+        variant?: string,
+      ) => {
         let modelObj: { providerID: string; modelID: string } | undefined;
         if (model) {
           const [providerID, modelID] = model.split('/');
@@ -119,6 +132,7 @@ export function createSDKClient(directory?: string): SDKClient {
           parts: parts as Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>,
           model: modelObj,
           agent,
+          variant, // Pass reasoning variant configuration to SDK async prompt call
         });
       },
       abort: async (id: string) => {
@@ -130,6 +144,7 @@ export function createSDKClient(directory?: string): SDKClient {
         args?: string,
         model?: string,
         agent?: string,
+        variant?: string,
       ): Promise<void> => {
         const result = await client.session.command({
           sessionID: id,
@@ -137,6 +152,7 @@ export function createSDKClient(directory?: string): SDKClient {
           arguments: args,
           model,
           agent,
+          variant, // Pass reasoning variant configuration to SDK command call
         });
         const typed = result as { data?: unknown; error?: unknown };
         if (typed.error) {
@@ -230,6 +246,8 @@ export function createSDKClient(directory?: string): SDKClient {
             providerName: p.name,
             isConnected,
             contextLimit: model.limit?.context,
+            // Extract the list of available variant names from provider model configurations
+            variants: model.variants ? Object.keys(model.variants) : undefined,
           });
         }
       }
