@@ -658,6 +658,47 @@ pre.code-block code {
   background-color: transparent;
 }
 
+/* Interactive diff elements pointer and hover effects */
+.diff-file-header[role='button'],
+.diff-hunk-header-row[role='button'] .diff-hunk-header,
+.diff-row-added[role='button'],
+.diff-row-removed[role='button'],
+.diff-row-context[role='button'] {
+  cursor: pointer;
+}
+
+.diff-file-header[role='button']:hover {
+  background-color: color-mix(in srgb, var(--webview-foreground) 10%, transparent);
+}
+
+.diff-hunk-header-row[role='button']:hover .diff-hunk-header {
+  background-color: color-mix(
+    in srgb,
+    var(--webview-foreground) 8%,
+    var(--vscode-textCodeBlock-background, #252526)
+  );
+}
+
+.diff-row-added[role='button']:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--vscode-diffEditor-insertedLineBackground, rgba(46, 160, 67, 0.15)),
+    var(--webview-foreground) 10%
+  );
+}
+
+.diff-row-removed[role='button']:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--vscode-diffEditor-removedLineBackground, rgba(248, 81, 112, 0.15)),
+    var(--webview-foreground) 10%
+  );
+}
+
+.diff-row-context[role='button']:hover {
+  background-color: color-mix(in srgb, var(--webview-foreground) 5%, transparent);
+}
+
 .diff-empty-fallback {
   padding: 8px 12px;
   font-size: 12px;

@@ -2,7 +2,7 @@
  * @file Unit tests for the DiffPart component.
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { DiffPart } from './DiffPart';
 
@@ -79,5 +79,109 @@ describe('DiffPart', () => {
   it('renders fallback when no hunks are parsed', () => {
     render(<DiffPart diff="" />);
     expect(screen.getByText('No changes to display')).toBeInTheDocument();
+  });
+
+  it('handles clicks on headers, hunk headers, and diff lines by posting file:open IPC messages', () => {
+    const diff = `
+--- a/file.ts
++++ b/file.ts
+@@ -1,3 +1,3 @@
+ const x = 10;
+-const y = 20;
++const y = 30;
+`;
+
+    render(<DiffPart diff={diff.trim()} filePath="file.ts" />);
+
+    // 1. File header click -> open file (no lines)
+    vi.mocked(window.vscode.postMessage).mockClear();
+    fireEvent.click(screen.getByText('file.ts'));
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: 'file.ts',
+    });
+
+    // 2. Hunk header click -> open file at hunk new start line (1)
+    vi.mocked(window.vscode.postMessage).mockClear();
+    fireEvent.click(screen.getByText('@@ -1,3 +1,3 @@'));
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: 'file.ts',
+      startLine: 1,
+    });
+
+    // 3. Context line click -> open file at line 1
+    vi.mocked(window.vscode.postMessage).mockClear();
+    const contextRow = screen.getByText('const x = 10;').closest('tr');
+    expect(contextRow).toBeInTheDocument();
+    fireEvent.click(contextRow!);
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: 'file.ts',
+      startLine: 1,
+    });
+
+    // 4. Removed line click -> open file at old line 2
+    vi.mocked(window.vscode.postMessage).mockClear();
+    const removedRow = screen.getByText('const y = 20;').closest('tr');
+    expect(removedRow).toBeInTheDocument();
+    fireEvent.click(removedRow!);
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: 'file.ts',
+      startLine: 2,
+    });
+
+    // 5. Added line click -> open file and select line 2
+    vi.mocked(window.vscode.postMessage).mockClear();
+    const addedRow = screen.getByText('const y = 30;').closest('tr');
+    expect(addedRow).toBeInTheDocument();
+    fireEvent.click(addedRow!);
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: 'file.ts',
+      startLine: 2,
+      endLine: 2,
+    });
+  });
+
+  it('uses parsed newFile if filePath is not explicitly provided', () => {
+    const diff = `
+--- a/file.ts
++++ b/file.ts
+@@ -1,1 +1,1 @@
+ const x = 10;
+`;
+
+    render(<DiffPart diff={diff.trim()} />);
+
+    vi.mocked(window.vscode.postMessage).mockClear();
+    const contextRow = screen.getByText('const x = 10;').closest('tr');
+    expect(contextRow).toBeInTheDocument();
+    fireEvent.click(contextRow!);
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: 'file.ts',
+      startLine: 1,
+    });
+  });
+
+  it('does not send file:open messages if path is /dev/null', () => {
+    const diff = `
+--- a/file.ts
++++ b/dev/null
+@@ -1,1 +0,0 @@
+-const x = 10;
+`;
+
+    render(<DiffPart diff={diff.trim()} />);
+
+    // Since path is /dev/null, it is invalid for file opening, so no button role or clicks
+    vi.mocked(window.vscode.postMessage).mockClear();
+    const removedRow = screen.getByText('const x = 10;').closest('tr');
+    expect(removedRow).toBeInTheDocument();
+    expect(removedRow).not.toHaveAttribute('role', 'button');
+    fireEvent.click(removedRow!);
+    expect(window.vscode.postMessage).not.toHaveBeenCalled();
   });
 });

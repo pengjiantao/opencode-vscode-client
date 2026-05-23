@@ -110,7 +110,13 @@ describe('Extension IPC & Permission Event Handlers', () => {
     const openHandler = ipcHandlers.get('file:open');
     expect(openHandler).toBeDefined();
 
-    const mockDoc = {};
+    const mockDoc = {
+      lineAt: vi.fn().mockReturnValue({ text: 'mockContent' }),
+    };
+    const mockEditor = {
+      selection: undefined as import('vscode').Selection | undefined,
+      revealRange: vi.fn(),
+    };
     vi.spyOn(workspace, 'getWorkspaceFolder').mockReturnValue({
       uri: { fsPath: '/some', path: '/some', scheme: 'file' } as unknown as Uri,
       name: 'workspace',
@@ -120,7 +126,7 @@ describe('Extension IPC & Permission Event Handlers', () => {
       .spyOn(workspace, 'openTextDocument')
       .mockResolvedValue(mockDoc as unknown as import('vscode').TextDocument);
     vi.spyOn(window, 'showTextDocument').mockResolvedValue(
-      undefined as unknown as import('vscode').TextEditor,
+      mockEditor as unknown as import('vscode').TextEditor,
     );
     vi.mocked(fs.statSync).mockReturnValue({
       isFile: () => true,
@@ -134,11 +140,32 @@ describe('Extension IPC & Permission Event Handlers', () => {
     } as unknown as fs.Stats);
 
     if (openHandler) {
+      // 1. Without line numbers
       void openHandler({ path: '/some/file.txt' });
       await new Promise((resolve) => setTimeout(resolve, 0));
-    }
+      expect(openTextDocumentSpy).toHaveBeenCalled();
 
-    expect(openTextDocumentSpy).toHaveBeenCalled();
+      // 2. With startLine only
+      mockEditor.revealRange.mockClear();
+      void openHandler({ path: '/some/file.txt', startLine: 10 });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(mockEditor.selection).toBeDefined();
+      expect(mockEditor.selection?.anchor.line).toBe(9);
+      expect(mockEditor.selection?.active.line).toBe(9);
+      expect(mockEditor.selection?.anchor.character).toBe(0);
+      expect(mockEditor.selection?.active.character).toBe(0);
+      expect(mockEditor.revealRange).toHaveBeenCalled();
+
+      // 3. With startLine and endLine
+      mockEditor.revealRange.mockClear();
+      void openHandler({ path: '/some/file.txt', startLine: 10, endLine: 15 });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(mockEditor.selection).toBeDefined();
+      expect(mockEditor.selection?.anchor.line).toBe(9);
+      expect(mockEditor.selection?.active.line).toBe(14);
+      expect(mockEditor.selection?.active.character).toBe('mockContent'.length);
+      expect(mockEditor.revealRange).toHaveBeenCalled();
+    }
 
     // Test file:query handler
     const queryHandler = ipcHandlers.get('file:query');

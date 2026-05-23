@@ -6,6 +6,24 @@
 import { vi } from 'vitest';
 
 export const mockVscode = {
+  Position: class Position {
+    constructor(
+      public readonly line: number,
+      public readonly character: number,
+    ) {}
+  },
+  Range: class Range {
+    constructor(
+      public readonly start: unknown,
+      public readonly end: unknown,
+    ) {}
+  },
+  Selection: class Selection {
+    constructor(
+      public readonly anchor: unknown,
+      public readonly active: unknown,
+    ) {}
+  },
   StatusBarAlignment: {
     Left: 1,
     Right: 2,

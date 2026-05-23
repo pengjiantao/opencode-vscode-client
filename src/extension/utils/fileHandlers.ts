@@ -265,12 +265,17 @@ export function registerFileHandlers(ipc: IPCBridge): void {
       workspace.openTextDocument(uri).then(
         (doc) => {
           window.showTextDocument(doc).then((editor) => {
-            // Highlight and reveal the selection range if specified by a code-selection chip
-            if (startLine !== undefined && endLine !== undefined) {
+            // Position cursor and reveal line. If endLine is provided, select the full range (e.g. for added lines).
+            if (startLine !== undefined) {
               const startPos = new Position(startLine - 1, 0);
-              const endPos = new Position(endLine - 1, doc.lineAt(endLine - 1).text.length);
-              editor.selection = new Selection(startPos, endPos);
-              editor.revealRange(new Range(startPos, endPos));
+              if (endLine !== undefined) {
+                const endPos = new Position(endLine - 1, doc.lineAt(endLine - 1).text.length);
+                editor.selection = new Selection(startPos, endPos);
+                editor.revealRange(new Range(startPos, endPos));
+              } else {
+                editor.selection = new Selection(startPos, startPos);
+                editor.revealRange(new Range(startPos, startPos));
+              }
             }
           });
         },
