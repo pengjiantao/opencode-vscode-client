@@ -82,12 +82,16 @@
 }
 
 .prompt-input-footer .stop-btn {
-  color: var(--vscode-statusBarItem-errorBackground, #c74c3c);
-  transition: color 0.12s ease;
+  color: var(--vscode-errorForeground, #c74c3c);
+  opacity: 0.85;
+  transition:
+    opacity 0.12s ease,
+    color 0.12s ease;
 }
 
 .prompt-input-footer .stop-btn:hover:not(:disabled) {
-  color: var(--vscode-statusBarItem-errorHoverBackground, #e74c3c);
+  color: var(--vscode-errorForeground, #e74c3c);
+  opacity: 1;
 }
 
 /* Custom Select Components */

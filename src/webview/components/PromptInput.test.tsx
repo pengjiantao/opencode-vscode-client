@@ -237,6 +237,23 @@ describe('PromptInput', () => {
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 
+  /** Regression: stop button has stop-btn class to map to high-contrast errorForeground colors. */
+  it('regression: stop button has stop-btn class to map to errorForeground colors', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        status={{ type: 'busy' }}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const stopBtn = screen.getByRole('button', { name: /stop/i });
+    expect(stopBtn).toHaveClass('stop-btn');
+  });
+
   /** Regression: subagents and hidden agents should be filtered out of the agent list. */
   it('regression: AgentSelector only lists primary (non-subagent and non-hidden) agents', () => {
     const agents = [
