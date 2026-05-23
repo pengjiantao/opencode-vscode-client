@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.9](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.8...v0.1.9) (2026-05-23)
+
+### Features
+
+- **extension:** buffer pending permission/question requests in extension host ([6ec214d](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/6ec214d33fd5a1b4620395ff7dd60ac6039a76a4))
+- **extension:** implement per-session model/agent/variant isolation ([de1a404](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/de1a404ef3afbacc4bbfc01b8c87b098d0bd825b))
+
 ### [0.1.8](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.7...v0.1.8) (2026-05-23)
 
 ### Features
