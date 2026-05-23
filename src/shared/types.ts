@@ -183,6 +183,10 @@ export type ExtToWebview =
   | {
       type: 'file:selected';
       files: SelectedFileInfo[];
+    }
+  | {
+      type: 'editor:paste-plain-text';
+      text: string;
     };
 
 /**
@@ -205,5 +209,6 @@ export type WebviewToExt =
   | { type: 'file:query'; path: string }
   | { type: 'workspace:search-files'; query: string }
   | { type: 'file:select' }
+  | { type: 'clipboard:paste-plain-text' }
   | { type: 'init' }
   | { type: 'pong' };

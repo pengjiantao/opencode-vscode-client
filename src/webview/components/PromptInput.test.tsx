@@ -451,6 +451,35 @@ describe('PromptInput', () => {
     expect(chip).toHaveAttribute('data-chip-filename', 'test.txt');
     expect(chip).toHaveAttribute('data-chip-path', '/workspace/test.txt');
   });
+
+  /** Regression: inserts plain text when receiving editor:paste-plain-text message */
+  it('regression: inserts plain text when receiving editor:paste-plain-text message', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const editor = screen.getByTestId('prompt-editor');
+
+    // Simulate IPC message from extension host
+    fireEvent(
+      window,
+      new MessageEvent('message', {
+        data: {
+          type: 'editor:paste-plain-text',
+          text: 'hello from clipboard',
+        },
+      }),
+    );
+
+    // Verify plain text was inserted into editor
+    expect(editor.textContent).toBe('hello from clipboard');
+  });
 });
 
 describe('PromptInputHeader', () => {

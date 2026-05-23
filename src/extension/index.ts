@@ -6,7 +6,7 @@
 
 import type { Part, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import { StatusBarAlignment, ThemeColor, window, workspace, type ExtensionContext } from 'vscode';
-import { registerExtensionCommands } from './commands';
+import { pasteClipboardTextAsPlainText, registerExtensionCommands } from './commands';
 import { IPCBridge } from './ipc';
 import { syncMetadata as importSyncMetadata } from './metadata';
 import type { SDKClient } from './sdk-client';
@@ -343,6 +343,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     ipc.on('sessions:select-history', () => {
       handleSelectHistory();
+    });
+
+    ipc.on('clipboard:paste-plain-text', () => {
+      void pasteClipboardTextAsPlainText(ipc);
     });
 
     ipc.on('prompt:send', (msg) => {

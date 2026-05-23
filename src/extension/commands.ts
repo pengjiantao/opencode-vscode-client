@@ -48,6 +48,12 @@ export function registerExtensionCommands(
   );
 
   context.subscriptions.push(
+    commands.registerCommand('opencode-sidebar.pasteAsPlainText', async () => {
+      await pasteClipboardTextAsPlainText(ipc);
+    }),
+  );
+
+  context.subscriptions.push(
     commands.registerCommand('opencode-sidebar.sendSelectionToOpencode', () => {
       const editor = window.activeTextEditor;
       if (!editor) return;
@@ -162,6 +168,20 @@ export function registerExtensionCommands(
       provider.view?.show(true);
     }),
   );
+}
+
+/**
+ * Reads the native VS Code clipboard and sends its current text to the prompt editor.
+ *
+ * @param ipc The bridge used to deliver the plain text insertion message.
+ */
+export async function pasteClipboardTextAsPlainText(ipc: IPCBridge): Promise<void> {
+  const text = await env.clipboard.readText();
+  if (!text) return;
+  ipc.send({
+    type: 'editor:paste-plain-text',
+    text,
+  });
 }
 
 /**

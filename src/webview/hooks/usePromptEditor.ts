@@ -323,25 +323,20 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
           return;
         }
 
-        if (pastedText.includes('\n') || pastedText.includes('\r')) {
-          e.preventDefault();
-          const linesCount = pastedText.split(/\r?\n/).length;
-          insertChip({
-            id: `text-${Math.random().toString(36).substring(7)}`,
-            type: 'text',
-            filename: `Pasted ${linesCount} Lines`,
-            text: pastedText,
-            linesCount,
-          });
-          return;
-        }
-
         e.preventDefault();
-        // Use custom DOM text insertion instead of deprecated document.execCommand to support sandboxed VS Code webview environments.
-        insertText(pastedText);
+        const linesCount = pastedText.split(/\r?\n/).length;
+        // Treat all other pasted text (single-line or multi-line) as text chips under ordinary paste.
+        insertChip({
+          id: `text-${Math.random().toString(36).substring(7)}`,
+          type: 'text',
+          filename: `Pasted ${linesCount} Lines`,
+          text: pastedText,
+          linesCount,
+        });
+        return;
       }
     },
-    [insertChip, insertText],
+    [insertChip],
   );
 
   return { insertChip, insertText, handlePaste };

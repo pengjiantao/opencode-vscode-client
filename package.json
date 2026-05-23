@@ -143,9 +143,21 @@
         "command": "opencode-sidebar.explainTerminalToOpencode",
         "title": "Explain and Fix in OpenCode",
         "category": "OpenCode"
+      },
+      {
+        "command": "opencode-sidebar.pasteAsPlainText",
+        "title": "Paste as Plain Text",
+        "category": "OpenCode"
       }
     ],
     "menus": {
+      "webview/context": [
+        {
+          "command": "opencode-sidebar.pasteAsPlainText",
+          "when": "webviewId == 'opencode-sidebar.main' && webviewSection == 'promptInput'",
+          "group": "paste@1"
+        }
+      ],
       "view/title": [
         {
           "command": "opencode-sidebar.createSession",
@@ -196,6 +208,14 @@
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "opencode-sidebar.pasteAsPlainText",
+        "key": "ctrl+shift+v",
+        "mac": "cmd+shift+v",
+        "when": "activeWebviewPanelId == 'opencode-sidebar.main'"
+      }
+    ],
     "configuration": {
       "title": "OpenCode Sidebar",
       "properties": {

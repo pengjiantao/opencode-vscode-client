@@ -70,6 +70,8 @@ export function usePromptSelectionIPC({
         callbacksRef.current.insertText('\nExplain this content or fix issues in it');
         callbacksRef.current.onSubmit();
       }
+    } else if (message.type === 'editor:paste-plain-text') {
+      callbacksRef.current.insertText(message.text);
     }
   });
 }

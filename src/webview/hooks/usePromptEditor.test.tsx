@@ -196,7 +196,7 @@ describe('usePromptEditor', () => {
     expect(screen.getByText('Pasted 3 Lines')).toBeInTheDocument();
   });
 
-  it('should parse pasted single-line plain text and insert it as plain text', () => {
+  it('should parse pasted single-line plain text and insert it as a text chip', () => {
     const onInputSpy = vi.fn();
     render(<TestComponent fileInfos={{}} sendSpy={vi.fn()} onInputSpy={onInputSpy} />);
 
@@ -209,7 +209,11 @@ describe('usePromptEditor', () => {
 
     fireEvent(editor, pasteEvent);
 
-    expect(editor.textContent).toBe('hello world');
+    const chip = editor.querySelector('.opencode-chip.text-chip');
+    expect(chip).toBeInTheDocument();
+    expect(chip).toHaveAttribute('data-chip-text', 'hello world');
+    expect(chip).toHaveAttribute('data-chip-lines-count', '1');
+    expect(screen.getByText('Pasted 1 Lines')).toBeInTheDocument();
     expect(onInputSpy).toHaveBeenCalled();
   });
 
@@ -241,7 +245,7 @@ describe('usePromptEditor', () => {
     );
   });
 
-  it('regression: should not parse single-line comments starting with // as file paths', () => {
+  it('regression: should not parse single-line comments starting with // as file paths but insert as text chip', () => {
     const sendSpy = vi.fn();
     render(<TestComponent fileInfos={{}} sendSpy={sendSpy} onInputSpy={vi.fn()} />);
 
@@ -258,11 +262,14 @@ describe('usePromptEditor', () => {
     const fileChip = editor.querySelector('.opencode-chip.file-chip');
     expect(fileChip).not.toBeInTheDocument();
 
-    // It should insert it as plain text in the editor
-    expect(editor.textContent).toBe('// ── 路径 A ──');
+    // It should insert it as a text chip
+    const textChip = editor.querySelector('.opencode-chip.text-chip');
+    expect(textChip).toBeInTheDocument();
+    expect(textChip).toHaveAttribute('data-chip-text', '// ── 路径 A ──');
+    expect(textChip).toHaveAttribute('data-chip-lines-count', '1');
   });
 
-  it('regression: should not parse slash commands as file paths', () => {
+  it('regression: should not parse slash commands as file paths but insert as text chip', () => {
     const sendSpy = vi.fn();
     render(<TestComponent fileInfos={{}} sendSpy={sendSpy} onInputSpy={vi.fn()} />);
 
@@ -279,7 +286,10 @@ describe('usePromptEditor', () => {
     const fileChip = editor.querySelector('.opencode-chip.file-chip');
     expect(fileChip).not.toBeInTheDocument();
 
-    // It should insert it as plain text
-    expect(editor.textContent).toBe('/goal');
+    // It should insert it as a text chip
+    const textChip = editor.querySelector('.opencode-chip.text-chip');
+    expect(textChip).toBeInTheDocument();
+    expect(textChip).toHaveAttribute('data-chip-text', '/goal');
+    expect(textChip).toHaveAttribute('data-chip-lines-count', '1');
   });
 });

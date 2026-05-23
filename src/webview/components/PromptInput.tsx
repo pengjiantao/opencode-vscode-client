@@ -315,6 +315,12 @@ export function PromptInput({
   }, [closeMentionList, closeCommandList, handleSlashTrigger, handleMentionTrigger]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!disabled && (e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'v') {
+      e.preventDefault();
+      send({ type: 'clipboard:paste-plain-text' });
+      return;
+    }
+
     if (mentionState.show) {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -413,6 +419,7 @@ export function PromptInput({
           }}
           {...{ placeholder: 'Type a message... (Shift+Enter for new line)' }}
           data-testid="prompt-editor"
+          data-vscode-context='{"webviewSection": "promptInput"}'
         />
 
         <div className="prompt-input-footer">
