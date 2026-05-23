@@ -81,6 +81,13 @@ export interface SDKClient {
   permission: {
     reply(requestID: string, reply: 'once' | 'always' | 'reject'): Promise<void>;
   };
+  /** Operations for responding to interactive question requests from the AI assistant. */
+  question: {
+    /** Sends the selected answers to a question request. */
+    reply(requestID: string, answers: string[][]): Promise<void>;
+    /** Rejects/dismisses a question request. */
+    reject(requestID: string): Promise<void>;
+  };
   /** Subscribes to SSE events from the server. Returns an unsubscribe function. */
   subscribeEvents(handler: (event: unknown) => void): () => void;
   /** Retrieves the list of available models from connected providers. */

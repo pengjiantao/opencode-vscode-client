@@ -7,6 +7,7 @@ import type {
   Message,
   Part,
   PermissionRequest,
+  QuestionRequest,
   Session,
   SessionStatus,
 } from '@opencode-ai/sdk/v2/client';
@@ -27,6 +28,8 @@ interface SessionStore {
   sessionStatus: Record<string, SessionStatus>;
   /** Active session's pending permission requests. */
   pendingPermissions: PermissionRequest[];
+  /** Active session's pending question requests. */
+  pendingQuestions: QuestionRequest[];
 
   workspaceName: string | null;
   lspServers: LspServerInfo[];
@@ -49,6 +52,8 @@ interface SessionStore {
   setSessionStatus: (sessionID: string, status: SessionStatus) => void;
   addPendingPermission: (permission: PermissionRequest) => void;
   removePendingPermission: (id: string) => void;
+  addPendingQuestion: (question: QuestionRequest) => void;
+  removePendingQuestion: (id: string) => void;
   setSessionMessagesAndParts: (sessionID: string, messages: Message[], parts: Part[]) => void;
 
   setWorkspaceName: (name: string | null) => void;
@@ -77,6 +82,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   parts: {},
   sessionStatus: {},
   pendingPermissions: [],
+  pendingQuestions: [],
 
   setActiveSession: (id) => set({ activeSessionID: id }),
 
@@ -111,6 +117,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
       sessions: state.sessions.filter((s) => s.id !== id),
       activeSessionID: state.activeSessionID === id ? null : state.activeSessionID,
       pendingPermissions: state.pendingPermissions.filter((p) => p.sessionID !== id),
+      pendingQuestions: state.pendingQuestions.filter((q) => q.sessionID !== id),
     })),
 
   updateSession: (session) =>
@@ -252,6 +259,21 @@ export const useSessionStore = create<SessionStore>((set) => ({
   removePendingPermission: (id) =>
     set((state) => ({
       pendingPermissions: state.pendingPermissions.filter((p) => p.id !== id),
+    })),
+
+  /** Adds a pending question request if it's not already in the list. */
+  addPendingQuestion: (question) =>
+    set((state) => {
+      if (state.pendingQuestions.some((q) => q.id === question.id)) {
+        return {};
+      }
+      return { pendingQuestions: [...state.pendingQuestions, question] };
+    }),
+
+  /** Removes a pending question request by its request ID. */
+  removePendingQuestion: (id) =>
+    set((state) => ({
+      pendingQuestions: state.pendingQuestions.filter((q) => q.id !== id),
     })),
 
   workspaceName: null,

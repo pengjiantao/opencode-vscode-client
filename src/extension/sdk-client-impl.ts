@@ -186,6 +186,39 @@ export function createSDKClient(directory?: string): SDKClient {
         }
       },
     },
+    question: {
+      reply: async (requestID: string, answers: string[][]): Promise<void> => {
+        const result = await client.question.reply({
+          requestID,
+          answers,
+        });
+        const typed = result as {
+          error?: { name?: string; data?: { message?: string } } | string;
+        };
+        if (typed.error) {
+          const errMsg =
+            typeof typed.error === 'string'
+              ? typed.error
+              : typed.error.data?.message || typed.error.name || 'Question reply failed';
+          throw new Error(errMsg);
+        }
+      },
+      reject: async (requestID: string): Promise<void> => {
+        const result = await client.question.reject({
+          requestID,
+        });
+        const typed = result as {
+          error?: { name?: string; data?: { message?: string } } | string;
+        };
+        if (typed.error) {
+          const errMsg =
+            typeof typed.error === 'string'
+              ? typed.error
+              : typed.error.data?.message || typed.error.name || 'Question reject failed';
+          throw new Error(errMsg);
+        }
+      },
+    },
     /** Subscribes to the SSE event stream and returns an unsubscribe callback. */
     subscribeEvents: (handler) => {
       let closed = false;

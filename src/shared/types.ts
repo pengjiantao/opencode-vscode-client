@@ -219,6 +219,15 @@ export type WebviewToExt =
       reply?: 'once' | 'always' | 'reject';
       allow?: boolean;
     }
+  | {
+      type: 'question:reply';
+      requestID: string;
+      answers: string[][];
+    }
+  | {
+      type: 'question:reject';
+      requestID: string;
+    }
   | { type: 'sessions:select-history' }
   | { type: 'file:open'; path: string; startLine?: number; endLine?: number }
   | { type: 'file:query'; path: string }

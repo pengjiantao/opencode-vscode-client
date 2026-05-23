@@ -1,0 +1,289 @@
+/* Styling for interactive question panels, conforming to DESIGN.md and VS Code variable specs */
+
+.question-bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border, #454545));
+  border-radius: var(--rounded-lg, 8px);
+  background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  margin: 8px;
+  padding: 12px;
+  gap: 12px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.question-bar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.question-bar-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.question-bar-dot-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.question-bar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--vscode-editor-foreground);
+  opacity: 0.3;
+  transition: opacity 0.15s ease;
+}
+
+.question-bar-dot-btn.active .question-bar-dot {
+  opacity: 1;
+  background-color: var(--vscode-progressBar-background, var(--vscode-button-background, #0e639c));
+}
+
+.question-bar-progress-text {
+  font-size: var(--vscode-font-size, 13px);
+  font-weight: 500;
+  color: var(--vscode-descriptionForeground, #8c8c8c);
+  margin-left: 4px;
+}
+
+.question-bar-dismiss-btn {
+  background: none;
+  border: none;
+  color: var(--vscode-editor-foreground);
+  opacity: 0.6;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: var(--rounded-sm, 4px);
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.question-bar-dismiss-btn:hover {
+  opacity: 1;
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.question-bar-progress-bar-wrapper {
+  height: 3px;
+  background-color: var(--vscode-editor-inactiveSelectionBackground, #3a3a3a);
+  border-radius: 2px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.question-bar-progress-bar {
+  height: 100%;
+  background-color: var(--vscode-progressBar-background, var(--vscode-button-background, #0e639c));
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.question-bar-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.question-bar-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vscode-editor-foreground);
+  margin: 0;
+}
+
+.question-bar-text {
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-editor-foreground);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.question-bar-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.question-bar-option-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border, #454545));
+  border-radius: var(--rounded-sm, 4px);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.question-bar-option-label:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.question-bar-option-label.selected {
+  background-color: color-mix(in srgb, var(--vscode-button-background) 12%, transparent);
+  border-color: var(--vscode-button-background);
+}
+
+.question-bar-option-label input[type='radio'],
+.question-bar-option-label input[type='checkbox'] {
+  margin-top: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.question-bar-option-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.question-bar-option-text {
+  font-size: var(--vscode-font-size, 13px);
+  font-weight: 500;
+  color: var(--vscode-editor-foreground);
+  min-width: 0;
+}
+
+.question-bar-option-desc {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground, #8c8c8c);
+  margin-top: 2px;
+}
+
+.question-bar-custom-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.question-bar-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--vscode-input-background, #2d2d2d);
+  color: var(--vscode-input-foreground, var(--vscode-editor-foreground));
+  border: 1px solid var(--vscode-input-border, var(--vscode-widget-border, #454545));
+  border-radius: var(--rounded-sm, 4px);
+  padding: 8px;
+  font-family: inherit;
+  font-size: var(--vscode-font-size, 13px);
+  resize: vertical;
+}
+
+.question-bar-textarea:focus {
+  outline: 1px solid var(--vscode-focusBorder, var(--vscode-button-background));
+  border-color: var(--vscode-focusBorder, var(--vscode-button-background));
+}
+
+.question-bar-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.question-bar-nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.question-bar-btn {
+  padding: 0 12px;
+  font-size: var(--vscode-font-size, 13px);
+  font-weight: 500;
+  border-radius: var(--rounded-sm, 4px);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.question-bar-btn:active {
+  transform: scale(0.97);
+}
+
+.question-bar-btn-dismiss {
+  color: var(--vscode-errorForeground, var(--vscode-error-foreground, #f48771));
+  background-color: transparent;
+  border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border, #454545));
+}
+
+.question-bar-btn-dismiss:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--vscode-errorForeground, var(--vscode-error-foreground, #f48771)) 10%,
+    transparent
+  );
+}
+
+.question-bar-btn-back {
+  color: var(--vscode-button-foreground);
+  background-color: transparent;
+  border: 1px solid var(--vscode-button-border, transparent);
+}
+
+.question-bar-btn-back:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--vscode-button-foreground) 10%, transparent);
+}
+
+.question-bar-btn-back:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.question-bar-btn-submit {
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.question-bar-btn-submit:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+/* History rendering stylings for messages tool answers */
+.question-answers-completed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 8px;
+}
+
+.question-answer-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.question-text {
+  font-size: var(--vscode-font-size, 13px);
+  font-weight: 500;
+  color: var(--vscode-descriptionForeground, #8c8c8c);
+}
+
+.answer-text {
+  font-size: var(--vscode-font-size, 13px);
+  font-weight: 600;
+  color: var(--vscode-textLink-foreground);
+}

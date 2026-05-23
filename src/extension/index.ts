@@ -453,6 +453,31 @@ export async function activate(context: ExtensionContext): Promise<void> {
       });
     });
 
+    ipc.on('question:reply', (msg) => {
+      const { requestID, answers } = msg as {
+        requestID: string;
+        answers: string[][];
+      };
+      sdk.question.reply(requestID, answers).catch((err) => {
+        ipc.send({
+          type: 'error',
+          message: `Question reply failed: ${(err as Error).message}`,
+        });
+      });
+    });
+
+    ipc.on('question:reject', (msg) => {
+      const { requestID } = msg as {
+        requestID: string;
+      };
+      sdk.question.reject(requestID).catch((err) => {
+        ipc.send({
+          type: 'error',
+          message: `Question reject failed: ${(err as Error).message}`,
+        });
+      });
+    });
+
     // Subscribe to events and register disposable to prevent memory leaks
     const unsubscribeEvents = sdk.subscribeEvents((event: unknown) => {
       // Forward SSE events to webview

@@ -65,6 +65,10 @@ export function getToolIcon(tool: string): string {
   if (name.includes('read') || name.includes('view') || name.includes('file')) {
     return '$(file-code)';
   }
+  // Map question tool to question icon
+  if (name.includes('question')) {
+    return '$(question)';
+  }
   // Fallback to a general toolbox/tools icon
   return '$(tools)';
 }
@@ -104,14 +108,15 @@ export function ToolPart({
 }: ToolPartProps) {
   const toolName = tool.toLowerCase();
 
-  // File modifying tools (edit, write, write_to_file, apply_patch) should be default expanded (collapsed = false)
-  const isFileModifyingTool =
+  // File modifying and question tools should be default expanded (collapsed = false)
+  const isDefaultExpanded =
     toolName === 'edit' ||
     toolName === 'write' ||
     toolName === 'write_to_file' ||
-    toolName === 'apply_patch';
+    toolName === 'apply_patch' ||
+    toolName === 'question';
 
-  const [collapsed, setCollapsed] = useState(!isFileModifyingTool);
+  const [collapsed, setCollapsed] = useState(!isDefaultExpanded);
 
   const isEditOrWrite = toolName === 'edit' || toolName === 'write' || toolName === 'write_to_file';
 
@@ -206,6 +211,31 @@ export function ToolPart({
       }
     }
 
+    // Render completed question tool questions & answers
+    if (toolName === 'question' && state.status === 'completed') {
+      const questions = state.input?.questions as Array<{ question: string }> | undefined;
+      const answers = state.metadata?.answers as Array<Array<string>> | undefined;
+      if (questions && answers) {
+        return (
+          <div data-component="question-answers" className="question-answers-completed">
+            {questions.map((qItem, idx) => {
+              const ansList = answers[idx] || [];
+              return (
+                <div key={idx} data-slot="question-answer-item" className="question-answer-item">
+                  <div data-slot="question-text" className="question-text">
+                    {qItem.question}
+                  </div>
+                  <div data-slot="answer-text" className="answer-text">
+                    {ansList.join(', ') || '(no answer)'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
+    }
+
     // Fallback for non-diff/non-patch outputs
     if (!state.output) return null;
 
@@ -241,23 +271,26 @@ export function ToolPart({
         }}
       >
         <div className="tool-content">
-          {/* Hide tool input if a diff is being rendered, to keep layout clean */}
-          {!hasDiff && state.input && Object.keys(state.input).length > 0 && (
-            <div className="tool-input">
-              <pre>
-                {Object.entries(state.input)
-                  .map(([key, value]) => {
-                    const upperKey = key.toUpperCase();
-                    const displayVal =
-                      typeof value === 'object' && value !== null
-                        ? JSON.stringify(value)
-                        : String(value);
-                    return `${upperKey} ${displayVal}`;
-                  })
-                  .join('\n')}
-              </pre>
-            </div>
-          )}
+          {/* Hide tool input if a diff is being rendered or if it is a question tool, to keep layout clean */}
+          {!hasDiff &&
+            toolName !== 'question' &&
+            state.input &&
+            Object.keys(state.input).length > 0 && (
+              <div className="tool-input">
+                <pre>
+                  {Object.entries(state.input)
+                    .map(([key, value]) => {
+                      const upperKey = key.toUpperCase();
+                      const displayVal =
+                        typeof value === 'object' && value !== null
+                          ? JSON.stringify(value)
+                          : String(value);
+                      return `${upperKey} ${displayVal}`;
+                    })
+                    .join('\n')}
+                </pre>
+              </div>
+            )}
 
           {renderOutput()}
 

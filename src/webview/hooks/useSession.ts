@@ -8,6 +8,7 @@ import type {
   Message,
   Part,
   PermissionRequest,
+  QuestionRequest,
   Session,
   SessionStatus,
 } from '@opencode-ai/sdk/v2/client';
@@ -35,6 +36,8 @@ export function useSession() {
   const setSessionStatus = useSessionStore((s) => s.setSessionStatus);
   const addPendingPermission = useSessionStore((s) => s.addPendingPermission);
   const removePendingPermission = useSessionStore((s) => s.removePendingPermission);
+  const addPendingQuestion = useSessionStore((s) => s.addPendingQuestion);
+  const removePendingQuestion = useSessionStore((s) => s.removePendingQuestion);
 
   const createSession = useCallback(() => {
     send({ type: 'session:create' });
@@ -84,6 +87,20 @@ export function useSession() {
       const reply =
         typeof replyOrAllow === 'boolean' ? (replyOrAllow ? 'once' : 'reject') : replyOrAllow;
       send({ type: 'permission:reply', permissionID, reply } as never);
+    },
+    [send],
+  );
+
+  const replyQuestion = useCallback(
+    (requestID: string, answers: string[][]) => {
+      send({ type: 'question:reply', requestID, answers } as never);
+    },
+    [send],
+  );
+
+  const rejectQuestion = useCallback(
+    (requestID: string) => {
+      send({ type: 'question:reject', requestID } as never);
     },
     [send],
   );
@@ -145,6 +162,13 @@ export function useSession() {
         case 'permission.asked':
           addPendingPermission(props as unknown as PermissionRequest);
           break;
+        case 'question.asked':
+          addPendingQuestion(props as unknown as QuestionRequest);
+          break;
+        case 'question.replied':
+        case 'question.rejected':
+          removePendingQuestion((props as unknown as { requestID: string }).requestID);
+          break;
         default:
           break;
       }
@@ -158,6 +182,8 @@ export function useSession() {
       updatePartDelta,
       setSessionStatus,
       addPendingPermission,
+      addPendingQuestion,
+      removePendingQuestion,
     ],
   );
 
@@ -176,8 +202,12 @@ export function useSession() {
     switchModel,
     switchAgent,
     replyPermission,
+    replyQuestion,
+    rejectQuestion,
     handleEvent,
     addPendingPermission,
     removePendingPermission,
+    addPendingQuestion,
+    removePendingQuestion,
   };
 }

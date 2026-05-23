@@ -9,6 +9,7 @@ import type { AgentInfo, ExtToWebview, ModelInfo } from '../shared/types';
 import { ChatView } from './components/ChatView';
 import { PermissionBar } from './components/PermissionBar';
 import { PromptInput } from './components/PromptInput';
+import { QuestionBar } from './components/QuestionBar';
 import { SessionTabs } from './components/SessionTabs';
 import { SettingsPanel } from './components/SettingsPanel';
 import { Tooltip } from './components/Tooltip';
@@ -41,6 +42,7 @@ export function App() {
   const messages = useSessionStore((s) => s.messages);
   const parts = useSessionStore((s) => s.parts);
   const sessionStatus = useSessionStore((s) => s.sessionStatus);
+  const pendingQuestions = useSessionStore((s) => s.pendingQuestions);
 
   const setActiveSession = useSessionStore((s) => s.setActiveSession);
   const setSessions = useSessionStore((s) => s.setSessions);
@@ -200,7 +202,20 @@ export function App() {
     send({ type: 'permission:reply', permissionID, reply } as never);
   };
 
+  const handleQuestionReply = (requestID: string, answers: string[][]) => {
+    send({ type: 'question:reply', requestID, answers } as never);
+  };
+
+  const handleQuestionReject = (requestID: string) => {
+    send({ type: 'question:reject', requestID } as never);
+  };
+
   const currentStatus = activeSessionID ? sessionStatus[activeSessionID] : undefined;
+  const activeQuestions = activeSessionID
+    ? pendingQuestions.filter((q) => q.sessionID === activeSessionID)
+    : [];
+  const hasPendingQuestion = activeQuestions.length > 0;
+  const activeQuestionRequestID = activeQuestions[0]?.id;
 
   return (
     <div className="app">
@@ -219,7 +234,16 @@ export function App() {
             messages={messages[activeSessionID] || []}
             parts={parts}
           />
-          <PermissionBar sessionID={activeSessionID} onReply={handlePermissionReply} />
+          {hasPendingQuestion ? (
+            <QuestionBar
+              key={activeQuestionRequestID || ''}
+              sessionID={activeSessionID}
+              onReply={handleQuestionReply}
+              onReject={handleQuestionReject}
+            />
+          ) : (
+            <PermissionBar sessionID={activeSessionID} onReply={handlePermissionReply} />
+          )}
         </>
       ) : (
         <div className="no-session">
@@ -228,24 +252,26 @@ export function App() {
         </div>
       )}
 
-      <PromptInput
-        onSubmit={handleSubmitPrompt}
-        onAbort={() => {
-          if (activeSessionID) {
-            send({ type: 'prompt:abort', sessionID: activeSessionID } as never);
-          }
-        }}
-        status={currentStatus}
-        models={models}
-        agents={agents}
-        activeModel={activeModel}
-        activeAgent={activeAgent}
-        modelVariants={modelVariants}
-        onModelChange={handleModelChange}
-        onAgentChange={handleAgentChange}
-        onVariantChange={handleVariantChange}
-        disabled={!activeSessionID}
-      />
+      {!hasPendingQuestion && (
+        <PromptInput
+          onSubmit={handleSubmitPrompt}
+          onAbort={() => {
+            if (activeSessionID) {
+              send({ type: 'prompt:abort', sessionID: activeSessionID } as never);
+            }
+          }}
+          status={currentStatus}
+          models={models}
+          agents={agents}
+          activeModel={activeModel}
+          activeAgent={activeAgent}
+          modelVariants={modelVariants}
+          onModelChange={handleModelChange}
+          onAgentChange={handleAgentChange}
+          onVariantChange={handleVariantChange}
+          disabled={!activeSessionID}
+        />
+      )}
 
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       <Tooltip />

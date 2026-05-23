@@ -43,6 +43,10 @@ const mockSdk = {
   permission: {
     reply: vi.fn().mockResolvedValue(undefined),
   },
+  question: {
+    reply: vi.fn().mockResolvedValue(undefined),
+    reject: vi.fn().mockResolvedValue(undefined),
+  },
   getModels: vi.fn().mockResolvedValue([]),
   getAgents: vi.fn().mockResolvedValue([]),
 };
@@ -396,5 +400,82 @@ describe('Extension IPC & Permission Event Handlers', () => {
     expect(errorCalls.length).toBeGreaterThan(0);
     const errorMsg = (errorCalls[0]?.[0] as { message: string })?.message;
     expect(errorMsg).toContain('Network error');
+  });
+
+  it('regression: forwards question.asked event to webview', async () => {
+    await activate(mockContext);
+    mockIpcSend.mockClear();
+
+    if (sseHandlerCallback) {
+      sseHandlerCallback({
+        type: 'question.asked',
+        properties: {
+          id: 'q-1',
+          sessionID: 'session-1',
+          questions: [
+            {
+              header: 'Header',
+              question: 'Text',
+              options: [],
+            },
+          ],
+        },
+      });
+    }
+
+    const sendCalls = mockIpcSend.mock.calls;
+    const questionEventForwarded = sendCalls.some(
+      ([msg]) =>
+        msg &&
+        (msg as { type: string }).type === 'event:received' &&
+        (msg as { event: { type: string } }).event?.type === 'question.asked',
+    );
+    expect(questionEventForwarded).toBe(true);
+  });
+
+  it('regression: handles question:reply IPC with error feedback on failure', async () => {
+    await activate(mockContext);
+    mockSdk.question.reply.mockRejectedValueOnce(new Error('SDK reply error'));
+    mockIpcSend.mockClear();
+
+    const replyHandler = ipcHandlers.get('question:reply');
+    expect(replyHandler).toBeDefined();
+
+    if (replyHandler) {
+      void replyHandler({ requestID: 'q-1', answers: [['Choice']] });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    expect(mockSdk.question.reply).toHaveBeenCalledWith('q-1', [['Choice']]);
+
+    const errorCalls = mockIpcSend.mock.calls.filter(
+      ([msg]) => msg && (msg as { type: string }).type === 'error',
+    );
+    expect(errorCalls.length).toBeGreaterThan(0);
+    const errorMsg = (errorCalls[0]?.[0] as { message: string })?.message;
+    expect(errorMsg).toContain('SDK reply error');
+  });
+
+  it('regression: handles question:reject IPC with error feedback on failure', async () => {
+    await activate(mockContext);
+    mockSdk.question.reject.mockRejectedValueOnce(new Error('SDK reject error'));
+    mockIpcSend.mockClear();
+
+    const rejectHandler = ipcHandlers.get('question:reject');
+    expect(rejectHandler).toBeDefined();
+
+    if (rejectHandler) {
+      void rejectHandler({ requestID: 'q-1' });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    expect(mockSdk.question.reject).toHaveBeenCalledWith('q-1');
+
+    const errorCalls = mockIpcSend.mock.calls.filter(
+      ([msg]) => msg && (msg as { type: string }).type === 'error',
+    );
+    expect(errorCalls.length).toBeGreaterThan(0);
+    const errorMsg = (errorCalls[0]?.[0] as { message: string })?.message;
+    expect(errorMsg).toContain('SDK reject error');
   });
 });
