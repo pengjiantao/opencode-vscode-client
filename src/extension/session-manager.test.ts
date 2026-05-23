@@ -5,7 +5,7 @@
 import type { Part } from '@opencode-ai/sdk/v2/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockSession } from '../test/mocks/sdk';
-import type { SDKClient } from './sdk-client';
+import type { PromptOptions, SDKClient } from './sdk-client';
 import { SessionManager } from './session-manager';
 
 describe('SessionManager', () => {
@@ -95,9 +95,9 @@ describe('SessionManager', () => {
       await manager.sendPrompt('s1', messyParts, 'openai/gpt-4o', 'coder');
 
       expect(mockPromptAsync).toHaveBeenCalledTimes(1);
-      expect(mockPromptAsync).toHaveBeenCalledWith(
-        's1',
-        [
+      expect(mockPromptAsync).toHaveBeenCalledWith({
+        id: 's1',
+        parts: [
           {
             type: 'text',
             text: 'Hello, World!',
@@ -107,10 +107,10 @@ describe('SessionManager', () => {
             metadata: undefined,
           },
         ],
-        'openai/gpt-4o',
-        'coder',
-        undefined,
-      );
+        model: 'openai/gpt-4o',
+        agent: 'coder',
+        variant: undefined,
+      });
     });
 
     it('regression: should sanitize file parts and handle data URL base64 rewriting correctly', async () => {
@@ -140,7 +140,10 @@ describe('SessionManager', () => {
       await manager.sendPrompt('s1', parts);
 
       expect(mockPromptAsync).toHaveBeenCalledTimes(1);
-      const passedParts = mockPromptAsync.mock.calls[0][1] as Array<{ type: string; url?: string }>;
+      const passedParts = (mockPromptAsync.mock.calls[0][0] as PromptOptions).parts as Array<{
+        type: string;
+        url?: string;
+      }>;
       expect(passedParts[0].url).toBe('data:text/plain;base64,IyBDaGFuZ2Vsb2c=');
       expect(passedParts[1].url).toBe('data:text/plain;base64,aGVsbG8gd29ybGQ=');
     });
@@ -166,7 +169,7 @@ describe('SessionManager', () => {
       await manager.sendPrompt('s1', parts);
 
       expect(mockPromptAsync).toHaveBeenCalledTimes(1);
-      const passedParts = mockPromptAsync.mock.calls[0][1] as Array<{
+      const passedParts = (mockPromptAsync.mock.calls[0][0] as PromptOptions).parts as Array<{
         type: string;
         mime: string;
         url?: string;
@@ -196,7 +199,7 @@ describe('SessionManager', () => {
       await manager.sendPrompt('s1', parts);
 
       expect(mockPromptAsync).toHaveBeenCalledTimes(1);
-      const passedParts = mockPromptAsync.mock.calls[0][1] as Array<{
+      const passedParts = (mockPromptAsync.mock.calls[0][0] as PromptOptions).parts as Array<{
         type: string;
         mime: string;
         url?: string;
@@ -223,13 +226,13 @@ describe('SessionManager', () => {
 
       await manager.sendPrompt('s1', parts, 'openai/gpt-4o', 'coder', 'high');
 
-      expect(mockPromptAsync).toHaveBeenCalledWith(
-        's1',
-        expect.any(Array),
-        'openai/gpt-4o',
-        'coder',
-        'high',
-      );
+      expect(mockPromptAsync).toHaveBeenCalledWith({
+        id: 's1',
+        parts: expect.any(Array) as Part[],
+        model: 'openai/gpt-4o',
+        agent: 'coder',
+        variant: 'high',
+      });
     });
 
     it('should propagate variant argument to sendCommand', async () => {
@@ -243,14 +246,14 @@ describe('SessionManager', () => {
 
       await manager.sendCommand('s1', '/explain', 'some code', 'openai/gpt-4o', 'coder', 'medium');
 
-      expect(mockCommand).toHaveBeenCalledWith(
-        's1',
-        '/explain',
-        'some code',
-        'openai/gpt-4o',
-        'coder',
-        'medium',
-      );
+      expect(mockCommand).toHaveBeenCalledWith({
+        id: 's1',
+        cmd: '/explain',
+        args: 'some code',
+        model: 'openai/gpt-4o',
+        agent: 'coder',
+        variant: 'medium',
+      });
     });
   });
 });

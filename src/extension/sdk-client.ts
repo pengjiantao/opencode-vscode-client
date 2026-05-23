@@ -19,6 +19,36 @@ export interface ServerHandle {
   close(): void;
 }
 
+/** Options for sending a prompt to the SDK client. */
+export interface PromptOptions {
+  /** The session ID. */
+  id: string;
+  /** The list of message parts to send. */
+  parts: Part[];
+  /** Optional model identifier (e.g. 'provider/model-id'). */
+  model?: string;
+  /** Optional agent configuration identifier. */
+  agent?: string;
+  /** Optional reasoning variant configuration. */
+  variant?: string;
+}
+
+/** Options for sending a built-in or user-defined command to the SDK client. */
+export interface CommandOptions {
+  /** The session ID. */
+  id: string;
+  /** The command string (e.g. /explain). */
+  cmd: string;
+  /** Optional arguments for the command. */
+  args?: string;
+  /** Optional model identifier. */
+  model?: string;
+  /** Optional agent configuration identifier. */
+  agent?: string;
+  /** Optional reasoning variant configuration. */
+  variant?: string;
+}
+
 /** Interface for all SDK operations used by the extension host. */
 export interface SDKClient {
   /** Starts or connects to an OpenCode server. */
@@ -32,31 +62,12 @@ export interface SDKClient {
     messages(id: string): Promise<Message[]>;
     messagesWithParts(id: string): Promise<Array<{ info: Message; parts: Part[] }>>;
     /** Sends a prompt and waits for completion (blocking). */
-    prompt(
-      id: string,
-      parts: Part[],
-      model?: string,
-      agent?: string,
-      variant?: string,
-    ): Promise<void>;
+    prompt(options: PromptOptions): Promise<void>;
     /** Sends a prompt without waiting for completion (non-blocking). */
-    promptAsync(
-      id: string,
-      parts: Part[],
-      model?: string,
-      agent?: string,
-      variant?: string,
-    ): Promise<void>;
+    promptAsync(options: PromptOptions): Promise<void>;
     abort(id: string): Promise<void>;
     /** Sends a built-in command for execution. */
-    command(
-      id: string,
-      cmd: string,
-      args?: string,
-      model?: string,
-      agent?: string,
-      variant?: string,
-    ): Promise<void>;
+    command(options: CommandOptions): Promise<void>;
   };
   lsp: {
     status(): Promise<LspStatus[]>;

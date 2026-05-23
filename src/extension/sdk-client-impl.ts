@@ -18,7 +18,7 @@ import type {
   TextPartInput,
 } from '@opencode-ai/sdk/v2/client';
 import { createOpencodeClient } from '@opencode-ai/sdk/v2/client';
-import type { SDKClient, ServerHandle } from './sdk-client';
+import type { CommandOptions, PromptOptions, SDKClient, ServerHandle } from './sdk-client';
 import type { AgentInfo, CommandInfo, ModelInfo, SkillInfo } from './types';
 
 /** Creates a configured SDK client, attempting to reuse an existing server on localhost:4096. */
@@ -94,13 +94,8 @@ export function createSDKClient(directory?: string): SDKClient {
         return result.data ?? [];
       },
       /** Sends a prompt and blocks until the response is complete. */
-      prompt: async (
-        id: string,
-        parts: Part[],
-        model?: string,
-        agent?: string,
-        variant?: string,
-      ) => {
+      prompt: async (options: PromptOptions) => {
+        const { id, parts, model, agent, variant } = options;
         let modelObj: { providerID: string; modelID: string } | undefined;
         if (model) {
           const [providerID, modelID] = model.split('/');
@@ -115,13 +110,8 @@ export function createSDKClient(directory?: string): SDKClient {
         });
       },
       /** Sends a prompt and returns immediately (non-blocking). */
-      promptAsync: async (
-        id: string,
-        parts: Part[],
-        model?: string,
-        agent?: string,
-        variant?: string,
-      ) => {
+      promptAsync: async (options: PromptOptions) => {
+        const { id, parts, model, agent, variant } = options;
         let modelObj: { providerID: string; modelID: string } | undefined;
         if (model) {
           const [providerID, modelID] = model.split('/');
@@ -138,14 +128,8 @@ export function createSDKClient(directory?: string): SDKClient {
       abort: async (id: string) => {
         await client.session.abort({ sessionID: id });
       },
-      command: async (
-        id: string,
-        cmd: string,
-        args?: string,
-        model?: string,
-        agent?: string,
-        variant?: string,
-      ): Promise<void> => {
+      command: async (options: CommandOptions): Promise<void> => {
+        const { id, cmd, args, model, agent, variant } = options;
         const result = await client.session.command({
           sessionID: id,
           command: cmd,

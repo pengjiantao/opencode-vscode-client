@@ -185,7 +185,13 @@ export class SessionManager {
       return part;
     });
 
-    await this.sdk.session.promptAsync(sessionID, cleanedParts, model, agent, variant);
+    await this.sdk.session.promptAsync({
+      id: sessionID,
+      parts: cleanedParts,
+      model,
+      agent,
+      variant,
+    });
   }
 
   /** Sends a built-in command for execution with optional arguments. */
@@ -197,7 +203,14 @@ export class SessionManager {
     agent?: string,
     variant?: string,
   ): Promise<void> {
-    await this.sdk.session.command(sessionID, command, args, model, agent, variant);
+    await this.sdk.session.command({
+      id: sessionID,
+      cmd: command,
+      args,
+      model,
+      agent,
+      variant,
+    });
   }
 
   /** Aborts a running prompt for the given session. */
