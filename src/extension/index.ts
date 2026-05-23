@@ -5,14 +5,16 @@
  */
 
 import type { Part, SessionStatus } from '@opencode-ai/sdk/v2/client';
-import { StatusBarAlignment, ThemeColor, window, workspace, type ExtensionContext } from 'vscode';
+import { window, workspace, type ExtensionContext } from 'vscode';
 import { pasteClipboardTextAsPlainText, registerExtensionCommands } from './commands';
 import { IPCBridge } from './ipc';
 import { syncMetadata as importSyncMetadata } from './metadata';
 import type { SDKClient } from './sdk-client';
 import { createSDKClient } from './sdk-client-impl';
 import { SessionManager } from './session-manager';
-import type { ExtToWebview } from './types';
+import { SessionStateStore, type SessionState } from './session-state-store';
+import { StatusBarManager } from './status-bar';
+import type { AgentInfo, ExtToWebview, ModelInfo } from './types';
 import { handleCommandPart } from './utils/command-router';
 import { registerFileHandlers } from './utils/fileHandlers';
 import { OpencodeSidebarViewProvider } from './webview-provider';
@@ -24,14 +26,15 @@ let provider: OpencodeSidebarViewProvider;
 
 /**
  * Activates the OpenCode sidebar extension.
- * Sets up SDK connection, IPC handlers for session/prompt/model operations.
+ * Sets up SDK connection, IPC bridges, and registers handlers for lifecycle events.
+ *
+ * @param context VS Code ExtensionContext.
  */
 export async function activate(context: ExtensionContext): Promise<void> {
-  let activeModel = context.globalState.get<string>('lastUsedModel');
-  let activeAgent = context.globalState.get<string>('lastUsedAgent');
-  // Load saved variant selections for all models
-  const modelVariants = context.globalState.get<Record<string, string>>('modelVariants') || {};
+  const sessionStateStore = new SessionStateStore(context.globalState);
   const sessionStatuses = new Map<string, SessionStatus>();
+  let cachedModels: ModelInfo[] = [];
+  let cachedAgents: AgentInfo[] = [];
 
   try {
     const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -48,48 +51,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
       void importSyncMetadata(sdk, ipc.send.bind(ipc));
     };
 
-    // Initialize native status bar item to show current session processing status
-    const statusBarItem = window.createStatusBarItem(StatusBarAlignment.Right, 100);
-    statusBarItem.name = 'OpenCode Status';
-    statusBarItem.command = 'opencode-sidebar.focus';
-    statusBarItem.text = '$(circle-outline) OpenCode: Ready';
-    statusBarItem.tooltip = 'OpenCode is idle and ready';
-    statusBarItem.show();
-    context.subscriptions.push(statusBarItem);
-
-    /**
-     * Updates the native status bar item's styling and text to match
-     * the active session's latest processing state.
-     */
-    const updateStatusBar = (): void => {
-      const activeSessionID = sessionManager.activeSessionID;
-      if (!activeSessionID) {
-        statusBarItem.hide();
-        return;
-      }
-
-      const status = sessionStatuses.get(activeSessionID);
-      if (!status || status.type === 'idle') {
-        statusBarItem.text = '$(circle-outline) OpenCode: Ready';
-        statusBarItem.tooltip = `Session: ${activeSessionID}\nStatus: Ready`;
-        statusBarItem.backgroundColor = undefined;
-      } else if (status.type === 'busy') {
-        statusBarItem.text = '$(sync~spin) OpenCode: Processing...';
-        statusBarItem.tooltip = `Session: ${activeSessionID}\nStatus: Processing`;
-        statusBarItem.backgroundColor = undefined;
-      } else if (status.type === 'retry') {
-        statusBarItem.text = `$(warning) OpenCode: Retrying (${status.attempt}/${status.next})`;
-        statusBarItem.tooltip = `Session: ${activeSessionID}\nStatus: Retrying...\nMessage: ${status.message || 'None'}`;
-        statusBarItem.backgroundColor = new ThemeColor('statusBarItem.warningBackground');
-      }
-      statusBarItem.show();
-    };
-
-    // Keep status bar in sync when active session changes, registering a disposable for clean cleanup
-    const unsubscribeActiveSession = sessionManager.subscribe(() => {
-      updateStatusBar();
-    });
-    context.subscriptions.push({ dispose: unsubscribeActiveSession });
+    // Initialize native status bar item to show current session processing status via StatusBarManager
+    const statusBarManager = new StatusBarManager(context, sessionManager, sessionStatuses);
 
     await sessionManager.connect();
 
@@ -98,82 +61,97 @@ export async function activate(context: ExtensionContext): Promise<void> {
     );
 
     /** Creates a new session, persists to workspace state, and notifies webview. */
-    const handleCreateSession = () => {
-      sessionManager
-        .create()
-        .then((session) => {
-          const openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
-          if (!openIDs.includes(session.id)) {
-            openIDs.push(session.id);
-            void context.workspaceState.update('openSessionIDs', openIDs);
-          }
-          ipc.send({ type: 'session:created', session });
-          ipc.send({ type: 'session:switched', sessionID: session.id });
-          ipc.send({ type: 'messages:list', sessionID: session.id, messages: [], parts: [] });
-        })
-        .catch((err) => {
-          ipc.send({ type: 'error', message: (err as Error).message });
+    const handleCreateSession = async (): Promise<void> => {
+      try {
+        const session = await sessionManager.create();
+        const openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
+        if (!openIDs.includes(session.id)) {
+          openIDs.push(session.id);
+          await context.workspaceState.update('openSessionIDs', openIDs);
+        }
+        const state = sessionStateStore.getOrInitialize(session.id, cachedModels, cachedAgents);
+        ipc.send({ type: 'session:created', session });
+        ipc.send({
+          type: 'session:switched',
+          sessionID: session.id,
+          model: state.model,
+          agent: state.agent,
+          modelVariants: state.modelVariants,
         });
+        ipc.send({ type: 'messages:list', sessionID: session.id, messages: [], parts: [] });
+      } catch (err) {
+        ipc.send({ type: 'error', message: (err as Error).message });
+      }
     };
 
     /** Shows a QuickPick list to select and reopen a previous session from history. */
-    const handleSelectHistory = () => {
-      void sdk.session
-        .list()
-        .then((sessions) => {
-          const activeSessions = sessions.filter(
-            (s) => !(s.time as { archived?: unknown }).archived,
-          );
-          if (activeSessions.length === 0) {
-            void window.showInformationMessage('No previous sessions found.');
-            return;
-          }
+    const handleSelectHistory = async (): Promise<void> => {
+      try {
+        const sessions = await sdk.session.list();
+        const activeSessions = sessions.filter((s) => !(s.time as { archived?: unknown }).archived);
+        if (activeSessions.length === 0) {
+          void window.showInformationMessage('No previous sessions found.');
+          return;
+        }
 
-          const sorted = [...activeSessions].sort(
-            (a, b) => (b.time?.updated || 0) - (a.time?.updated || 0),
-          );
+        const sorted = [...activeSessions].sort(
+          (a, b) => (b.time?.updated || 0) - (a.time?.updated || 0),
+        );
 
-          const items = sorted.map((s) => ({
-            label: s.title || 'Untitled Session',
-            description: new Date(s.time.updated || s.time.created).toLocaleString(),
-            sessionID: s.id,
-            session: s,
-          }));
+        const items = sorted.map((s) => ({
+          label: s.title || 'Untitled Session',
+          description: new Date(s.time.updated || s.time.created).toLocaleString(),
+          sessionID: s.id,
+          session: s,
+        }));
 
-          void window
-            .showQuickPick(items, {
-              placeHolder: 'Select a previous session to open',
-              title: 'OpenCode Session History',
-            })
-            .then((selected) => {
-              if (!selected) return;
-
-              const sessionID = selected.sessionID;
-              const openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
-
-              if (!openIDs.includes(sessionID)) {
-                openIDs.push(sessionID);
-                void context.workspaceState.update('openSessionIDs', openIDs);
-                ipc.send({ type: 'session:created', session: selected.session });
-              }
-
-              sessionManager.switch(sessionID);
-              ipc.send({ type: 'session:switched', sessionID });
-              void sessionManager.getMessagesAndParts(sessionID).then(({ messages, parts }) => {
-                ipc.send({ type: 'messages:list', sessionID, messages, parts });
-              });
-            });
-        })
-        .catch((err) => {
-          void window.showErrorMessage(
-            `Failed to retrieve session history: ${(err as Error).message}`,
-          );
+        const selected = await window.showQuickPick(items, {
+          placeHolder: 'Select a previous session to open',
+          title: 'OpenCode Session History',
         });
+        if (!selected) return;
+
+        const sessionID = selected.sessionID;
+        const openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
+
+        if (!openIDs.includes(sessionID)) {
+          openIDs.push(sessionID);
+          await context.workspaceState.update('openSessionIDs', openIDs);
+          ipc.send({ type: 'session:created', session: selected.session });
+        }
+
+        sessionManager.switch(sessionID);
+        const state = sessionStateStore.getOrInitialize(sessionID, cachedModels, cachedAgents);
+        ipc.send({
+          type: 'session:switched',
+          sessionID,
+          model: state.model,
+          agent: state.agent,
+          modelVariants: state.modelVariants,
+        });
+        const { messages, parts } = await sessionManager.getMessagesAndParts(sessionID);
+        ipc.send({ type: 'messages:list', sessionID, messages, parts });
+      } catch (err) {
+        void window.showErrorMessage(
+          `Failed to retrieve session history: ${(err as Error).message}`,
+        );
+      }
     };
 
     /** Handles webview initialization: loads sessions, messages, models, and agents. */
-    ipc.on('init', () => {
-      void sdk.session.list().then((sessions) => {
+    ipc.on('init', async () => {
+      try {
+        const [models, agents] = await Promise.all([sdk.getModels(), sdk.getAgents()]);
+        cachedModels = models;
+        cachedAgents = agents;
+        ipc.send({ type: 'models:list', models });
+        ipc.send({ type: 'agents:list', agents });
+      } catch (err) {
+        console.error('Failed to load models or agents:', err);
+      }
+
+      try {
+        const sessions = await sdk.session.list();
         const activeSessions = sessions.filter((s) => !(s.time as { archived?: unknown }).archived);
         sessionManager.setSessions(activeSessions);
 
@@ -198,129 +176,120 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
         // No active session found — auto-create one
         if (!activeID) {
-          void sessionManager
-            .create()
-            .then((session) => {
-              openIDs = [session.id];
-              void context.workspaceState.update('openSessionIDs', openIDs);
-              ipc.send({
-                type: 'init',
-                sessions: [session],
-                activeModel,
-                activeAgent,
-                modelVariants,
-              });
-              ipc.send({ type: 'session:switched', sessionID: session.id });
-              ipc.send({ type: 'messages:list', sessionID: session.id, messages: [], parts: [] });
-            })
-            .catch((err) => {
-              console.error('Failed to auto-create session on init:', err);
-            });
+          const session = await sessionManager.create();
+          openIDs = [session.id];
+          await context.workspaceState.update('openSessionIDs', openIDs);
+
+          const state = sessionStateStore.getOrInitialize(session.id, cachedModels, cachedAgents);
+          ipc.send({
+            type: 'init',
+            sessions: [session],
+          });
+          ipc.send({
+            type: 'session:switched',
+            sessionID: session.id,
+            model: state.model,
+            agent: state.agent,
+            modelVariants: state.modelVariants,
+          });
+          ipc.send({ type: 'messages:list', sessionID: session.id, messages: [], parts: [] });
         } else {
           sessionManager.switch(activeID);
-          void context.workspaceState.update('openSessionIDs', openIDs);
+          await context.workspaceState.update('openSessionIDs', openIDs);
+
+          // Migrate legacy configuration into the active session.
+          sessionStateStore.migrateLegacyState(activeID);
 
           const openSessions = activeSessions.filter((s) => openIDs.includes(s.id));
+          const state = sessionStateStore.getOrInitialize(activeID, cachedModels, cachedAgents);
           ipc.send({
             type: 'init',
             sessions: openSessions,
-            activeModel,
-            activeAgent,
-            modelVariants,
           });
-          ipc.send({ type: 'session:switched', sessionID: activeID });
+          ipc.send({
+            type: 'session:switched',
+            sessionID: activeID,
+            model: state.model,
+            agent: state.agent,
+            modelVariants: state.modelVariants,
+          });
 
-          void sessionManager
-            .getMessagesAndParts(activeID)
-            .then(({ messages, parts }) => {
-              ipc.send({ type: 'messages:list', sessionID: activeID, messages, parts });
-            })
-            .catch((err) => {
-              console.error('Failed to load messages on init:', err);
-            });
+          const { messages, parts } = await sessionManager.getMessagesAndParts(activeID);
+          ipc.send({ type: 'messages:list', sessionID: activeID, messages, parts });
         }
-      });
-
-      void sdk
-        .getModels()
-        .then((models) => {
-          ipc.send({ type: 'models:list', models });
-        })
-        .catch((err) => {
-          console.error('Failed to load models:', err);
-        });
-
-      void sdk
-        .getAgents()
-        .then((agents) => {
-          ipc.send({ type: 'agents:list', agents });
-        })
-        .catch((err) => {
-          console.error('Failed to load agents:', err);
-        })
-        .finally(() => {
-          void syncMetadata();
-        });
+      } catch (err) {
+        console.error('Failed to load session list on init:', err);
+      } finally {
+        void syncMetadata();
+      }
     });
 
     ipc.on('session:create', () => {
-      handleCreateSession();
+      void handleCreateSession();
     });
 
-    ipc.on('session:switch', (msg) => {
+    ipc.on('session:switch', async (msg) => {
       const { sessionID } = msg as { sessionID: string };
-      sessionManager.switch(sessionID);
-      ipc.send({ type: 'session:switched', sessionID });
-      void sessionManager
-        .getMessagesAndParts(sessionID)
-        .then(({ messages, parts }) => {
-          ipc.send({ type: 'messages:list', sessionID, messages, parts });
-          void syncMetadata();
-        })
-        .catch((err) => {
-          ipc.send({ type: 'error', message: (err as Error).message });
+      try {
+        sessionManager.switch(sessionID);
+        const state = sessionStateStore.getOrInitialize(sessionID, cachedModels, cachedAgents);
+        ipc.send({
+          type: 'session:switched',
+          sessionID,
+          model: state.model,
+          agent: state.agent,
+          modelVariants: state.modelVariants,
         });
+        const { messages, parts } = await sessionManager.getMessagesAndParts(sessionID);
+        ipc.send({ type: 'messages:list', sessionID, messages, parts });
+        void syncMetadata();
+      } catch (err) {
+        ipc.send({ type: 'error', message: (err as Error).message });
+      }
     });
 
-    ipc.on('session:archive', (msg) => {
+    ipc.on('session:archive', async (msg) => {
       const { sessionID } = msg as { sessionID: string };
+      sessionStateStore.delete(sessionID);
       // Delete session status to prevent unbounded map growth
       sessionStatuses.delete(sessionID);
       const previousActiveID = sessionManager.activeSessionID;
-      sessionManager
-        .archive(sessionID)
-        .then(() => {
-          let openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
-          openIDs = openIDs.filter((id) => id !== sessionID);
-          void context.workspaceState.update('openSessionIDs', openIDs);
+      try {
+        await sessionManager.archive(sessionID);
+        let openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
+        openIDs = openIDs.filter((id) => id !== sessionID);
+        await context.workspaceState.update('openSessionIDs', openIDs);
 
-          ipc.send({ type: 'session:archived', sessionID });
+        ipc.send({ type: 'session:archived', sessionID });
 
-          if (previousActiveID === sessionID) {
-            if (openIDs.length > 0) {
-              const nextActiveID = openIDs[openIDs.length - 1];
-              sessionManager.switch(nextActiveID);
-              ipc.send({ type: 'session:switched', sessionID: nextActiveID });
-              void sessionManager.getMessagesAndParts(nextActiveID).then(({ messages, parts }) => {
-                ipc.send({ type: 'messages:list', sessionID: nextActiveID, messages, parts });
-              });
-            } else {
-              void sessionManager.create().then((session) => {
-                const nextOpen = [session.id];
-                void context.workspaceState.update('openSessionIDs', nextOpen);
-                ipc.send({ type: 'session:created', session });
-                ipc.send({ type: 'session:switched', sessionID: session.id });
-                ipc.send({ type: 'messages:list', sessionID: session.id, messages: [], parts: [] });
-              });
-            }
+        if (previousActiveID === sessionID) {
+          if (openIDs.length > 0) {
+            const nextActiveID = openIDs[openIDs.length - 1];
+            sessionManager.switch(nextActiveID);
+            const state = sessionStateStore.getOrInitialize(
+              nextActiveID,
+              cachedModels,
+              cachedAgents,
+            );
+            ipc.send({
+              type: 'session:switched',
+              sessionID: nextActiveID,
+              model: state.model,
+              agent: state.agent,
+              modelVariants: state.modelVariants,
+            });
+            const { messages, parts } = await sessionManager.getMessagesAndParts(nextActiveID);
+            ipc.send({ type: 'messages:list', sessionID: nextActiveID, messages, parts });
+          } else {
+            await handleCreateSession();
           }
-        })
-        .catch((err) => {
-          ipc.send({ type: 'error', message: (err as Error).message });
-        });
+        }
+      } catch (err) {
+        ipc.send({ type: 'error', message: (err as Error).message });
+      }
     });
 
-    ipc.on('session:close', (msg) => {
+    ipc.on('session:close', async (msg) => {
       const { sessionID } = msg as { sessionID: string };
       // Delete session status to prevent unbounded map growth
       sessionStatuses.delete(sessionID);
@@ -328,22 +297,28 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
       let openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
       openIDs = openIDs.filter((id) => id !== sessionID);
-      void context.workspaceState.update('openSessionIDs', openIDs);
+      await context.workspaceState.update('openSessionIDs', openIDs);
 
       ipc.send({ type: 'session:deleted', sessionID });
 
       if (openIDs.length === 0) {
-        handleCreateSession();
+        await handleCreateSession();
         return;
       }
 
       if (previousActiveID === sessionID) {
         const nextActiveID = openIDs[openIDs.length - 1];
         sessionManager.switch(nextActiveID);
-        ipc.send({ type: 'session:switched', sessionID: nextActiveID });
-        void sessionManager.getMessagesAndParts(nextActiveID).then(({ messages, parts }) => {
-          ipc.send({ type: 'messages:list', sessionID: nextActiveID, messages, parts });
+        const state = sessionStateStore.getOrInitialize(nextActiveID, cachedModels, cachedAgents);
+        ipc.send({
+          type: 'session:switched',
+          sessionID: nextActiveID,
+          model: state.model,
+          agent: state.agent,
+          modelVariants: state.modelVariants,
         });
+        const { messages, parts } = await sessionManager.getMessagesAndParts(nextActiveID);
+        ipc.send({ type: 'messages:list', sessionID: nextActiveID, messages, parts });
       }
     });
 
@@ -352,11 +327,11 @@ export async function activate(context: ExtensionContext): Promise<void> {
       sessionStatuses.clear();
       void context.workspaceState.update('openSessionIDs', []);
       ipc.send({ type: 'init', sessions: [] });
-      handleCreateSession();
+      void handleCreateSession();
     });
 
     ipc.on('sessions:select-history', () => {
-      handleSelectHistory();
+      void handleSelectHistory();
     });
 
     ipc.on('clipboard:paste-plain-text', () => {
@@ -371,8 +346,11 @@ export async function activate(context: ExtensionContext): Promise<void> {
         return;
       }
 
+      const sessionState = sessionStateStore.getOrInitialize(activeID, cachedModels, cachedAgents);
       // Resolve the active variant for the currently selected model
-      const activeVariant = activeModel ? modelVariants[activeModel] || 'default' : 'default';
+      const activeVariant = sessionState.model
+        ? sessionState.modelVariants[sessionState.model] || 'default'
+        : 'default';
       const sdkVariant = activeVariant === 'default' ? undefined : activeVariant;
 
       // Detect command parts and route to the dedicated command execution endpoint
@@ -380,8 +358,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
         parts,
         text,
         activeID,
-        activeModel,
-        activeAgent,
+        activeModel: sessionState.model || undefined,
+        activeAgent: sessionState.agent || undefined,
         activeVariant: sdkVariant,
         sessionManager,
         ipc,
@@ -401,40 +379,62 @@ export async function activate(context: ExtensionContext): Promise<void> {
       ];
 
       sessionManager
-        .sendPrompt(activeID, promptParts, activeModel, activeAgent, sdkVariant)
+        .sendPrompt(
+          activeID,
+          promptParts,
+          sessionState.model || undefined,
+          sessionState.agent || undefined,
+          sdkVariant,
+        )
         .catch((err) => {
           ipc.send({ type: 'error', message: (err as Error).message });
         });
     });
 
+    const handlePromise = (promise: Promise<unknown>, errorPrefix: string): void => {
+      promise.catch((err) => {
+        ipc.send({ type: 'error', message: `${errorPrefix}: ${(err as Error).message}` });
+      });
+    };
+
+    const updateSessionState = (callback: (state: SessionState) => void): void => {
+      const activeID = sessionManager.activeSessionID;
+      if (activeID) {
+        const state = sessionStateStore.getOrInitialize(activeID, cachedModels, cachedAgents);
+        callback(state);
+        sessionStateStore.set(activeID, state);
+      }
+    };
+
     registerFileHandlers(ipc);
 
     ipc.on('prompt:abort', (msg) => {
       const { sessionID } = msg as { sessionID: string };
-      sessionManager.abort(sessionID).catch((err) => {
-        ipc.send({ type: 'error', message: (err as Error).message });
-      });
+      handlePromise(sessionManager.abort(sessionID), 'Abort failed');
     });
 
     ipc.on('model:switch', (msg) => {
       const { model } = msg as { model: string };
-      activeModel = model || undefined;
-      void context.globalState.update('lastUsedModel', model || undefined);
+      updateSessionState((state) => {
+        state.model = model || '';
+      });
       void syncMetadata();
     });
 
     ipc.on('agent:switch', (msg) => {
       const { agent } = msg as { agent: string };
-      activeAgent = agent || undefined;
-      void context.globalState.update('lastUsedAgent', agent || undefined);
+      updateSessionState((state) => {
+        state.agent = agent || '';
+      });
       void syncMetadata();
     });
 
     ipc.on('variant:switch', (msg) => {
       const { model, variant } = msg as { model: string; variant: string };
       if (model) {
-        modelVariants[model] = variant || 'default';
-        void context.globalState.update('modelVariants', modelVariants);
+        updateSessionState((state) => {
+          state.modelVariants[model] = variant || 'default';
+        });
       }
     });
 
@@ -445,37 +445,17 @@ export async function activate(context: ExtensionContext): Promise<void> {
         reply?: 'once' | 'always' | 'reject';
       };
       const replyValue = reply || (allow ? 'once' : 'reject');
-      sdk.permission.reply(permissionID, replyValue).catch((err) => {
-        ipc.send({
-          type: 'error',
-          message: `Permission reply failed: ${(err as Error).message}`,
-        });
-      });
+      handlePromise(sdk.permission.reply(permissionID, replyValue), 'Permission reply failed');
     });
 
     ipc.on('question:reply', (msg) => {
-      const { requestID, answers } = msg as {
-        requestID: string;
-        answers: string[][];
-      };
-      sdk.question.reply(requestID, answers).catch((err) => {
-        ipc.send({
-          type: 'error',
-          message: `Question reply failed: ${(err as Error).message}`,
-        });
-      });
+      const { requestID, answers } = msg as { requestID: string; answers: string[][] };
+      handlePromise(sdk.question.reply(requestID, answers), 'Question reply failed');
     });
 
     ipc.on('question:reject', (msg) => {
-      const { requestID } = msg as {
-        requestID: string;
-      };
-      sdk.question.reject(requestID).catch((err) => {
-        ipc.send({
-          type: 'error',
-          message: `Question reject failed: ${(err as Error).message}`,
-        });
-      });
+      const { requestID } = msg as { requestID: string };
+      handlePromise(sdk.question.reject(requestID), 'Question reject failed');
     });
 
     // Subscribe to events and register disposable to prevent memory leaks
@@ -485,26 +465,28 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
       const evt = event as {
         type?: string;
-        properties?: {
-          sessionID?: string;
-          status?: SessionStatus;
-          info?: { id?: string };
-        };
+        properties?: { sessionID?: string; status?: SessionStatus; info?: { id?: string } };
       };
       if (evt.type === 'session.status' && evt.properties?.sessionID && evt.properties?.status) {
         sessionStatuses.set(evt.properties.sessionID, evt.properties.status);
-        updateStatusBar();
+        statusBarManager.update();
       } else if (evt.type === 'session.deleted' && evt.properties?.info?.id) {
         // Clean up status of deleted sessions to prevent unbounded map growth
         sessionStatuses.delete(evt.properties.info.id);
-        updateStatusBar();
+        statusBarManager.update();
       } else if (evt.type === 'lsp.updated') {
         void syncMetadata();
       }
     });
     context.subscriptions.push({ dispose: unsubscribeEvents });
 
-    registerExtensionCommands(context, ipc, provider, handleCreateSession, handleSelectHistory);
+    registerExtensionCommands(
+      context,
+      ipc,
+      provider,
+      () => void handleCreateSession(),
+      () => void handleSelectHistory(),
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     window.showErrorMessage(`OpenCode Sidebar activation failed: ${message}`);

@@ -74,6 +74,15 @@ export function App() {
           break;
         case 'session:switched':
           setActiveSession(message.sessionID);
+          if (message.model) {
+            setActiveModel(message.model);
+          }
+          if (message.agent) {
+            setActiveAgent(message.agent);
+          }
+          if (message.modelVariants) {
+            setModelVariants(message.modelVariants);
+          }
           break;
         case 'session:archived':
           removeSession(message.sessionID);
@@ -118,15 +127,6 @@ export function App() {
           break;
         case 'init':
           setSessions(message.sessions);
-          if (message.activeModel) {
-            setActiveModel(message.activeModel);
-          }
-          if (message.activeAgent) {
-            setActiveAgent(message.activeAgent);
-          }
-          if (message.modelVariants) {
-            setModelVariants(message.modelVariants);
-          }
           break;
       }
     };

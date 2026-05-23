@@ -132,7 +132,13 @@ export interface SelectedFileInfo {
  */
 export type ExtToWebview =
   | { type: 'session:created'; session: Session }
-  | { type: 'session:switched'; sessionID: string }
+  | {
+      type: 'session:switched';
+      sessionID: string;
+      model?: string;
+      agent?: string;
+      modelVariants?: Record<string, string>;
+    }
   | { type: 'session:archived'; sessionID: string }
   | { type: 'session:updated'; session: Session }
   | { type: 'session:deleted'; sessionID: string }
@@ -141,10 +147,6 @@ export type ExtToWebview =
   | {
       type: 'init';
       sessions: Session[];
-      activeModel?: string;
-      activeAgent?: string;
-      /** Map of model ID to last selected variant. */
-      modelVariants?: Record<string, string>;
     }
   | { type: 'settings:open' }
   | { type: 'models:list'; models: ModelInfo[] }
