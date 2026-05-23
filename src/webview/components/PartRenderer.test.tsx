@@ -371,6 +371,70 @@ describe('PartRenderer', () => {
       expect(preElement?.textContent).toContain('QUERY search-query');
       expect(preElement?.textContent).toContain('MATCHCOUNT 10');
     });
+
+    it('regression: renders edit tool output as DiffPart when metadata contains diff', () => {
+      const part = createMockToolPart('edit');
+      part.state = {
+        status: 'completed',
+        input: { filePath: 'src/main.ts' },
+        output: 'Success',
+        title: 'Editing main.ts',
+        time: { start: Date.now(), end: Date.now() + 1000 },
+        metadata: {
+          diff: '--- a/src/main.ts\n+++ b/src/main.ts\n@@ -1,2 +1,3 @@\n-const old = 1;\n+const newText = 1;\n+const extra = 2;',
+        },
+      };
+
+      const { container } = render(<PartRenderer part={part} />);
+
+      // Should render Diff section instead of raw Output
+      expect(screen.getByText('Diff')).toBeInTheDocument();
+      expect(container.querySelector('.diff-table')).toBeInTheDocument();
+      expect(screen.getByText('const old = 1;')).toBeInTheDocument();
+      expect(screen.getByText('const newText = 1;')).toBeInTheDocument();
+      expect(screen.getByText('const extra = 2;')).toBeInTheDocument();
+    });
+
+    it('regression: renders apply_patch output as DiffPart for each modified file', () => {
+      const part = createMockToolPart('apply_patch');
+      part.state = {
+        status: 'completed',
+        input: {},
+        output: 'Success',
+        title: 'Applying patch',
+        time: { start: Date.now(), end: Date.now() + 1000 },
+        metadata: {
+          files: [
+            {
+              filePath: 'src/helper.ts',
+              type: 'modify',
+              patch:
+                '--- a/src/helper.ts\n+++ b/src/helper.ts\n@@ -5,2 +5,2 @@\n-oldHelper\n+newHelper',
+            },
+            {
+              filePath: 'src/deleted.ts',
+              type: 'delete',
+              deletions: 10,
+            },
+          ],
+        },
+      };
+
+      const { container } = render(<PartRenderer part={part} />);
+
+      // Verify header titles are generated
+      expect(screen.getByText('Applied Patch')).toBeInTheDocument();
+      expect(screen.getByText('Patched src/helper.ts')).toBeInTheDocument();
+      expect(screen.getByText('Deleted src/deleted.ts')).toBeInTheDocument();
+
+      // Verify helper.ts diff table is rendered
+      expect(container.querySelector('.diff-table')).toBeInTheDocument();
+      expect(screen.getByText('oldHelper')).toBeInTheDocument();
+      expect(screen.getByText('newHelper')).toBeInTheDocument();
+
+      // Verify deleted.ts lines deleted summary is rendered
+      expect(screen.getByText('-10 lines')).toBeInTheDocument();
+    });
   });
 
   describe('getToolIcon', () => {

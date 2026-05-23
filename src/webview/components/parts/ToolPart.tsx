@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { Codicon } from '../Codicon';
+import { DiffPart } from './DiffPart';
 
 interface ToolPartProps {
   tool: string;
@@ -14,6 +15,7 @@ interface ToolPartProps {
     title?: string;
     error?: string;
     time?: { start: number; end?: number };
+    metadata?: Record<string, unknown>;
   };
   hasPredecessor?: boolean;
   hasSuccessor?: boolean;
@@ -84,6 +86,84 @@ export function ToolPart({
   const dotClassName = `timeline-dot tool-dot status-${state.status}`;
   const showLine = hasPredecessor || hasSuccessor;
 
+  /**
+   * Conditionally renders the tool output as a diff view if applicable,
+   * otherwise falls back to a plain text pre-formatted block.
+   */
+  const renderOutput = () => {
+    if (!state.output) return null;
+
+    const toolName = tool.toLowerCase();
+
+    // Check if the tool modifies files and has diff metadata
+    if (
+      (toolName === 'edit' || toolName === 'write') &&
+      state.metadata?.diff &&
+      typeof state.metadata.diff === 'string'
+    ) {
+      const filePath = (state.input?.filePath || state.input?.TargetFile || '') as string;
+      return (
+        <div className="tool-output">
+          <span className="section-label">Diff</span>
+          <DiffPart diff={state.metadata.diff} filePath={filePath} />
+        </div>
+      );
+    }
+
+    // Check if it is a multi-file patch application tool call
+    if (toolName === 'apply_patch' && Array.isArray(state.metadata?.files)) {
+      const files = state.metadata.files as Array<Record<string, unknown>>;
+      if (files.length > 0) {
+        return (
+          <div className="tool-output">
+            <span className="section-label">Applied Patch</span>
+            {files.map((file, idx) => {
+              const relativePath = (file.relativePath || file.filePath || 'patch') as string;
+              const fileType = file.type as string;
+              const patch = file.patch as string | undefined;
+              const filePath = (file.filePath || '') as string;
+
+              // Construct a user-friendly descriptive action title
+              let title = `Patched ${relativePath}`;
+              if (fileType === 'delete') {
+                title = `Deleted ${relativePath}`;
+              } else if (fileType === 'add') {
+                title = `Created ${relativePath}`;
+              } else if (fileType === 'move') {
+                title = `Moved ${filePath} → ${relativePath}`;
+              }
+
+              return (
+                <div key={`patch-file-${idx}`} className="patch-file-block">
+                  <div className="patch-file-title">{title}</div>
+                  {patch ? (
+                    <DiffPart diff={patch} />
+                  ) : (
+                    (() => {
+                      const deletions = typeof file.deletions === 'number' ? file.deletions : 0;
+                      return (
+                        <div className="patch-file-summary">
+                          -{deletions} line{deletions === 1 ? '' : 's'}
+                        </div>
+                      );
+                    })()
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
+    }
+
+    return (
+      <div className="tool-output">
+        <span className="section-label">Output</span>
+        <pre>{state.output}</pre>
+      </div>
+    );
+  };
+
   return (
     <div
       className={`part tool-part timeline-item status-${state.status} ${collapsed ? 'collapsed' : 'expanded'}`}
@@ -125,12 +205,7 @@ export function ToolPart({
             </div>
           )}
 
-          {state.output && (
-            <div className="tool-output">
-              <span className="section-label">Output</span>
-              <pre>{state.output}</pre>
-            </div>
-          )}
+          {renderOutput()}
 
           {state.error && (
             <div className="tool-error">

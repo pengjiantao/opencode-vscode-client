@@ -23,7 +23,8 @@ describe('PermissionCard', () => {
     );
 
     expect(screen.getByText('Run bash command')).toBeInTheDocument();
-    expect(screen.getByText('Type: bash')).toBeInTheDocument();
+    expect(screen.getByText('Type: Execute Terminal Command')).toBeInTheDocument();
+    expect(screen.getByText('$ ls -la')).toBeInTheDocument();
   });
 
   it('calls onReply with allow=true when Allow is clicked', () => {
@@ -58,5 +59,25 @@ describe('PermissionCard', () => {
 
     fireEvent.click(screen.getByText('Deny'));
     expect(onReply).toHaveBeenCalledWith('perm-1', false);
+  });
+
+  it('regression: renders diff preview for edit permission requests', () => {
+    const { container } = render(
+      <PermissionCard
+        id="perm-2"
+        type="edit"
+        title="Edit file permission request"
+        metadata={{
+          filepath: 'src/config.json',
+          diff: '--- a/src/config.json\n+++ b/src/config.json\n@@ -1,2 +1,2 @@\n-port: 3000\n+port: 4000',
+        }}
+        onReply={() => {}}
+      />,
+    );
+
+    expect(screen.getByText('Edit: src/config.json')).toBeInTheDocument();
+    expect(container.querySelector('.diff-table')).toBeInTheDocument();
+    expect(screen.getByText('port: 3000')).toBeInTheDocument();
+    expect(screen.getByText('port: 4000')).toBeInTheDocument();
   });
 });

@@ -73,6 +73,7 @@ export function PartRenderer({
         state.status === 'completed' || state.status === 'running' ? state.time : undefined;
       const output = state.status === 'completed' ? state.output : undefined;
       const error = state.status === 'error' ? (state as { error: string }).error : undefined;
+      const metadata = (state as { metadata?: Record<string, unknown> }).metadata;
       return (
         <ToolPart
           tool={part.tool}
@@ -83,6 +84,7 @@ export function PartRenderer({
             title,
             error,
             time,
+            metadata,
           }}
           hasPredecessor={hasPredecessor}
           hasSuccessor={hasSuccessor}
