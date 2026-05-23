@@ -69,6 +69,32 @@ export function getToolIcon(tool: string): string {
   return '$(tools)';
 }
 
+/**
+ * Constructs a synthetic unified diff from a file-writing tool's input.
+ * This simulates a creation diff (from /dev/null to the new file path)
+ * so that we can render the written content in the standard diff viewer.
+ *
+ * @param input The tool input record containing the content and optional path details.
+ * @returns A unified diff string, or undefined if content is not a string.
+ */
+function getSyntheticWriteDiff(input?: Record<string, unknown>): string | undefined {
+  if (!input || typeof input.content !== 'string') {
+    return undefined;
+  }
+  const filePath = (input.filePath ||
+    input.TargetFile ||
+    input.targetFile ||
+    input.path ||
+    'file') as string;
+  const content = input.content;
+  const lines = content === '' ? [] : content.split(/\r?\n/);
+  const lineCount = lines.length;
+  // Construct the unified diff headers representing a newly created file.
+  const diffHeader = `--- /dev/null\n+++ b/${filePath}\n@@ -0,0 +1,${lineCount} @@`;
+  const diffBody = lines.map((line) => `+${line}`).join('\n');
+  return `${diffHeader}\n${diffBody}`;
+}
+
 /** Displays a tool execution in a collapsible borderless box, default collapsed. */
 export function ToolPart({
   tool,
@@ -76,7 +102,30 @@ export function ToolPart({
   hasPredecessor = false,
   hasSuccessor = false,
 }: ToolPartProps) {
-  const [collapsed, setCollapsed] = useState(true);
+  const toolName = tool.toLowerCase();
+
+  // File modifying tools (edit, write, write_to_file, apply_patch) should be default expanded (collapsed = false)
+  const isFileModifyingTool =
+    toolName === 'edit' ||
+    toolName === 'write' ||
+    toolName === 'write_to_file' ||
+    toolName === 'apply_patch';
+
+  const [collapsed, setCollapsed] = useState(!isFileModifyingTool);
+
+  const isEditOrWrite = toolName === 'edit' || toolName === 'write' || toolName === 'write_to_file';
+
+  const hasDiffText =
+    isEditOrWrite &&
+    ((state.metadata?.diff && typeof state.metadata.diff === 'string') ||
+      (state.input && typeof state.input.content === 'string'));
+
+  const hasApplyPatchFiles =
+    toolName === 'apply_patch' &&
+    Array.isArray(state.metadata?.files) &&
+    state.metadata.files.length > 0;
+
+  const hasDiff = hasDiffText || hasApplyPatchFiles;
 
   // Omit "Tool:" prefix to keep the sidebar presentation compact and developer-centric
   const getSummaryText = () => {
@@ -91,32 +140,33 @@ export function ToolPart({
    * otherwise falls back to a plain text pre-formatted block.
    */
   const renderOutput = () => {
-    if (!state.output) return null;
+    // Check if the tool modifies files and has a diff (either real or synthetic)
+    if (isEditOrWrite) {
+      let diffText: string | undefined;
+      if (state.metadata?.diff && typeof state.metadata.diff === 'string') {
+        diffText = state.metadata.diff;
+      } else if (state.input && typeof state.input.content === 'string') {
+        diffText = getSyntheticWriteDiff(state.input);
+      }
 
-    const toolName = tool.toLowerCase();
-
-    // Check if the tool modifies files and has diff metadata
-    if (
-      (toolName === 'edit' || toolName === 'write') &&
-      state.metadata?.diff &&
-      typeof state.metadata.diff === 'string'
-    ) {
-      const filePath = (state.input?.filePath || state.input?.TargetFile || '') as string;
-      return (
-        <div className="tool-output">
-          <span className="section-label">Diff</span>
-          <DiffPart diff={state.metadata.diff} filePath={filePath} />
-        </div>
-      );
+      if (diffText) {
+        const filePath = (state.input?.filePath ||
+          state.input?.TargetFile ||
+          state.input?.targetFile ||
+          state.input?.path ||
+          '') as string;
+        // Return only the diff element, omitting label and wrapping div as per instructions
+        return <DiffPart diff={diffText} filePath={filePath} />;
+      }
     }
 
     // Check if it is a multi-file patch application tool call
     if (toolName === 'apply_patch' && Array.isArray(state.metadata?.files)) {
       const files = state.metadata.files as Array<Record<string, unknown>>;
       if (files.length > 0) {
+        // Return only the file patches directly, omitting the top label and wrapping div
         return (
-          <div className="tool-output">
-            <span className="section-label">Applied Patch</span>
+          <>
             {files.map((file, idx) => {
               const relativePath = (file.relativePath || file.filePath || 'patch') as string;
               const fileType = file.type as string;
@@ -151,10 +201,13 @@ export function ToolPart({
                 </div>
               );
             })}
-          </div>
+          </>
         );
       }
     }
+
+    // Fallback for non-diff/non-patch outputs
+    if (!state.output) return null;
 
     return (
       <div className="tool-output">
@@ -188,7 +241,8 @@ export function ToolPart({
         }}
       >
         <div className="tool-content">
-          {state.input && Object.keys(state.input).length > 0 && (
+          {/* Hide tool input if a diff is being rendered, to keep layout clean */}
+          {!hasDiff && state.input && Object.keys(state.input).length > 0 && (
             <div className="tool-input">
               <pre>
                 {Object.entries(state.input)

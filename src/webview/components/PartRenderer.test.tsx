@@ -387,8 +387,9 @@ describe('PartRenderer', () => {
 
       const { container } = render(<PartRenderer part={part} />);
 
-      // Should render Diff section instead of raw Output
-      expect(screen.getByText('Diff')).toBeInTheDocument();
+      // Should render Diff table directly, omitting "Diff" section label and the input text
+      expect(screen.queryByText('Diff')).not.toBeInTheDocument();
+      expect(screen.queryByText(/FILEPATH/i)).not.toBeInTheDocument();
       expect(container.querySelector('.diff-table')).toBeInTheDocument();
       expect(screen.getByText('const old = 1;')).toBeInTheDocument();
       expect(screen.getByText('const newText = 1;')).toBeInTheDocument();
@@ -422,8 +423,8 @@ describe('PartRenderer', () => {
 
       const { container } = render(<PartRenderer part={part} />);
 
-      // Verify header titles are generated
-      expect(screen.getByText('Applied Patch')).toBeInTheDocument();
+      // Verify "Applied Patch" header label is NOT generated, but file-specific headers are
+      expect(screen.queryByText('Applied Patch')).not.toBeInTheDocument();
       expect(screen.getByText('Patched src/helper.ts')).toBeInTheDocument();
       expect(screen.getByText('Deleted src/deleted.ts')).toBeInTheDocument();
 
@@ -434,6 +435,39 @@ describe('PartRenderer', () => {
 
       // Verify deleted.ts lines deleted summary is rendered
       expect(screen.getByText('-10 lines')).toBeInTheDocument();
+    });
+
+    it('regression: renders write tool output with a synthetic diff, hides input/label, and defaults to expanded', () => {
+      const part = createMockToolPart('write');
+      part.state = {
+        status: 'completed',
+        input: {
+          TargetFile: 'src/new-file.js',
+          content: 'console.log("hello world");\nconst x = 5;',
+        },
+        output: 'Success',
+        title: 'Writing new-file.js',
+        time: { start: Date.now(), end: Date.now() + 1000 },
+        metadata: {},
+      };
+
+      const { container } = render(<PartRenderer part={part} />);
+
+      // Verify the element is default expanded (class list contains expanded, not collapsed)
+      const toolPartEl = container.querySelector('.tool-part');
+      expect(toolPartEl).toHaveClass('expanded');
+      expect(toolPartEl).not.toHaveClass('collapsed');
+
+      // Verify the synthetic diff table is rendered with added lines
+      expect(container.querySelector('.diff-table')).toBeInTheDocument();
+      expect(screen.getByText('console.log("hello world");')).toBeInTheDocument();
+      expect(screen.getByText('const x = 5;')).toBeInTheDocument();
+
+      // Verify labels like "Diff", "Output" or input contents are not visible
+      expect(screen.queryByText('Diff')).not.toBeInTheDocument();
+      expect(screen.queryByText('Output')).not.toBeInTheDocument();
+      expect(screen.queryByText(/TARGETFILE/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/CONTENT/i)).not.toBeInTheDocument();
     });
   });
 
