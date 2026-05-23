@@ -7,6 +7,7 @@ import type { Part } from '@opencode-ai/sdk/v2/client';
 import { useEffect, useState } from 'react';
 import type { AgentInfo, ExtToWebview, ModelInfo } from '../shared/types';
 import { ChatView } from './components/ChatView';
+import { PermissionBar } from './components/PermissionBar';
 import { PromptInput } from './components/PromptInput';
 import { SessionTabs } from './components/SessionTabs';
 import { SettingsPanel } from './components/SettingsPanel';
@@ -195,8 +196,8 @@ export function App() {
     send({ type: 'variant:switch', model, variant } as never);
   };
 
-  const handlePermissionReply = (permissionID: string, allow: boolean) => {
-    send({ type: 'permission:reply', permissionID, allow } as never);
+  const handlePermissionReply = (permissionID: string, reply: 'once' | 'always' | 'reject') => {
+    send({ type: 'permission:reply', permissionID, reply } as never);
   };
 
   const currentStatus = activeSessionID ? sessionStatus[activeSessionID] : undefined;
@@ -212,12 +213,14 @@ export function App() {
       />
 
       {activeSessionID ? (
-        <ChatView
-          sessionID={activeSessionID}
-          messages={messages[activeSessionID] || []}
-          parts={parts}
-          onPermissionReply={handlePermissionReply}
-        />
+        <>
+          <ChatView
+            sessionID={activeSessionID}
+            messages={messages[activeSessionID] || []}
+            parts={parts}
+          />
+          <PermissionBar sessionID={activeSessionID} onReply={handlePermissionReply} />
+        </>
       ) : (
         <div className="no-session">
           <p>No active session. Create a new session to start.</p>

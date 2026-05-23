@@ -19,7 +19,7 @@ describe('ChatView', () => {
     vi.clearAllMocks();
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => cb(performance.now()));
     useSessionStore.setState({
-      pendingPermission: null,
+      pendingPermissions: [],
     });
   });
 
@@ -32,14 +32,7 @@ describe('ChatView', () => {
     const assistantMsg = createMockAssistantMessage();
     const messages = [userMsg, assistantMsg];
 
-    const { container } = render(
-      <ChatView
-        sessionID="session-1"
-        messages={messages}
-        parts={{}}
-        onPermissionReply={() => {}}
-      />,
-    );
+    const { container } = render(<ChatView sessionID="session-1" messages={messages} parts={{}} />);
 
     expect(container.querySelector('.user-message')).toBeInTheDocument();
     expect(container.querySelector('.assistant-message')).toBeInTheDocument();
@@ -51,14 +44,7 @@ describe('ChatView', () => {
     const assistantMsg2 = { ...createMockAssistantMessage(), id: 'msg-3' };
     const messages = [userMsg, assistantMsg1, assistantMsg2];
 
-    const { container } = render(
-      <ChatView
-        sessionID="session-1"
-        messages={messages}
-        parts={{}}
-        onPermissionReply={() => {}}
-      />,
-    );
+    const { container } = render(<ChatView sessionID="session-1" messages={messages} parts={{}} />);
 
     // There should only be one message turn (one .message-turn container)
     expect(container.querySelectorAll('.message-turn')).toHaveLength(1);
@@ -67,16 +53,14 @@ describe('ChatView', () => {
   });
 
   it('renders empty state when no messages', () => {
-    render(
-      <ChatView sessionID="session-1" messages={[]} parts={{}} onPermissionReply={() => {}} />,
-    );
+    render(<ChatView sessionID="session-1" messages={[]} parts={{}} />);
 
     expect(screen.getByText('Start a conversation by typing a message below.')).toBeInTheDocument();
   });
 
   it('enables auto-scroll when scrolled to bottom', () => {
     const { container, rerender } = render(
-      <ChatView sessionID="session-1" messages={[]} parts={{}} onPermissionReply={() => {}} />,
+      <ChatView sessionID="session-1" messages={[]} parts={{}} />,
     );
 
     const chatView = container.querySelector('.chat-view') as HTMLDivElement;
@@ -94,21 +78,14 @@ describe('ChatView', () => {
 
     // Verify auto-scroll on new message
     const userMsg = createMockUserMessage();
-    rerender(
-      <ChatView
-        sessionID="session-1"
-        messages={[userMsg]}
-        parts={{}}
-        onPermissionReply={() => {}}
-      />,
-    );
+    rerender(<ChatView sessionID="session-1" messages={[userMsg]} parts={{}} />);
 
     expect(chatView.scrollTop).toBe(500);
   });
 
   it('disables auto-scroll when user scrolls up', () => {
     const { container, rerender } = render(
-      <ChatView sessionID="session-1" messages={[]} parts={{}} onPermissionReply={() => {}} />,
+      <ChatView sessionID="session-1" messages={[]} parts={{}} />,
     );
 
     const chatView = container.querySelector('.chat-view') as HTMLDivElement;
@@ -126,14 +103,7 @@ describe('ChatView', () => {
 
     // Verify auto-scroll remains disabled on new message
     const userMsg = createMockUserMessage();
-    rerender(
-      <ChatView
-        sessionID="session-1"
-        messages={[userMsg]}
-        parts={{}}
-        onPermissionReply={() => {}}
-      />,
-    );
+    rerender(<ChatView sessionID="session-1" messages={[userMsg]} parts={{}} />);
 
     expect(chatView.scrollTop).toBe(100);
   });

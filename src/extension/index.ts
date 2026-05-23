@@ -439,8 +439,13 @@ export async function activate(context: ExtensionContext): Promise<void> {
     });
 
     ipc.on('permission:reply', (msg) => {
-      const { permissionID, allow } = msg as { permissionID: string; allow: boolean };
-      sdk.permission.reply(permissionID, allow).catch((err) => {
+      const { permissionID, allow, reply } = msg as {
+        permissionID: string;
+        allow?: boolean;
+        reply?: 'once' | 'always' | 'reject';
+      };
+      const replyValue = reply || (allow ? 'once' : 'reject');
+      sdk.permission.reply(permissionID, replyValue).catch((err) => {
         ipc.send({
           type: 'error',
           message: `Permission reply failed: ${(err as Error).message}`,

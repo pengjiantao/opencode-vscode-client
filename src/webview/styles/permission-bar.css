@@ -1,0 +1,110 @@
+/* Compact, theme-adaptable permission bar styling */
+.permission-bar-container {
+  display: flex;
+  flex-direction: column;
+  max-height: 128px; /* Max height to display up to 3 rows comfortably */
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 2px 4px;
+  gap: 4px;
+}
+
+.permission-bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  gap: 16px;
+  height: 28px;
+  box-sizing: border-box;
+  border-radius: var(--rounded-md, 6px);
+  transition: background-color 0.15s ease;
+  background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+}
+
+.permission-bar-row:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.permission-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0; /* Necessary for text ellipsis to work inside flexbox */
+  flex: 1;
+}
+
+.permission-bar-icon {
+  color: var(--vscode-textLink-foreground);
+  flex-shrink: 0;
+}
+
+.permission-bar-text {
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-editor-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.permission-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.permission-bar-btn {
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--rounded-sm, 4px);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.permission-bar-btn:active {
+  transform: scale(0.96);
+}
+
+.permission-bar-btn-always {
+  color: var(--vscode-button-foreground);
+  background-color: transparent;
+  border: 1px solid var(--vscode-button-border, transparent);
+}
+
+.permission-bar-btn-always:hover {
+  background-color: color-mix(in srgb, var(--vscode-button-foreground) 10%, transparent);
+}
+
+.permission-bar-btn-allow {
+  background-color: color-mix(in srgb, var(--vscode-textLink-foreground) 10%, transparent);
+  color: var(--vscode-textLink-foreground);
+}
+
+.permission-bar-btn-allow:hover {
+  background-color: color-mix(in srgb, var(--vscode-textLink-foreground) 20%, transparent);
+}
+
+.permission-bar-btn-deny {
+  background-color: color-mix(
+    in srgb,
+    var(--vscode-errorForeground, var(--vscode-error-foreground, #f48771)) 10%,
+    transparent
+  );
+  color: var(--vscode-errorForeground, var(--vscode-error-foreground, #f48771));
+}
+
+.permission-bar-btn-deny:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--vscode-errorForeground, var(--vscode-error-foreground, #f48771)) 20%,
+    transparent
+  );
+}

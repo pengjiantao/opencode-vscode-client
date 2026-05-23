@@ -33,7 +33,8 @@ export function useSession() {
   const updatePart = useSessionStore((s) => s.updatePart);
   const updatePartDelta = useSessionStore((s) => s.updatePartDelta);
   const setSessionStatus = useSessionStore((s) => s.setSessionStatus);
-  const setPendingPermission = useSessionStore((s) => s.setPendingPermission);
+  const addPendingPermission = useSessionStore((s) => s.addPendingPermission);
+  const removePendingPermission = useSessionStore((s) => s.removePendingPermission);
 
   const createSession = useCallback(() => {
     send({ type: 'session:create' });
@@ -79,8 +80,10 @@ export function useSession() {
   );
 
   const replyPermission = useCallback(
-    (permissionID: string, allow: boolean) => {
-      send({ type: 'permission:reply', permissionID, allow });
+    (permissionID: string, replyOrAllow: 'once' | 'always' | 'reject' | boolean) => {
+      const reply =
+        typeof replyOrAllow === 'boolean' ? (replyOrAllow ? 'once' : 'reject') : replyOrAllow;
+      send({ type: 'permission:reply', permissionID, reply } as never);
     },
     [send],
   );
@@ -140,7 +143,7 @@ export function useSession() {
           );
           break;
         case 'permission.asked':
-          setPendingPermission(props as unknown as PermissionRequest);
+          addPendingPermission(props as unknown as PermissionRequest);
           break;
         default:
           break;
@@ -154,7 +157,7 @@ export function useSession() {
       updatePart,
       updatePartDelta,
       setSessionStatus,
-      setPendingPermission,
+      addPendingPermission,
     ],
   );
 
@@ -174,5 +177,7 @@ export function useSession() {
     switchAgent,
     replyPermission,
     handleEvent,
+    addPendingPermission,
+    removePendingPermission,
   };
 }

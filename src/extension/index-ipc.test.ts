@@ -388,7 +388,7 @@ describe('Extension IPC & Permission Event Handlers', () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
 
-    expect(mockSdk.permission.reply).toHaveBeenCalledWith('perm-1', true);
+    expect(mockSdk.permission.reply).toHaveBeenCalledWith('perm-1', 'once');
 
     const errorCalls = mockIpcSend.mock.calls.filter(
       ([msg]) => msg && (msg as { type: string }).type === 'error',

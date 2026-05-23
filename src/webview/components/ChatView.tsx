@@ -7,7 +7,6 @@ import type { Message, Part } from '@opencode-ai/sdk/v2/client';
 import { useMemo } from 'react';
 import { useSessionStore } from '../store/sessionStore';
 import { MessageTurn } from './MessageTurn';
-import { PermissionCard } from './PermissionCard';
 import { ScrollFadeContainer } from './ScrollFadeContainer';
 
 /**
@@ -24,13 +23,10 @@ interface ChatViewProps {
   sessionID: string;
   messages: Message[];
   parts: Record<string, Part[]>;
-  onPermissionReply: (id: string, allow: boolean) => void;
 }
 
 /** Renders a list of user/assistant message turns with inline permission cards. */
-export function ChatView({ sessionID, messages, parts, onPermissionReply }: ChatViewProps) {
-  const pendingPermission = useSessionStore((s) => s.pendingPermission);
-  const setPendingPermission = useSessionStore((s) => s.setPendingPermission);
+export function ChatView({ sessionID, messages, parts }: ChatViewProps) {
   const sessionStatus = useSessionStore((s) => s.sessionStatus);
 
   const activeSessionStatus = sessionID ? sessionStatus[sessionID] : undefined;
@@ -64,28 +60,13 @@ export function ChatView({ sessionID, messages, parts, onPermissionReply }: Chat
     return result;
   }, [messages, parts]);
 
-  const handlePermissionReply = (permissionID: string, allow: boolean) => {
-    onPermissionReply(permissionID, allow);
-    setPendingPermission(null);
-  };
-
   return (
     <ScrollFadeContainer
       className="chat-view-container"
       contentClassName="chat-view"
       autoScroll={true}
-      dependencies={[turns, activeSessionStatus, parts, pendingPermission]}
+      dependencies={[turns, activeSessionStatus, parts]}
     >
-      {pendingPermission && (
-        <PermissionCard
-          id={pendingPermission.id}
-          type={pendingPermission.permission}
-          title={pendingPermission.permission}
-          metadata={pendingPermission.metadata}
-          onReply={handlePermissionReply}
-        />
-      )}
-
       {turns.map((turn, index) => {
         const isLastTurn = index === turns.length - 1;
         const isGenerating =

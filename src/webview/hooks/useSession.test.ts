@@ -27,7 +27,7 @@ describe('useSession', () => {
       messages: {},
       parts: {},
       sessionStatus: {},
-      pendingPermission: null,
+      pendingPermissions: [],
     });
   });
 
@@ -126,7 +126,7 @@ describe('useSession', () => {
     });
   });
 
-  it('calls send when replyPermission is called', () => {
+  it('calls send when replyPermission is called with boolean', () => {
     const { result } = renderHook(() => useSession());
 
     act(() => {
@@ -136,7 +136,21 @@ describe('useSession', () => {
     expect(window.vscode.postMessage).toHaveBeenCalledWith({
       type: 'permission:reply',
       permissionID: 'perm-1',
-      allow: true,
+      reply: 'once',
+    });
+  });
+
+  it('calls send when replyPermission is called with string', () => {
+    const { result } = renderHook(() => useSession());
+
+    act(() => {
+      result.current.replyPermission('perm-1', 'always');
+    });
+
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'permission:reply',
+      permissionID: 'perm-1',
+      reply: 'always',
     });
   });
 
@@ -203,7 +217,7 @@ describe('useSession', () => {
         } as unknown as Event);
       });
 
-      expect(useSessionStore.getState().pendingPermission).toEqual(permission);
+      expect(useSessionStore.getState().pendingPermissions).toContainEqual(permission);
     });
 
     it('handles session.updated event', () => {

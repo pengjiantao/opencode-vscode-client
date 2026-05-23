@@ -169,10 +169,10 @@ export function createSDKClient(directory?: string): SDKClient {
       },
     },
     permission: {
-      reply: async (requestID: string, allow: boolean): Promise<void> => {
+      reply: async (requestID: string, reply: 'once' | 'always' | 'reject'): Promise<void> => {
         const result = await client.permission.reply({
           requestID,
-          reply: allow ? 'once' : 'reject',
+          reply,
         });
         const typed = result as {
           error?: { name?: string; data?: { message?: string } } | string;

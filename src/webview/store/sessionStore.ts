@@ -25,8 +25,8 @@ interface SessionStore {
   parts: Record<string, Part[]>;
   /** Session statuses keyed by session ID. */
   sessionStatus: Record<string, SessionStatus>;
-  /** Currently displayed permission request (null when dismissed). */
-  pendingPermission: PermissionRequest | null;
+  /** Active session's pending permission requests. */
+  pendingPermissions: PermissionRequest[];
 
   workspaceName: string | null;
   lspServers: LspServerInfo[];
@@ -47,7 +47,8 @@ interface SessionStore {
   updatePart: (part: Part) => void;
   updatePartDelta: (messageID: string, partID: string, field: string, delta: string) => void;
   setSessionStatus: (sessionID: string, status: SessionStatus) => void;
-  setPendingPermission: (permission: PermissionRequest | null) => void;
+  addPendingPermission: (permission: PermissionRequest) => void;
+  removePendingPermission: (id: string) => void;
   setSessionMessagesAndParts: (sessionID: string, messages: Message[], parts: Part[]) => void;
 
   setWorkspaceName: (name: string | null) => void;
@@ -75,7 +76,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   messages: {},
   parts: {},
   sessionStatus: {},
-  pendingPermission: null,
+  pendingPermissions: [],
 
   setActiveSession: (id) => set({ activeSessionID: id }),
 
@@ -109,6 +110,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
     set((state) => ({
       sessions: state.sessions.filter((s) => s.id !== id),
       activeSessionID: state.activeSessionID === id ? null : state.activeSessionID,
+      pendingPermissions: state.pendingPermissions.filter((p) => p.sessionID !== id),
     })),
 
   updateSession: (session) =>
@@ -237,8 +239,20 @@ export const useSessionStore = create<SessionStore>((set) => ({
       sessionStatus: { ...state.sessionStatus, [sessionID]: status },
     })),
 
-  /** Sets or clears the pending permission request shown to the user. */
-  setPendingPermission: (permission) => set({ pendingPermission: permission }),
+  /** Adds a pending permission request if it's not already in the list. */
+  addPendingPermission: (permission) =>
+    set((state) => {
+      if (state.pendingPermissions.some((p) => p.id === permission.id)) {
+        return {};
+      }
+      return { pendingPermissions: [...state.pendingPermissions, permission] };
+    }),
+
+  /** Removes a pending permission request by its request ID. */
+  removePendingPermission: (id) =>
+    set((state) => ({
+      pendingPermissions: state.pendingPermissions.filter((p) => p.id !== id),
+    })),
 
   workspaceName: null,
   lspServers: [],

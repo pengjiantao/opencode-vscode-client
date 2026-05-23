@@ -79,7 +79,7 @@ export interface SDKClient {
     get(): Promise<Config>;
   };
   permission: {
-    reply(requestID: string, allow: boolean): Promise<void>;
+    reply(requestID: string, reply: 'once' | 'always' | 'reject'): Promise<void>;
   };
   /** Subscribes to SSE events from the server. Returns an unsubscribe function. */
   subscribeEvents(handler: (event: unknown) => void): () => void;

@@ -213,7 +213,12 @@ export type WebviewToExt =
   | { type: 'model:switch'; model: string }
   | { type: 'agent:switch'; agent: string }
   | { type: 'variant:switch'; model: string; variant: string }
-  | { type: 'permission:reply'; permissionID: string; allow: boolean }
+  | {
+      type: 'permission:reply';
+      permissionID: string;
+      reply?: 'once' | 'always' | 'reject';
+      allow?: boolean;
+    }
   | { type: 'sessions:select-history' }
   | { type: 'file:open'; path: string; startLine?: number; endLine?: number }
   | { type: 'file:query'; path: string }
