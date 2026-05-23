@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.8](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.7...v0.1.8) (2026-05-23)
+
+### Features
+
+- add model variant reasoning profile support ([57e0dff](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/57e0dff3f8c26ad6d7c788679be8fde4bf0d5fba))
+- add paste-as-plain-text with context menu and Ctrl+Shift+V shortcut ([2645c4d](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/2645c4d35b0cefa38872e9a88c516bf279056716))
+- **webview:** implement question tool rendering with interactive QuestionBar ([a70b18c](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/a70b18cf4a5949dad65c9de2871295ac2cb8aef7))
+- **webview:** make diff component interactive — click to open/jump to file ([755d44a](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/755d44a92d3e0a40981968993bb01563beb3ec94))
+- **webview:** render edit/write/apply_patch diff output as structured table ([d92e3dd](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/d92e3dd9abd99327e4906ec8cdbbce56a945dea7))
+- **webview:** synthetic diff for write tool, expanded by default, hide labels ([855a9da](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/855a9daf803831f1d5f3014a9d21a12227ad2fa7))
+
+### Bug Fixes
+
+- **webview:** use errorForeground token for stop button with opacity-based hover ([741c0e4](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/741c0e43e4ad4e708730fada3cae96f62a80b1e7))
+
 ### [0.1.7](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.6...v0.1.7) (2026-05-22)
 
 ### Bug Fixes
