@@ -309,5 +309,32 @@ describe('useSession', () => {
 
       expect(useSessionStore.getState().sessionStatus['session-1']).toBe('busy');
     });
+
+    it('handles permission.replied event', () => {
+      const { result } = renderHook(() => useSession());
+      const permission: PermissionRequest = {
+        id: 'perm-1',
+        sessionID: 'session-1',
+        permission: 'run_command',
+        patterns: ['ls'],
+        metadata: {},
+        always: [],
+      };
+
+      act(() => {
+        useSessionStore.setState({
+          pendingPermissions: [permission],
+        });
+      });
+
+      act(() => {
+        result.current.handleEvent({
+          type: 'permission.replied',
+          properties: { requestID: 'perm-1' },
+        } as unknown as Event);
+      });
+
+      expect(useSessionStore.getState().pendingPermissions).toEqual([]);
+    });
   });
 });

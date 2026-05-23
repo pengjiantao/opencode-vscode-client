@@ -55,6 +55,11 @@ interface SessionStore {
   addPendingQuestion: (question: QuestionRequest) => void;
   removePendingQuestion: (id: string) => void;
   setSessionMessagesAndParts: (sessionID: string, messages: Message[], parts: Part[]) => void;
+  setPendingRequests: (
+    sessionID: string,
+    permissions: PermissionRequest[],
+    questions: QuestionRequest[],
+  ) => void;
 
   setWorkspaceName: (name: string | null) => void;
   setLspServers: (lsp: LspServerInfo[]) => void;
@@ -274,6 +279,19 @@ export const useSessionStore = create<SessionStore>((set) => ({
   removePendingQuestion: (id) =>
     set((state) => ({
       pendingQuestions: state.pendingQuestions.filter((q) => q.id !== id),
+    })),
+
+  /** Synchronizes the pending permissions and questions for a session from the extension host buffer. */
+  setPendingRequests: (sessionID, permissions, questions) =>
+    set((state) => ({
+      pendingPermissions: [
+        ...state.pendingPermissions.filter((p) => p.sessionID !== sessionID),
+        ...permissions,
+      ],
+      pendingQuestions: [
+        ...state.pendingQuestions.filter((q) => q.sessionID !== sessionID),
+        ...questions,
+      ],
     })),
 
   workspaceName: null,

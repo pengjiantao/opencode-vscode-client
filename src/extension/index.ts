@@ -4,13 +4,20 @@
  * Registers all IPC message handlers for session lifecycle and prompt operations.
  */
 
-import type { Part, SessionStatus } from '@opencode-ai/sdk/v2/client';
+import type {
+  Part,
+  PermissionRequest,
+  QuestionRequest,
+  SessionStatus,
+} from '@opencode-ai/sdk/v2/client';
 import { window, workspace, type ExtensionContext } from 'vscode';
 import { pasteClipboardTextAsPlainText, registerExtensionCommands } from './commands';
 import { IPCBridge } from './ipc';
 import { syncMetadata as importSyncMetadata } from './metadata';
+import { PendingRequestBuffer } from './pending-request-buffer';
 import type { SDKClient } from './sdk-client';
 import { createSDKClient } from './sdk-client-impl';
+import { handleCreateSession, handleSelectHistory } from './session-handlers';
 import { SessionManager } from './session-manager';
 import { SessionStateStore, type SessionState } from './session-state-store';
 import { StatusBarManager } from './status-bar';
@@ -33,8 +40,47 @@ let provider: OpencodeSidebarViewProvider;
 export async function activate(context: ExtensionContext): Promise<void> {
   const sessionStateStore = new SessionStateStore(context.globalState);
   const sessionStatuses = new Map<string, SessionStatus>();
+  const pendingBuffer = new PendingRequestBuffer();
   let cachedModels: ModelInfo[] = [];
   let cachedAgents: AgentInfo[] = [];
+
+  /** Sends the current session's pending requests to the webview. */
+  const syncPendingRequests = (sessionID: string): void => {
+    const { permissions, questions } = pendingBuffer.getBySession(sessionID);
+    ipc.send({
+      type: 'pending-requests',
+      sessionID,
+      permissions,
+      questions,
+    });
+  };
+
+  /** Calls the extracted handleCreateSession command handler. */
+  const invokeCreateSession = async (): Promise<void> => {
+    await handleCreateSession({
+      sessionManager,
+      context,
+      sessionStateStore,
+      cachedModels,
+      cachedAgents,
+      ipc,
+      syncPendingRequests,
+    });
+  };
+
+  /** Calls the extracted handleSelectHistory command handler. */
+  const invokeSelectHistory = async (): Promise<void> => {
+    await handleSelectHistory({
+      sdk,
+      sessionManager,
+      context,
+      sessionStateStore,
+      cachedModels,
+      cachedAgents,
+      ipc,
+      syncPendingRequests,
+    });
+  };
 
   try {
     const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -59,84 +105,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
     context.subscriptions.push(
       window.registerWebviewViewProvider('opencode-sidebar.main', provider),
     );
-
-    /** Creates a new session, persists to workspace state, and notifies webview. */
-    const handleCreateSession = async (): Promise<void> => {
-      try {
-        const session = await sessionManager.create();
-        const openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
-        if (!openIDs.includes(session.id)) {
-          openIDs.push(session.id);
-          await context.workspaceState.update('openSessionIDs', openIDs);
-        }
-        const state = sessionStateStore.getOrInitialize(session.id, cachedModels, cachedAgents);
-        ipc.send({ type: 'session:created', session });
-        ipc.send({
-          type: 'session:switched',
-          sessionID: session.id,
-          model: state.model,
-          agent: state.agent,
-          modelVariants: state.modelVariants,
-        });
-        ipc.send({ type: 'messages:list', sessionID: session.id, messages: [], parts: [] });
-      } catch (err) {
-        ipc.send({ type: 'error', message: (err as Error).message });
-      }
-    };
-
-    /** Shows a QuickPick list to select and reopen a previous session from history. */
-    const handleSelectHistory = async (): Promise<void> => {
-      try {
-        const sessions = await sdk.session.list();
-        const activeSessions = sessions.filter((s) => !(s.time as { archived?: unknown }).archived);
-        if (activeSessions.length === 0) {
-          void window.showInformationMessage('No previous sessions found.');
-          return;
-        }
-
-        const sorted = [...activeSessions].sort(
-          (a, b) => (b.time?.updated || 0) - (a.time?.updated || 0),
-        );
-
-        const items = sorted.map((s) => ({
-          label: s.title || 'Untitled Session',
-          description: new Date(s.time.updated || s.time.created).toLocaleString(),
-          sessionID: s.id,
-          session: s,
-        }));
-
-        const selected = await window.showQuickPick(items, {
-          placeHolder: 'Select a previous session to open',
-          title: 'OpenCode Session History',
-        });
-        if (!selected) return;
-
-        const sessionID = selected.sessionID;
-        const openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
-
-        if (!openIDs.includes(sessionID)) {
-          openIDs.push(sessionID);
-          await context.workspaceState.update('openSessionIDs', openIDs);
-          ipc.send({ type: 'session:created', session: selected.session });
-        }
-
-        sessionManager.switch(sessionID);
-        const state = sessionStateStore.getOrInitialize(sessionID, cachedModels, cachedAgents);
-        ipc.send({
-          type: 'session:switched',
-          sessionID,
-          model: state.model,
-          agent: state.agent,
-          modelVariants: state.modelVariants,
-        });
-        const { messages, parts } = await sessionManager.getMessagesAndParts(sessionID);
-        ipc.send({ type: 'messages:list', sessionID, messages, parts });
-      } catch (err) {
-        void window.showErrorMessage(
-          `Failed to retrieve session history: ${(err as Error).message}`,
-        );
-      }
-    };
 
     /** Handles webview initialization: loads sessions, messages, models, and agents. */
     ipc.on('init', async () => {
@@ -193,6 +161,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
             modelVariants: state.modelVariants,
           });
           ipc.send({ type: 'messages:list', sessionID: session.id, messages: [], parts: [] });
+          syncPendingRequests(session.id);
         } else {
           sessionManager.switch(activeID);
           await context.workspaceState.update('openSessionIDs', openIDs);
@@ -216,6 +185,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
           const { messages, parts } = await sessionManager.getMessagesAndParts(activeID);
           ipc.send({ type: 'messages:list', sessionID: activeID, messages, parts });
+          syncPendingRequests(activeID);
         }
       } catch (err) {
         console.error('Failed to load session list on init:', err);
@@ -225,7 +195,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     });
 
     ipc.on('session:create', () => {
-      void handleCreateSession();
+      void invokeCreateSession();
     });
 
     ipc.on('session:switch', async (msg) => {
@@ -243,6 +213,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         const { messages, parts } = await sessionManager.getMessagesAndParts(sessionID);
         ipc.send({ type: 'messages:list', sessionID, messages, parts });
         void syncMetadata();
+        syncPendingRequests(sessionID);
       } catch (err) {
         ipc.send({ type: 'error', message: (err as Error).message });
       }
@@ -253,6 +224,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       sessionStateStore.delete(sessionID);
       // Delete session status to prevent unbounded map growth
       sessionStatuses.delete(sessionID);
+      pendingBuffer.removeBySession(sessionID);
       const previousActiveID = sessionManager.activeSessionID;
       try {
         await sessionManager.archive(sessionID);
@@ -280,8 +252,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
             });
             const { messages, parts } = await sessionManager.getMessagesAndParts(nextActiveID);
             ipc.send({ type: 'messages:list', sessionID: nextActiveID, messages, parts });
+            syncPendingRequests(nextActiveID);
           } else {
-            await handleCreateSession();
+            await invokeCreateSession();
           }
         }
       } catch (err) {
@@ -293,6 +266,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       const { sessionID } = msg as { sessionID: string };
       // Delete session status to prevent unbounded map growth
       sessionStatuses.delete(sessionID);
+      pendingBuffer.removeBySession(sessionID);
       const previousActiveID = sessionManager.activeSessionID;
 
       let openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
@@ -302,7 +276,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       ipc.send({ type: 'session:deleted', sessionID });
 
       if (openIDs.length === 0) {
-        await handleCreateSession();
+        await invokeCreateSession();
         return;
       }
 
@@ -319,19 +293,21 @@ export async function activate(context: ExtensionContext): Promise<void> {
         });
         const { messages, parts } = await sessionManager.getMessagesAndParts(nextActiveID);
         ipc.send({ type: 'messages:list', sessionID: nextActiveID, messages, parts });
+        syncPendingRequests(nextActiveID);
       }
     });
 
     ipc.on('session:close-all', () => {
       // Clear all statuses to prevent memory leaks and unbounded map growth
       sessionStatuses.clear();
+      pendingBuffer.clear();
       void context.workspaceState.update('openSessionIDs', []);
       ipc.send({ type: 'init', sessions: [] });
-      void handleCreateSession();
+      void invokeCreateSession();
     });
 
     ipc.on('sessions:select-history', () => {
-      void handleSelectHistory();
+      void invokeSelectHistory();
     });
 
     ipc.on('clipboard:paste-plain-text', () => {
@@ -445,28 +421,48 @@ export async function activate(context: ExtensionContext): Promise<void> {
         reply?: 'once' | 'always' | 'reject';
       };
       const replyValue = reply || (allow ? 'once' : 'reject');
+      pendingBuffer.removePermission(permissionID);
       handlePromise(sdk.permission.reply(permissionID, replyValue), 'Permission reply failed');
     });
 
     ipc.on('question:reply', (msg) => {
       const { requestID, answers } = msg as { requestID: string; answers: string[][] };
+      pendingBuffer.removeQuestion(requestID);
       handlePromise(sdk.question.reply(requestID, answers), 'Question reply failed');
     });
 
     ipc.on('question:reject', (msg) => {
       const { requestID } = msg as { requestID: string };
+      pendingBuffer.removeQuestion(requestID);
       handlePromise(sdk.question.reject(requestID), 'Question reject failed');
     });
 
     // Subscribe to events and register disposable to prevent memory leaks
     const unsubscribeEvents = sdk.subscribeEvents((event: unknown) => {
-      // Forward SSE events to webview
-      ipc.send({ type: 'event:received', event } as ExtToWebview);
-
       const evt = event as {
         type?: string;
         properties?: { sessionID?: string; status?: SessionStatus; info?: { id?: string } };
       };
+
+      if (evt.type === 'permission.asked') {
+        pendingBuffer.addPermission(evt.properties as unknown as PermissionRequest);
+      } else if (evt.type === 'permission.replied') {
+        const permID = (evt.properties as unknown as { requestID: string })?.requestID;
+        if (permID) {
+          pendingBuffer.removePermission(permID);
+        }
+      } else if (evt.type === 'question.asked') {
+        pendingBuffer.addQuestion(evt.properties as unknown as QuestionRequest);
+      } else if (evt.type === 'question.replied' || evt.type === 'question.rejected') {
+        const reqID = (evt.properties as unknown as { requestID: string })?.requestID;
+        if (reqID) {
+          pendingBuffer.removeQuestion(reqID);
+        }
+      }
+
+      // Forward SSE events to webview
+      ipc.send({ type: 'event:received', event } as ExtToWebview);
+
       if (evt.type === 'session.status' && evt.properties?.sessionID && evt.properties?.status) {
         sessionStatuses.set(evt.properties.sessionID, evt.properties.status);
         statusBarManager.update();
@@ -480,12 +476,19 @@ export async function activate(context: ExtensionContext): Promise<void> {
     });
     context.subscriptions.push({ dispose: unsubscribeEvents });
 
+    ipc.on('sync-pending-requests', () => {
+      const activeID = sessionManager.activeSessionID;
+      if (activeID) {
+        syncPendingRequests(activeID);
+      }
+    });
+
     registerExtensionCommands(
       context,
       ipc,
       provider,
-      () => void handleCreateSession(),
-      () => void handleSelectHistory(),
+      () => void invokeCreateSession(),
+      () => void invokeSelectHistory(),
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

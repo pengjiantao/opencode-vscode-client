@@ -162,6 +162,9 @@ export function useSession() {
         case 'permission.asked':
           addPendingPermission(props as unknown as PermissionRequest);
           break;
+        case 'permission.replied':
+          removePendingPermission((props as unknown as { requestID: string }).requestID);
+          break;
         case 'question.asked':
           addPendingQuestion(props as unknown as QuestionRequest);
           break;
@@ -182,6 +185,7 @@ export function useSession() {
       updatePartDelta,
       setSessionStatus,
       addPendingPermission,
+      removePendingPermission,
       addPendingQuestion,
       removePendingQuestion,
     ],

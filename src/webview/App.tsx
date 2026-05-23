@@ -50,6 +50,7 @@ export function App() {
   const removeSession = useSessionStore((s) => s.removeSession);
   const updateSession = useSessionStore((s) => s.updateSession);
   const setSessionMessagesAndParts = useSessionStore((s) => s.setSessionMessagesAndParts);
+  const setPendingRequests = useSessionStore((s) => s.setPendingRequests);
 
   const setWorkspaceName = useSessionStore((s) => s.setWorkspaceName);
   const setLspServers = useSessionStore((s) => s.setLspServers);
@@ -128,6 +129,9 @@ export function App() {
         case 'init':
           setSessions(message.sessions);
           break;
+        case 'pending-requests':
+          setPendingRequests(message.sessionID, message.permissions, message.questions);
+          break;
       }
     };
 
@@ -148,6 +152,7 @@ export function App() {
     setPlugins,
     setExtensionVersion,
     setFileInfo,
+    setPendingRequests,
   ]);
 
   const handleCreateSession = () => {

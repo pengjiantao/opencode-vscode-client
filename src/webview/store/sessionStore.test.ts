@@ -109,4 +109,54 @@ describe('sessionStore', () => {
       expect(useSessionStore.getState().sessionStatus['session-1']).toEqual(status);
     });
   });
+
+  describe('setPendingRequests', () => {
+    it('overwrites pending requests for a specific session without affecting other sessions', () => {
+      const perm1 = {
+        id: 'perm-1',
+        sessionID: 'session-1',
+        permission: 'read_file',
+        patterns: [],
+        metadata: {},
+        always: [],
+      };
+      const perm2 = {
+        id: 'perm-2',
+        sessionID: 'session-2',
+        permission: 'write_file',
+        patterns: [],
+        metadata: {},
+        always: [],
+      };
+      const q1 = {
+        id: 'q-1',
+        sessionID: 'session-1',
+        questions: [],
+      };
+      const q2 = {
+        id: 'q-2',
+        sessionID: 'session-2',
+        questions: [],
+      };
+
+      useSessionStore.setState({
+        pendingPermissions: [perm1, perm2],
+        pendingQuestions: [q1, q2],
+      });
+
+      // Synchronize session-1 with empty pending lists
+      useSessionStore.getState().setPendingRequests('session-1', [], []);
+
+      expect(useSessionStore.getState().pendingPermissions).toEqual([perm2]);
+      expect(useSessionStore.getState().pendingQuestions).toEqual([q2]);
+
+      // Synchronize session-1 with new pending list
+      const newPerm = { ...perm1, id: 'perm-new' };
+      const newQ = { ...q1, id: 'q-new' };
+      useSessionStore.getState().setPendingRequests('session-1', [newPerm], [newQ]);
+
+      expect(useSessionStore.getState().pendingPermissions).toEqual([perm2, newPerm]);
+      expect(useSessionStore.getState().pendingQuestions).toEqual([q2, newQ]);
+    });
+  });
 });

@@ -39,6 +39,7 @@ export const mockVscode = {
     showInformationMessage: vi.fn(),
     showErrorMessage: vi.fn(),
     showWarningMessage: vi.fn(),
+    showQuickPick: vi.fn(),
     showTextDocument: vi.fn(),
     showOpenDialog: vi.fn(),
     registerWebviewViewProvider: vi.fn(() => ({ dispose: vi.fn() })),

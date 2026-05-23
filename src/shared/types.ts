@@ -3,7 +3,14 @@
  * Defines the IPC message protocol between the two sides.
  */
 
-import type { Event, Message, Part, Session } from '@opencode-ai/sdk/v2/client';
+import type {
+  Event,
+  Message,
+  Part,
+  PermissionRequest,
+  QuestionRequest,
+  Session,
+} from '@opencode-ai/sdk/v2/client';
 
 export type { Event };
 
@@ -133,6 +140,12 @@ export interface SelectedFileInfo {
 export type ExtToWebview =
   | { type: 'session:created'; session: Session }
   | {
+      type: 'pending-requests';
+      sessionID: string;
+      permissions: PermissionRequest[];
+      questions: QuestionRequest[];
+    }
+  | {
       type: 'session:switched';
       sessionID: string;
       model?: string;
@@ -237,4 +250,5 @@ export type WebviewToExt =
   | { type: 'file:select' }
   | { type: 'clipboard:paste-plain-text' }
   | { type: 'init' }
+  | { type: 'sync-pending-requests' }
   | { type: 'pong' };
