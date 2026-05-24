@@ -5,5 +5,6 @@
       "*": "deny",
       "/home/fiyqkrc/Documents/project/opencode/**": "allow"
     }
-  }
+  },
+  "default_agent": "spec-explorer"
 }
