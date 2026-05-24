@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.10](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.9...v0.1.10) (2026-05-24)
+
+### Features
+
+- **webview:** add custom Bash output with real-time streaming, auto-scroll, and styled container ([1fc0596](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/1fc059673657ce3fd3d4e052fad7df8c4d06c9c5))
+
 ### [0.1.9](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.8...v0.1.9) (2026-05-23)
 
 ### Features
