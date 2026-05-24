@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.13](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.12...v0.1.13) (2026-05-24)
+
+### Bug Fixes
+
+- improve horizontal wheel scrolling on session tabs ([381bef6](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/381bef6ba0917cae0f4c1853e97061c9fb7a3842))
+- replace scrollIntoView with manual scrollTop to prevent webview layout shift ([c27229d](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c27229dc3c97adc8e214c631f26cdd10d9b8b368))
+
 ### [0.1.12](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.11...v0.1.12) (2026-05-24)
 
 ### Bug Fixes
