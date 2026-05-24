@@ -100,7 +100,17 @@ export async function activate(context: ExtensionContext): Promise<void> {
     // Initialize native status bar item to show current session processing status via StatusBarManager
     const statusBarManager = new StatusBarManager(context, sessionManager, sessionStatuses);
 
-    await sessionManager.connect();
+    const serverHandle = await sessionManager.connect();
+    // Register the server cleanup disposable to terminate the server process on extension deactivation/window close
+    context.subscriptions.push({
+      dispose: () => {
+        try {
+          serverHandle.close();
+        } catch (err) {
+          console.error('Failed to close OpenCode server on deactivation:', err);
+        }
+      },
+    });
 
     context.subscriptions.push(
       window.registerWebviewViewProvider('opencode-sidebar.main', provider),

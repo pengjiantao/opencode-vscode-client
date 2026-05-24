@@ -4,7 +4,7 @@
  */
 
 import type { Message, Part, Session } from '@opencode-ai/sdk/v2/client';
-import type { SDKClient } from './sdk-client';
+import type { SDKClient, ServerHandle } from './sdk-client';
 
 /** Current state of the session manager. */
 export interface SessionManagerState {
@@ -57,10 +57,15 @@ export class SessionManager {
     this.setState({ sessions });
   }
 
-  /** Starts the SDK server and marks as connected. */
-  async connect(): Promise<void> {
-    await this.sdk.startServer();
+  /**
+   * Starts the SDK server, marks as connected, and returns the server handle.
+   *
+   * @returns A promise resolving to the ServerHandle.
+   */
+  async connect(): Promise<ServerHandle> {
+    const handle = await this.sdk.startServer();
     this.setState({ isConnected: true });
+    return handle;
   }
 
   /** Creates a new session and sets it as active. */

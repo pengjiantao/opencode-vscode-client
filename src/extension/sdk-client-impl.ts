@@ -1,6 +1,6 @@
 /**
  * @file Concrete implementation of the SDKClient interface.
- * Manages server lifecycle (auto-connect to existing server or start new one)
+ * Manages server lifecycle (starts a dedicated server per client instance)
  * and wraps the @opencode-ai/sdk library operations.
  */
 
@@ -21,32 +21,15 @@ import { createOpencodeClient } from '@opencode-ai/sdk/v2/client';
 import type { CommandOptions, PromptOptions, SDKClient, ServerHandle } from './sdk-client';
 import type { AgentInfo, CommandInfo, ModelInfo, SkillInfo } from './types';
 
-/** Creates a configured SDK client, attempting to reuse an existing server on localhost:4096. */
+/** Creates a configured SDK client. Every client instance starts its own dedicated server. */
 export function createSDKClient(directory?: string): SDKClient {
   let serverHandle: ServerHandle | null = null;
   let client = createOpencodeClient({ directory });
 
-  /** Probes port 4096, then starts a new server if unavailable. */
+  /** Starts a new dedicated server for this client instance. */
   const startServer = async (): Promise<ServerHandle> => {
-    try {
-      const testUrl = 'http://127.0.0.1:4096';
-      const response = await fetch(testUrl, {
-        method: 'HEAD',
-        signal: AbortSignal.timeout(1000),
-      }).catch(() => null);
-      // Reuse existing server if reachable
-      if (response?.ok) {
-        client = createOpencodeClient({ baseUrl: testUrl, directory });
-        return {
-          url: testUrl,
-          close: () => {},
-        };
-      }
-    } catch {
-      /* server not running — will start a new one */
-    }
-
-    const server = await createOpencodeServer();
+    // Spawn the opencode server on a free port (port fallback is handled by the SDK).
+    const server = await createOpencodeServer({ port: 0 });
     serverHandle = {
       url: server.url,
       close: () => server.close(),
