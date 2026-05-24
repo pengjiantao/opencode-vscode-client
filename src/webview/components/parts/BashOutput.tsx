@@ -27,11 +27,16 @@ export function BashOutput({ command, output, status }: BashOutputProps) {
     const el = scrollRef.current;
     if (!el) return;
 
-    // Check if the user is already near the bottom before scrolling
-    const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= 40;
-    if (isAtBottom) {
-      el.scrollTop = el.scrollHeight;
-    }
+    // Use requestAnimationFrame to ensure DOM has updated with new content
+    // before checking scroll dimensions and scrolling
+    const frameId = requestAnimationFrame(() => {
+      const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= 40;
+      if (isAtBottom) {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+
+    return () => cancelAnimationFrame(frameId);
   }, [output]);
 
   if (!output) {
