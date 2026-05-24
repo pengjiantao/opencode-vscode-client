@@ -86,9 +86,7 @@ describe('SearchListPopover', () => {
     expect(onSelect).toHaveBeenCalledWith(items[1]);
   });
 
-  it('should scroll selected element into view', () => {
-    const scrollSpy = vi.fn();
-
+  it('should adjust container scrollTop to keep selected element in view', () => {
     const { container, rerender } = render(
       <SearchListPopover
         show={true}
@@ -101,10 +99,18 @@ describe('SearchListPopover', () => {
       />,
     );
 
+    const popoverContainer = container.querySelector('.search-list-popover') as HTMLElement;
+    Object.defineProperty(popoverContainer, 'clientHeight', { value: 100 });
+    Object.defineProperty(popoverContainer, 'scrollTop', { value: 0, writable: true });
+
     const listItems = container.querySelectorAll('.search-list-item');
-    listItems.forEach((el) => {
-      el.scrollIntoView = scrollSpy;
-    });
+    // Mock first item
+    Object.defineProperty(listItems[0], 'offsetTop', { value: 0 });
+    Object.defineProperty(listItems[0], 'offsetHeight', { value: 30 });
+
+    // Mock second item (out of view at bottom)
+    Object.defineProperty(listItems[1], 'offsetTop', { value: 120 });
+    Object.defineProperty(listItems[1], 'offsetHeight', { value: 30 });
 
     rerender(
       <SearchListPopover
@@ -118,10 +124,27 @@ describe('SearchListPopover', () => {
       />,
     );
 
-    expect(scrollSpy).toHaveBeenCalledWith({
-      behavior: 'auto',
-      block: 'center',
-      inline: 'nearest',
-    });
+    // Should scroll down to show the bottom of the second item
+    // container.scrollTop = offsetTop (120) + itemHeight (30) - containerHeight (100) = 50
+    expect(popoverContainer.scrollTop).toBe(50);
+
+    // Now test scrolling up
+    Object.defineProperty(popoverContainer, 'scrollTop', { value: 100, writable: true });
+
+    rerender(
+      <SearchListPopover
+        show={true}
+        items={items}
+        selectedIndex={0}
+        onSelect={vi.fn()}
+        getKey={(i) => String(i.id)}
+        renderItem={renderItem}
+        emptyText="No items"
+      />,
+    );
+
+    // Should scroll up to show the top of the first item
+    // container.scrollTop = offsetTop (0)
+    expect(popoverContainer.scrollTop).toBe(0);
   });
 });

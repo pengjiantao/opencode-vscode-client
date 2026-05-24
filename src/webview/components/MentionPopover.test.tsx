@@ -65,30 +65,4 @@ describe('MentionPopover', () => {
     fireEvent.click(packageItem);
     expect(selectSpy).toHaveBeenCalledWith(mockResults[0]);
   });
-
-  it('should scroll selected element into view if scrollIntoView is available', () => {
-    const scrollSpy = vi.fn();
-
-    // First render with selectedIndex = 0
-    const { container, rerender } = render(
-      <MentionPopover show={true} results={mockResults} selectedIndex={0} onSelect={vi.fn()} />,
-    );
-
-    // Assign mock function to all list items (since selected class will move to index 1)
-    const items = container.querySelectorAll('.search-list-item');
-    items.forEach((item) => {
-      item.scrollIntoView = scrollSpy;
-    });
-
-    // Re-render with new selectedIndex = 1 to trigger useEffect
-    rerender(
-      <MentionPopover show={true} results={mockResults} selectedIndex={1} onSelect={vi.fn()} />,
-    );
-
-    expect(scrollSpy).toHaveBeenCalledWith({
-      behavior: 'auto',
-      block: 'center',
-      inline: 'nearest',
-    });
-  });
 });

@@ -50,15 +50,27 @@ export function SearchListPopover<T>({
   useEffect(() => {
     if (show && containerRef.current && selectedIndex >= 0 && items.length > 0) {
       const key = getKey(items[selectedIndex]);
-      const selectedEl = containerRef.current.querySelector(
+      const selectedEl = containerRef.current.querySelector<HTMLElement>(
         `.search-list-item[data-item-key="${CSS.escape(key)}"]`,
       );
-      if (selectedEl && typeof selectedEl.scrollIntoView === 'function') {
-        selectedEl.scrollIntoView({
-          behavior: 'auto',
-          block: 'center',
-          inline: 'nearest',
-        });
+
+      if (selectedEl && containerRef.current) {
+        const container = containerRef.current;
+        const offsetTop = selectedEl.offsetTop;
+        const itemHeight = selectedEl.offsetHeight;
+        const containerHeight = container.clientHeight;
+        const containerScrollTop = container.scrollTop;
+
+        // NOTE: We do not use `selectedEl.scrollIntoView()` here because it inherently
+        // tries to scroll ALL scrollable ancestor containers (including the document body/webview)
+        // to center the element, which causes the entire webview layout to shift upwards.
+        // Instead, we manually calculate and update the `scrollTop` of the dropdown container
+        // to ensure the selected item is just visible within the list bounds.
+        if (offsetTop < containerScrollTop) {
+          container.scrollTop = offsetTop;
+        } else if (offsetTop + itemHeight > containerScrollTop + containerHeight) {
+          container.scrollTop = offsetTop + itemHeight - containerHeight;
+        }
       }
     }
   }, [selectedIndex, show, items, getKey]);
