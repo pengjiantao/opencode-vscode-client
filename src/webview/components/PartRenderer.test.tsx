@@ -474,6 +474,7 @@ describe('PartRenderer', () => {
       const part = createMockToolPart('bash');
       part.state = {
         status: 'running',
+        title: 'List files',
         input: {
           command: 'ls -la',
         },
@@ -485,9 +486,8 @@ describe('PartRenderer', () => {
 
       const { container } = render(<PartRenderer part={part} />);
 
-      // 1. Collapsible header is strictly BASH (summary text only BASH)
-      expect(screen.getByText('BASH')).toBeInTheDocument();
-      expect(screen.queryByText(/BASH -/i)).not.toBeInTheDocument();
+      // 1. Collapsible header shows BASH with description
+      expect(screen.getByText('BASH - List files')).toBeInTheDocument();
 
       // 2. Default expanded
       const toolPartEl = container.querySelector('.tool-part');
@@ -526,7 +526,7 @@ describe('PartRenderer', () => {
 
       const { container } = render(<PartRenderer part={part} />);
 
-      expect(screen.getByText('BASH')).toBeInTheDocument();
+      expect(screen.getByText('BASH - echo hello')).toBeInTheDocument();
       expect(screen.getByText('hello')).toBeInTheDocument();
       expect(screen.queryByText('Output')).not.toBeInTheDocument();
 

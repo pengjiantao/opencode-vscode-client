@@ -145,7 +145,7 @@ export function ToolPart({
   // Omit "Tool:" prefix to keep the sidebar presentation compact and developer-centric
   const getSummaryText = () => {
     if (isBash) {
-      return 'BASH';
+      return state.title ? `BASH - ${state.title}` : 'BASH';
     }
     return `${tool.toUpperCase()}${state.title ? ` - ${state.title}` : ''}`;
   };
