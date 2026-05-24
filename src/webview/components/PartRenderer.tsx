@@ -9,7 +9,7 @@ import { Codicon } from './Codicon';
 import { FilePart } from './parts/FilePart';
 import { ReasoningPart } from './parts/ReasoningPart';
 import { TextPart } from './parts/TextPart';
-import { ToolPart } from './parts/ToolPart';
+import { ToolPart, isBashTool } from './parts/ToolPart';
 
 interface PartRendererProps {
   part: Part;
@@ -71,9 +71,13 @@ export function PartRenderer({
             : undefined;
       const time =
         state.status === 'completed' || state.status === 'running' ? state.time : undefined;
-      const output = state.status === 'completed' ? state.output : undefined;
-      const error = state.status === 'error' ? (state as { error: string }).error : undefined;
       const metadata = (state as { metadata?: Record<string, unknown> }).metadata;
+      const isBash = isBashTool(part.tool);
+      const completedOutput = state.status === 'completed' ? state.output : undefined;
+      const output = isBash
+        ? (metadata?.output as string | undefined) || completedOutput
+        : completedOutput;
+      const error = state.status === 'error' ? (state as { error: string }).error : undefined;
       return (
         <ToolPart
           tool={part.tool}

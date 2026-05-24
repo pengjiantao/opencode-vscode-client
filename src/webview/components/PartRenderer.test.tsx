@@ -469,6 +469,108 @@ describe('PartRenderer', () => {
       expect(screen.queryByText(/TARGETFILE/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/CONTENT/i)).not.toBeInTheDocument();
     });
+
+    it('regression: renders bash tool streaming/real-time output, defaults to expanded, shows header command, hides input block/labels, and header is strictly BASH', () => {
+      const part = createMockToolPart('bash');
+      part.state = {
+        status: 'running',
+        input: {
+          command: 'ls -la',
+        },
+        time: { start: Date.now() },
+        metadata: {
+          output: 'total 0\ndrwxr-xr-x 1 user staff 0 May 24 10:00 .',
+        },
+      };
+
+      const { container } = render(<PartRenderer part={part} />);
+
+      // 1. Collapsible header is strictly BASH (summary text only BASH)
+      expect(screen.getByText('BASH')).toBeInTheDocument();
+      expect(screen.queryByText(/BASH -/i)).not.toBeInTheDocument();
+
+      // 2. Default expanded
+      const toolPartEl = container.querySelector('.tool-part');
+      expect(toolPartEl).toHaveClass('expanded');
+      expect(toolPartEl).not.toHaveClass('collapsed');
+
+      // 3. Header command is shown in output header
+      const cmdSpan = container.querySelector('.bash-output-command');
+      expect(cmdSpan).toBeInTheDocument();
+      expect(cmdSpan?.textContent).toBe('ls -la');
+      expect(cmdSpan?.getAttribute('title')).toBe('ls -la');
+
+      // Verify thinking/executing spinner icon is displayed in the running state
+      expect(container.querySelector('.codicon-sync.codicon-modifier-spin')).toBeInTheDocument();
+
+      // 4. Output contains output text from metadata.output
+      expect(screen.getByText(/total 0/)).toBeInTheDocument();
+
+      // 5. Hide labels and input blocks (redundant inputs/labels are omitted)
+      expect(screen.queryByText('Output')).not.toBeInTheDocument();
+      expect(screen.queryByText(/COMMAND/i)).not.toBeInTheDocument();
+    });
+
+    it('regression: falls back to state.output when metadata.output is not available for completed bash tool', () => {
+      const part = createMockToolPart('run_command');
+      part.state = {
+        status: 'completed',
+        input: {
+          command: 'echo hello',
+        },
+        title: 'echo hello',
+        output: 'hello',
+        time: { start: Date.now(), end: Date.now() + 10 },
+        metadata: {},
+      };
+
+      const { container } = render(<PartRenderer part={part} />);
+
+      expect(screen.getByText('BASH')).toBeInTheDocument();
+      expect(screen.getByText('hello')).toBeInTheDocument();
+      expect(screen.queryByText('Output')).not.toBeInTheDocument();
+
+      // Verify thinking spinner icon is NOT displayed in completed state
+      expect(container.querySelector('.codicon-sync')).not.toBeInTheDocument();
+    });
+
+    it('regression: returns null from BashOutput when output is empty/undefined', () => {
+      const part = createMockToolPart('bash');
+      part.state = {
+        status: 'running',
+        input: {
+          command: 'ls',
+        },
+        time: { start: Date.now() },
+        metadata: {
+          output: '', // empty output
+        },
+      };
+
+      const { container } = render(<PartRenderer part={part} />);
+
+      // Output component is not rendered, so tool-bash-output container shouldn't be in the document
+      expect(container.querySelector('.tool-bash-output')).not.toBeInTheDocument();
+    });
+
+    it('regression: falls back to state.title when input.command is missing for bash tool', () => {
+      const part = createMockToolPart('bash');
+      part.state = {
+        status: 'running',
+        input: {}, // missing command
+        title: 'fallback command execution',
+        time: { start: Date.now() },
+        metadata: {
+          output: 'some output',
+        },
+      };
+
+      const { container } = render(<PartRenderer part={part} />);
+
+      const cmdSpan = container.querySelector('.bash-output-command');
+      expect(cmdSpan).toBeInTheDocument();
+      expect(cmdSpan?.textContent).toBe('fallback command execution');
+    });
   });
 
   describe('getToolIcon', () => {

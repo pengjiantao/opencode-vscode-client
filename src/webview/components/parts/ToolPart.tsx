@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { Codicon } from '../Codicon';
+import { BashOutput } from './BashOutput';
 import { DiffPart } from './DiffPart';
 
 interface ToolPartProps {
@@ -22,6 +23,18 @@ interface ToolPartProps {
 }
 
 /**
+ * Checks whether a given tool name refers to a bash-like shell or command execution tool.
+ *
+ * @param tool The raw tool name (e.g., 'bash', 'grep_search', 'write_to_file')
+ * @returns True if the tool name corresponds to a bash/shell command tool.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function isBashTool(tool: string): boolean {
+  const name = tool.toLowerCase();
+  return /bash|shell|command|terminal|run_command/.test(name);
+}
+
+/**
  * Resolves the appropriate VS Code Codicon class name or identifier for a given tool name.
  * Maps common tools like bash, grep, search, files, and browsers to their corresponding icons.
  *
@@ -36,12 +49,7 @@ export function getToolIcon(tool: string): string {
     return '$(browser)';
   }
   // Map bash/terminal commands to terminal icon
-  if (
-    name.includes('bash') ||
-    name.includes('command') ||
-    name.includes('terminal') ||
-    name.includes('run_command')
-  ) {
+  if (isBashTool(tool)) {
     return '$(terminal)';
   }
   // Map search / pattern matching to search icon
@@ -107,14 +115,16 @@ export function ToolPart({
   hasSuccessor = false,
 }: ToolPartProps) {
   const toolName = tool.toLowerCase();
+  const isBash = isBashTool(tool);
 
-  // File modifying and question tools should be default expanded (collapsed = false)
+  // File modifying, question, and bash tools should be default expanded (collapsed = false)
   const isDefaultExpanded =
     toolName === 'edit' ||
     toolName === 'write' ||
     toolName === 'write_to_file' ||
     toolName === 'apply_patch' ||
-    toolName === 'question';
+    toolName === 'question' ||
+    isBash;
 
   const [collapsed, setCollapsed] = useState(!isDefaultExpanded);
 
@@ -134,6 +144,9 @@ export function ToolPart({
 
   // Omit "Tool:" prefix to keep the sidebar presentation compact and developer-centric
   const getSummaryText = () => {
+    if (isBash) {
+      return 'BASH';
+    }
     return `${tool.toUpperCase()}${state.title ? ` - ${state.title}` : ''}`;
   };
 
@@ -145,6 +158,12 @@ export function ToolPart({
    * otherwise falls back to a plain text pre-formatted block.
    */
   const renderOutput = () => {
+    // If the tool is a bash-like tool, render using BashOutput component
+    if (isBash) {
+      const command = (state.input?.command || state.title || '') as string;
+      return <BashOutput command={command} output={state.output || ''} status={state.status} />;
+    }
+
     // Check if the tool modifies files and has a diff (either real or synthetic)
     if (isEditOrWrite) {
       let diffText: string | undefined;
@@ -271,9 +290,10 @@ export function ToolPart({
         }}
       >
         <div className="tool-content">
-          {/* Hide tool input if a diff is being rendered or if it is a question tool, to keep layout clean */}
+          {/* Hide tool input if a diff is being rendered, it is a question tool, or a bash tool to keep layout clean */}
           {!hasDiff &&
             toolName !== 'question' &&
+            !isBash &&
             state.input &&
             Object.keys(state.input).length > 0 && (
               <div className="tool-input">
