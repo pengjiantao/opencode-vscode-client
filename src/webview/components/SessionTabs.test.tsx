@@ -93,4 +93,39 @@ describe('SessionTabs', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Close Session' }));
     expect(onClose).toHaveBeenCalledWith('session-1');
   });
+
+  it('supports horizontal scrolling via mouse wheel', () => {
+    const sessions = [
+      createMockSession({ id: 's1', title: 'Session 1' }),
+      createMockSession({ id: 's2', title: 'Session 2' }),
+      createMockSession({ id: 's3', title: 'Session 3' }),
+      createMockSession({ id: 's4', title: 'Session 4' }),
+      createMockSession({ id: 's5', title: 'Session 5' }),
+    ];
+
+    render(
+      <SessionTabs
+        sessions={sessions}
+        activeSessionID="s1"
+        onSwitch={() => {}}
+        onClose={() => {}}
+        onCloseAll={() => {}}
+      />,
+    );
+
+    const tabsList = document.querySelector('.tabs-list');
+    expect(tabsList).not.toBeNull();
+
+    // Mock scrollLeft property
+    Object.defineProperty(tabsList, 'scrollLeft', {
+      writable: true,
+      value: 0,
+      configurable: true,
+    });
+
+    const wheelEvent = new WheelEvent('wheel', { deltaY: 100, bubbles: true });
+    fireEvent(tabsList!, wheelEvent);
+
+    expect((tabsList as HTMLElement & { scrollLeft: number }).scrollLeft).toBe(100);
+  });
 });

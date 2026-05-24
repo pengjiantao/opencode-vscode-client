@@ -33,7 +33,14 @@ export function SessionTabs({
 }: SessionTabsProps) {
   return (
     <div className="session-tabs">
-      <div className="tabs-list">
+      <div
+        className="tabs-list"
+        onWheel={(e) => {
+          // Translate vertical scroll into horizontal scroll for tab overflow
+          e.preventDefault();
+          e.currentTarget.scrollLeft += e.deltaY;
+        }}
+      >
         {sessions.map((session) => (
           <div
             key={session.id}
