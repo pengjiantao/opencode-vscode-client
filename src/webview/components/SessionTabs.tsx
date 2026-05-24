@@ -37,7 +37,6 @@ export function SessionTabs({
         className="tabs-list"
         onWheel={(e) => {
           // Translate vertical scroll into horizontal scroll for tab overflow
-          e.preventDefault();
           e.currentTarget.scrollLeft += e.deltaY;
         }}
       >

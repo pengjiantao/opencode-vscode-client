@@ -28,6 +28,7 @@
   flex: 1;
   align-items: stretch;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none; /* Firefox */
 }
 
