@@ -19,7 +19,8 @@ import type { SDKClient } from './sdk-client';
 import { createSDKClient } from './sdk-client-impl';
 import { handleCreateSession, handleSelectHistory } from './session-handlers';
 import { SessionManager } from './session-manager';
-import { SessionStateStore, type SessionState } from './session-state-store';
+import { registerSessionStateHandlers } from './session-state-ipc-handlers';
+import { SessionStateStore } from './session-state-store';
 import { StatusBarManager } from './status-bar';
 import type { AgentInfo, ExtToWebview, ModelInfo } from './types';
 import { handleCommandPart } from './utils/command-router';
@@ -172,7 +173,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
           ipc.send({ type: 'messages:list', sessionID: session.id, messages: [], parts: [] });
           syncPendingRequests(session.id);
         } else {
-          sessionManager.switch(activeID);
+          await sessionManager.switch(activeID);
 
           // Migrate legacy configuration into the active session.
           sessionStateStore.migrateLegacyState(activeID);
@@ -209,7 +210,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     ipc.on('session:switch', async (msg) => {
       const { sessionID } = msg as { sessionID: string };
       try {
-        sessionManager.switch(sessionID);
+        await sessionManager.switch(sessionID);
         const state = sessionStateStore.getOrInitialize(sessionID, cachedModels, cachedAgents);
         ipc.send({
           type: 'session:switched',
@@ -375,45 +376,19 @@ export async function activate(context: ExtensionContext): Promise<void> {
       });
     };
 
-    const updateSessionState = (callback: (state: SessionState) => void): void => {
-      const activeID = sessionManager.activeSessionID;
-      if (activeID) {
-        const state = sessionStateStore.getOrInitialize(activeID, cachedModels, cachedAgents);
-        callback(state);
-        sessionStateStore.set(activeID, state);
-      }
-    };
-
     registerFileHandlers(ipc);
+    registerSessionStateHandlers({
+      ipc,
+      sessionManager,
+      sessionStateStore,
+      getCachedModels: () => cachedModels,
+      getCachedAgents: () => cachedAgents,
+      syncMetadata,
+    });
 
     ipc.on('prompt:abort', (msg) => {
       const { sessionID } = msg as { sessionID: string };
       handlePromise(sessionManager.abort(sessionID), 'Abort failed');
-    });
-
-    ipc.on('model:switch', (msg) => {
-      const { model } = msg as { model: string };
-      updateSessionState((state) => {
-        state.model = model || '';
-      });
-      void syncMetadata();
-    });
-
-    ipc.on('agent:switch', (msg) => {
-      const { agent } = msg as { agent: string };
-      updateSessionState((state) => {
-        state.agent = agent || '';
-      });
-      void syncMetadata();
-    });
-
-    ipc.on('variant:switch', (msg) => {
-      const { model, variant } = msg as { model: string; variant: string };
-      if (model) {
-        updateSessionState((state) => {
-          state.modelVariants[model] = variant || 'default';
-        });
-      }
     });
 
     ipc.on('permission:reply', (msg) => {

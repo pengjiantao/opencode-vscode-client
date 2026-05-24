@@ -135,12 +135,12 @@ export class SessionManager {
    *
    * @param id The session ID to switch to.
    */
-  switch(id: string): void {
+  async switch(id: string): Promise<void> {
     const openIDs = this.getOpenSessionIDs();
     if (!openIDs.includes(id)) {
       throw new Error(`Session ${id} not found`);
     }
-    void this.setActiveSessionID(id);
+    await this.setActiveSessionID(id);
   }
 
   /**

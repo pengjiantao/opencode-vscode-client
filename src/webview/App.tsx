@@ -75,15 +75,9 @@ export function App() {
           break;
         case 'session:switched':
           setActiveSession(message.sessionID);
-          if (message.model) {
-            setActiveModel(message.model);
-          }
-          if (message.agent) {
-            setActiveAgent(message.agent);
-          }
-          if (message.modelVariants) {
-            setModelVariants(message.modelVariants);
-          }
+          setActiveModel(message.model ?? '');
+          setActiveAgent(message.agent ?? '');
+          setModelVariants(message.modelVariants ?? {});
           break;
         case 'session:archived':
           removeSession(message.sessionID);
@@ -190,17 +184,22 @@ export function App() {
 
   const handleModelChange = (model: string) => {
     setActiveModel(model);
-    send({ type: 'model:switch', model } as never);
+    send({ type: 'model:switch', sessionID: activeSessionID ?? undefined, model } as never);
   };
 
   const handleAgentChange = (agent: string) => {
     setActiveAgent(agent);
-    send({ type: 'agent:switch', agent } as never);
+    send({ type: 'agent:switch', sessionID: activeSessionID ?? undefined, agent } as never);
   };
 
   const handleVariantChange = (model: string, variant: string) => {
     setModelVariants((prev) => ({ ...prev, [model]: variant }));
-    send({ type: 'variant:switch', model, variant } as never);
+    send({
+      type: 'variant:switch',
+      sessionID: activeSessionID ?? undefined,
+      model,
+      variant,
+    } as never);
   };
 
   const handlePermissionReply = (permissionID: string, reply: 'once' | 'always' | 'reject') => {

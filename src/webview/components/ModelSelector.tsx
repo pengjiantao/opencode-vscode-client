@@ -3,6 +3,7 @@
  * Supports search, grouping by provider, and filtering disconnected models.
  */
 
+import { isConnectedModel } from '../../shared/model-selection';
 import type { ModelInfo } from '../../shared/types';
 import { Codicon } from './Codicon';
 import { Select } from './Select';
@@ -29,7 +30,7 @@ export function ModelSelector({ models, value, onChange }: ModelSelectorProps) {
   const triggerText = activeModel ? activeModel.name : value || 'Select model...';
 
   // Only show connected models in the dropdown
-  const configuredModels = models.filter((m) => m.isConnected !== false);
+  const configuredModels = models.filter(isConnectedModel);
 
   // Map Model items to generic SelectOption format
   const options = configuredModels.map((m) => ({

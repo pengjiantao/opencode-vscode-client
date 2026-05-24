@@ -30,10 +30,12 @@ describe('SessionManager', () => {
       const manager = new SessionManager(mockSdk, mockMemento);
       await manager.setOpenSessionIDs(['s1', 's2']);
 
-      manager.switch('s2');
+      await manager.switch('s2');
       expect(manager.activeSessionID).toBe('s2');
 
-      expect(() => manager.switch('non-existent')).toThrowError('Session non-existent not found');
+      await expect(manager.switch('non-existent')).rejects.toThrowError(
+        'Session non-existent not found',
+      );
     });
   });
 
@@ -291,7 +293,7 @@ describe('SessionManager', () => {
       const manager = new SessionManager(mockSdk, mockMemento);
       await manager.setOpenSessionIDs(['s1', 's2']);
 
-      manager.switch('s2');
+      await manager.switch('s2');
       expect(manager.activeSessionID).toBe('s2');
       expect(mockState['activeSessionID']).toBe('s2');
     });

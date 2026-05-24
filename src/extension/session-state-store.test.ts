@@ -171,6 +171,25 @@ describe('SessionStateStore', () => {
       expect(defaults.model).toBe('connected-model');
     });
 
+    it('regression: should not fall back to the first disconnected SDK model', () => {
+      const store = new SessionStateStore(mockMemento);
+      vi.mocked(getConfiguration).mockReturnValue({
+        model: '',
+        agent: '',
+        maxCacheFiles: 100,
+      });
+
+      const defaults = store.getDefaults(
+        [
+          { id: 'first-disconnected', name: 'First Disconnected', isConnected: false },
+          { id: 'usable-connected', name: 'Usable Connected', isConnected: true },
+        ],
+        [],
+      );
+
+      expect(defaults.model).toBe('usable-connected');
+    });
+
     it('should return empty string fallbacks if available lists are empty', () => {
       const store = new SessionStateStore(mockMemento);
       const defaults = store.getDefaults([], []);

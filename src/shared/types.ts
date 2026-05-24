@@ -225,9 +225,9 @@ export type WebviewToExt =
   | { type: 'session:title'; sessionID: string; title: string }
   | { type: 'prompt:send'; text?: string; parts?: Part[] }
   | { type: 'prompt:abort'; sessionID: string }
-  | { type: 'model:switch'; model: string }
-  | { type: 'agent:switch'; agent: string }
-  | { type: 'variant:switch'; model: string; variant: string }
+  | { type: 'model:switch'; sessionID?: string; model: string }
+  | { type: 'agent:switch'; sessionID?: string; agent: string }
+  | { type: 'variant:switch'; sessionID?: string; model: string; variant: string }
   | {
       type: 'permission:reply';
       permissionID: string;

@@ -5,6 +5,7 @@
 
 import type { Part, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import React from 'react';
+import { resolveDefaultModelId } from '../../shared/model-selection';
 import type { AgentInfo, ModelInfo, WebviewToExt } from '../../shared/types';
 import { useCommandEditor } from '../hooks/useCommandEditor';
 import { useIPC } from '../hooks/useIPC';
@@ -82,7 +83,8 @@ export function PromptInput({
   const editorRef = React.useRef<HTMLDivElement>(null);
   const isRunning = status?.type === 'busy' || status?.type === 'retry';
 
-  const activeModel = selectedModel || (models.length > 0 ? models[0].id : '');
+  const defaultModel = React.useMemo(() => resolveDefaultModelId(models), [models]);
+  const activeModel = selectedModel || defaultModel;
   const activeAgent = selectedAgent || (agents.length > 0 ? agents[0].id : '');
 
   // Find variants and resolved selected variant for active model
@@ -204,18 +206,6 @@ export function PromptInput({
   const handleSelectLocalFile = React.useCallback(() => {
     send({ type: 'file:select' });
   }, [send]);
-
-  React.useEffect(() => {
-    if (models.length > 0 && !selectedModel) {
-      onModelChange(models[0].id);
-    }
-  }, [models, selectedModel, onModelChange]);
-
-  React.useEffect(() => {
-    if (agents.length > 0 && !selectedAgent) {
-      onAgentChange(agents[0].id);
-    }
-  }, [agents, selectedAgent, onAgentChange]);
 
   // Synchronously update tooltip custom titles when async file queries settle
   React.useEffect(() => {

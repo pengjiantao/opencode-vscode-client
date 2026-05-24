@@ -5,6 +5,7 @@
  */
 
 import type { Memento } from 'vscode';
+import { resolveDefaultModelId } from '../shared/model-selection';
 import type { AgentInfo, ModelInfo } from './types';
 import { getConfiguration } from './utils/config';
 
@@ -100,22 +101,12 @@ export class SessionStateStore {
   public getDefaults(models: ModelInfo[], agents: AgentInfo[]): SessionState {
     const config = getConfiguration();
 
-    // Filter models to prioritize those that are connected.
-    const connectedModels = models.filter((m) => m.isConnected);
-
     // Prefer config setting, fallback to first available connected SDK model, then first available model, then empty string.
     let model = config.model;
     const modelIds = models.map((m) => m.id);
-    const connectedModelIds = connectedModels.map((m) => m.id);
 
     if (!model || !modelIds.includes(model)) {
-      if (connectedModelIds.length > 0) {
-        model = connectedModelIds[0];
-      } else if (modelIds.length > 0) {
-        model = modelIds[0];
-      } else {
-        model = '';
-      }
+      model = resolveDefaultModelId(models);
     }
 
     // Prefer config setting, fallback to first available SDK agent, then empty string.

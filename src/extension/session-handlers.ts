@@ -125,7 +125,7 @@ export async function handleSelectHistory({
       ipc.send({ type: 'session:created', session: selected.session });
     }
 
-    sessionManager.switch(sessionID);
+    await sessionManager.switch(sessionID);
     const state = sessionStateStore.getOrInitialize(sessionID, cachedModels, cachedAgents);
     ipc.send({
       type: 'session:switched',
