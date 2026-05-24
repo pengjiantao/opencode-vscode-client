@@ -3,7 +3,7 @@
  * Keeps index.ts focused and complies with file length limitations.
  */
 
-import { window, type ExtensionContext } from 'vscode';
+import { window } from 'vscode';
 import type { IPCBridge } from './ipc';
 import type { SDKClient } from './sdk-client';
 import type { SessionManager } from './session-manager';
@@ -14,8 +14,6 @@ import type { AgentInfo, ModelInfo } from './types';
 interface CreateSessionOptions {
   /** The extension session manager. */
   sessionManager: SessionManager;
-  /** The VS Code extension context. */
-  context: ExtensionContext;
   /** Store for per-session configurations. */
   sessionStateStore: SessionStateStore;
   /** Cached language models. */
@@ -34,8 +32,6 @@ interface SelectHistoryOptions {
   sdk: SDKClient;
   /** The extension session manager. */
   sessionManager: SessionManager;
-  /** The VS Code extension context. */
-  context: ExtensionContext;
   /** Store for per-session configurations. */
   sessionStateStore: SessionStateStore;
   /** Cached language models. */
@@ -56,7 +52,6 @@ interface SelectHistoryOptions {
  */
 export async function handleCreateSession({
   sessionManager,
-  context,
   sessionStateStore,
   cachedModels,
   cachedAgents,
@@ -65,11 +60,6 @@ export async function handleCreateSession({
 }: CreateSessionOptions): Promise<void> {
   try {
     const session = await sessionManager.create();
-    const openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
-    if (!openIDs.includes(session.id)) {
-      openIDs.push(session.id);
-      await context.workspaceState.update('openSessionIDs', openIDs);
-    }
     const state = sessionStateStore.getOrInitialize(session.id, cachedModels, cachedAgents);
     ipc.send({ type: 'session:created', session });
     ipc.send({
@@ -95,7 +85,6 @@ export async function handleCreateSession({
 export async function handleSelectHistory({
   sdk,
   sessionManager,
-  context,
   sessionStateStore,
   cachedModels,
   cachedAgents,
@@ -128,11 +117,11 @@ export async function handleSelectHistory({
     if (!selected) return;
 
     const sessionID = selected.sessionID;
-    const openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
+    const openIDs = sessionManager.getOpenSessionIDs();
 
     if (!openIDs.includes(sessionID)) {
       openIDs.push(sessionID);
-      await context.workspaceState.update('openSessionIDs', openIDs);
+      await sessionManager.setOpenSessionIDs(openIDs);
       ipc.send({ type: 'session:created', session: selected.session });
     }
 

@@ -4,7 +4,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { window, type ExtensionContext } from 'vscode';
+import { window } from 'vscode';
 import { createMockSession } from '../test/mocks/sdk';
 import type { IPCBridge } from './ipc';
 import type { SDKClient } from './sdk-client';
@@ -14,12 +14,7 @@ import type { SessionStateStore } from './session-state-store';
 import type { AgentInfo, ModelInfo } from './types';
 
 describe('session handlers', () => {
-  let mockWorkspaceStateStore: Record<string, string[]>;
-  let mockWorkspaceState: {
-    get: ReturnType<typeof vi.fn>;
-    update: ReturnType<typeof vi.fn>;
-  };
-  let mockContext: ExtensionContext;
+  let mockWorkspaceStateStore: Record<string, unknown>;
   let mockSessionStateStore: SessionStateStore;
   let mockSessionManager: SessionManager;
   let mockIpc: IPCBridge;
@@ -30,20 +25,6 @@ describe('session handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockWorkspaceStateStore = {};
-    mockWorkspaceState = {
-      get: vi.fn((key: string, defaultValue?: unknown) => {
-        return mockWorkspaceStateStore[key] !== undefined
-          ? mockWorkspaceStateStore[key]
-          : defaultValue;
-      }),
-      update: vi.fn((key: string, value: string[]) => {
-        mockWorkspaceStateStore[key] = value;
-        return Promise.resolve();
-      }),
-    };
-    mockContext = {
-      workspaceState: mockWorkspaceState,
-    } as unknown as ExtensionContext;
 
     mockSessionStateStore = {
       getOrInitialize: vi.fn().mockReturnValue({
@@ -56,6 +37,8 @@ describe('session handlers', () => {
     mockSessionManager = {
       create: vi.fn(),
       switch: vi.fn(),
+      getOpenSessionIDs: vi.fn().mockReturnValue([]),
+      setOpenSessionIDs: vi.fn().mockResolvedValue(undefined),
       getMessagesAndParts: vi.fn().mockResolvedValue({ messages: [], parts: [] }),
     } as unknown as SessionManager;
 
@@ -73,7 +56,6 @@ describe('session handlers', () => {
 
       await handleCreateSession({
         sessionManager: mockSessionManager,
-        context: mockContext,
         sessionStateStore: mockSessionStateStore,
         cachedModels,
         cachedAgents,
@@ -82,7 +64,6 @@ describe('session handlers', () => {
       });
 
       expect(mockSessionManager.create).toHaveBeenCalled();
-      expect(mockWorkspaceState.update).toHaveBeenCalledWith('openSessionIDs', ['session-123']);
       expect(mockIpc.send).toHaveBeenCalledWith({ type: 'session:created', session: mockSession });
       expect(mockIpc.send).toHaveBeenCalledWith({
         type: 'session:switched',
@@ -100,30 +81,11 @@ describe('session handlers', () => {
       expect(syncPendingRequests).toHaveBeenCalledWith('session-123');
     });
 
-    it('skips duplicate session ID', async () => {
-      const mockSession = createMockSession({ id: 'session-123' });
-      vi.mocked(mockSessionManager.create).mockResolvedValue(mockSession);
-      mockWorkspaceStateStore['openSessionIDs'] = ['session-123'];
-
-      await handleCreateSession({
-        sessionManager: mockSessionManager,
-        context: mockContext,
-        sessionStateStore: mockSessionStateStore,
-        cachedModels,
-        cachedAgents,
-        ipc: mockIpc,
-        syncPendingRequests,
-      });
-
-      expect(mockWorkspaceState.update).not.toHaveBeenCalled();
-    });
-
     it('sends error on failure', async () => {
       vi.mocked(mockSessionManager.create).mockRejectedValue(new Error('Failed to create session'));
 
       await handleCreateSession({
         sessionManager: mockSessionManager,
-        context: mockContext,
         sessionStateStore: mockSessionStateStore,
         cachedModels,
         cachedAgents,
@@ -156,7 +118,6 @@ describe('session handlers', () => {
       await handleSelectHistory({
         sdk: mockSdk,
         sessionManager: mockSessionManager,
-        context: mockContext,
         sessionStateStore: mockSessionStateStore,
         cachedModels,
         cachedAgents,
@@ -176,7 +137,6 @@ describe('session handlers', () => {
       await handleSelectHistory({
         sdk: mockSdk,
         sessionManager: mockSessionManager,
-        context: mockContext,
         sessionStateStore: mockSessionStateStore,
         cachedModels,
         cachedAgents,
@@ -203,7 +163,6 @@ describe('session handlers', () => {
       await handleSelectHistory({
         sdk: mockSdk,
         sessionManager: mockSessionManager,
-        context: mockContext,
         sessionStateStore: mockSessionStateStore,
         cachedModels,
         cachedAgents,
@@ -243,7 +202,6 @@ describe('session handlers', () => {
       await handleSelectHistory({
         sdk: mockSdk,
         sessionManager: mockSessionManager,
-        context: mockContext,
         sessionStateStore: mockSessionStateStore,
         cachedModels,
         cachedAgents,
@@ -251,7 +209,8 @@ describe('session handlers', () => {
         syncPendingRequests,
       });
 
-      expect(mockWorkspaceState.update).toHaveBeenCalledWith('openSessionIDs', ['session-old']);
+      expect(mockSessionManager.setOpenSessionIDs).toHaveBeenCalledWith(['session-old']);
+      expect(mockSessionManager.switch).toHaveBeenCalledWith('session-old');
       expect(mockIpc.send).toHaveBeenCalledWith({
         type: 'session:created',
         session: mockSession,
@@ -264,7 +223,6 @@ describe('session handlers', () => {
       await handleSelectHistory({
         sdk: mockSdk,
         sessionManager: mockSessionManager,
-        context: mockContext,
         sessionStateStore: mockSessionStateStore,
         cachedModels,
         cachedAgents,

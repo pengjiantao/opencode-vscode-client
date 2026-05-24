@@ -4,7 +4,7 @@
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMockSession } from '../test/mocks/sdk';
+import type { Memento } from 'vscode';
 import type { PromptOptions, SDKClient } from './sdk-client';
 import { SessionManager } from './session-manager';
 
@@ -13,54 +13,22 @@ describe('SessionManager', () => {
     vi.clearAllMocks();
   });
 
-  describe('create', () => {
-    it('should create a new session', () => {
-      const mockSession = createMockSession({ id: 'new-session', title: 'New Session' });
-
-      expect(mockSession.id).toBe('new-session');
-      expect(mockSession.title).toBe('New Session');
-    });
-
-    it('should generate unique session IDs', () => {
-      const session1 = createMockSession();
-      const session2 = createMockSession();
-
-      expect(session1.id).not.toBe(session2.id);
-    });
-  });
-
-  describe('switch', () => {
-    it('should track active session', () => {
-      const session = createMockSession();
-      const activeID = session.id;
-
-      expect(activeID).toBe(session.id);
-    });
-  });
-
-  describe('archive', () => {
-    it('should mark session as archived', () => {
-      const session = createMockSession();
-      const archivedAt = Date.now();
-
-      const archived = {
-        ...session,
-        time: { ...session.time, archived: archivedAt },
-      };
-
-      expect(archived.time.archived).toBeDefined();
-    });
-  });
-
-  describe('setSessions and switch functionality', () => {
-    it('should update sessions list and switch active sessions correctly', () => {
+  describe('switch functionality', () => {
+    it('should switch active session correctly', async () => {
       const mockSdk = {} as unknown as SDKClient;
-      const manager = new SessionManager(mockSdk);
-      const session1 = createMockSession({ id: 's1', title: 'Session 1' });
-      const session2 = createMockSession({ id: 's2', title: 'Session 2' });
-
-      manager.setSessions([session1, session2]);
-      expect(manager.state.sessions).toEqual([session1, session2]);
+      const mockState: Record<string, unknown> = {};
+      const mockMemento = {
+        get: vi.fn((key: string, defaultValue?: unknown) => {
+          return mockState[key] !== undefined ? mockState[key] : defaultValue;
+        }),
+        update: vi.fn((key: string, value: unknown) => {
+          mockState[key] = value;
+          return Promise.resolve();
+        }),
+        keys: vi.fn().mockReturnValue([]),
+      } as unknown as Memento;
+      const manager = new SessionManager(mockSdk, mockMemento);
+      await manager.setOpenSessionIDs(['s1', 's2']);
 
       manager.switch('s2');
       expect(manager.activeSessionID).toBe('s2');
@@ -254,6 +222,108 @@ describe('SessionManager', () => {
         agent: 'coder',
         variant: 'medium',
       });
+    });
+  });
+
+  describe('persistence integration', () => {
+    let mockState: Record<string, unknown>;
+    let mockMemento: Memento;
+    let mockSdk: SDKClient;
+
+    beforeEach(() => {
+      mockState = {};
+      mockMemento = {
+        get: vi.fn((key: string, defaultValue?: unknown) => {
+          return mockState[key] !== undefined ? mockState[key] : defaultValue;
+        }),
+        update: vi.fn((key: string, value: unknown) => {
+          mockState[key] = value;
+          return Promise.resolve();
+        }),
+        keys: vi.fn().mockReturnValue([]),
+      };
+      mockSdk = {
+        session: {
+          create: vi.fn().mockResolvedValue({
+            id: 'session-new',
+            title: 'Untitled',
+            time: { created: Date.now(), updated: Date.now() },
+          }),
+          get: vi.fn().mockResolvedValue({
+            id: 'session-mock',
+            title: 'Untitled',
+            time: { created: Date.now(), updated: Date.now() },
+          }),
+          update: vi.fn().mockResolvedValue(undefined),
+        },
+      } as unknown as SDKClient;
+    });
+
+    it('should get and set open session IDs and active session ID', async () => {
+      const manager = new SessionManager(mockSdk, mockMemento);
+
+      expect(manager.getOpenSessionIDs()).toEqual([]);
+      await manager.setOpenSessionIDs(['s1', 's2']);
+      expect(manager.getOpenSessionIDs()).toEqual(['s1', 's2']);
+
+      expect(manager.activeSessionID).toBeNull();
+      await manager.setActiveSessionID('s1');
+      expect(manager.activeSessionID).toBe('s1');
+    });
+
+    it('should initialize activeSessionID from workspaceState on construction', () => {
+      mockState['activeSessionID'] = 's2';
+      const manager = new SessionManager(mockSdk, mockMemento);
+      expect(manager.activeSessionID).toBe('s2');
+    });
+
+    it('should update open list and active ID on create()', async () => {
+      const manager = new SessionManager(mockSdk, mockMemento);
+      mockState['openSessionIDs'] = ['s1'];
+
+      const session = await manager.create();
+      expect(session.id).toBe('session-new');
+      expect(manager.getOpenSessionIDs()).toEqual(['s1', 'session-new']);
+      expect(manager.activeSessionID).toBe('session-new');
+    });
+
+    it('should update active ID on switch()', async () => {
+      const manager = new SessionManager(mockSdk, mockMemento);
+      await manager.setOpenSessionIDs(['s1', 's2']);
+
+      manager.switch('s2');
+      expect(manager.activeSessionID).toBe('s2');
+      expect(mockState['activeSessionID']).toBe('s2');
+    });
+
+    it('should remove from open list and update active ID on archive()', async () => {
+      const manager = new SessionManager(mockSdk, mockMemento);
+      mockState['openSessionIDs'] = ['s1', 's2'];
+      mockState['activeSessionID'] = 's2';
+
+      await manager.archive('s2');
+      expect(manager.getOpenSessionIDs()).toEqual(['s1']);
+      expect(manager.activeSessionID).toBe('s1');
+    });
+
+    it('should remove from open list and update active ID on close()', async () => {
+      const manager = new SessionManager(mockSdk, mockMemento);
+      mockState['openSessionIDs'] = ['s1', 's2'];
+      mockState['activeSessionID'] = 's2';
+
+      await manager.close('s2');
+      expect(manager.getOpenSessionIDs()).toEqual(['s1']);
+      expect(manager.activeSessionID).toBe('s1');
+    });
+
+    it('should clear open list and active ID on closeAll()', async () => {
+      const manager = new SessionManager(mockSdk, mockMemento);
+      mockState['openSessionIDs'] = ['s1', 's2'];
+      mockState['activeSessionID'] = 's2';
+
+      await manager.closeAll();
+      expect(manager.getOpenSessionIDs()).toEqual([]);
+      expect(manager.activeSessionID).toBeNull();
     });
   });
 });

@@ -59,7 +59,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
   const invokeCreateSession = async (): Promise<void> => {
     await handleCreateSession({
       sessionManager,
-      context,
       sessionStateStore,
       cachedModels,
       cachedAgents,
@@ -73,7 +72,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
     await handleSelectHistory({
       sdk,
       sessionManager,
-      context,
       sessionStateStore,
       cachedModels,
       cachedAgents,
@@ -85,7 +83,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
   try {
     const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath;
     sdk = createSDKClient(workspaceRoot);
-    sessionManager = new SessionManager(sdk);
+    sessionManager = new SessionManager(sdk, context.workspaceState);
     ipc = new IPCBridge();
     provider = new OpencodeSidebarViewProvider(context, ipc);
 
@@ -131,12 +129,12 @@ export async function activate(context: ExtensionContext): Promise<void> {
       try {
         const sessions = await sdk.session.list();
         const activeSessions = sessions.filter((s) => !(s.time as { archived?: unknown }).archived);
-        sessionManager.setSessions(activeSessions);
 
-        let openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
+        let openIDs = sessionManager.getOpenSessionIDs();
         // Remove stale session IDs that no longer exist on the server
         openIDs = openIDs.filter((id) => activeSessions.some((s) => s.id === id));
 
+        // Load activeSessionID from sessionManager's unified persistence
         let activeID = sessionManager.activeSessionID;
         // Fall back to first open session or most recent active session
         if (!activeID || !openIDs.includes(activeID)) {
@@ -152,11 +150,12 @@ export async function activate(context: ExtensionContext): Promise<void> {
           }
         }
 
+        // Synchronize open IDs back to sessionManager's persistence
+        await sessionManager.setOpenSessionIDs(openIDs);
+
         // No active session found — auto-create one
         if (!activeID) {
           const session = await sessionManager.create();
-          openIDs = [session.id];
-          await context.workspaceState.update('openSessionIDs', openIDs);
 
           const state = sessionStateStore.getOrInitialize(session.id, cachedModels, cachedAgents);
           ipc.send({
@@ -174,7 +173,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
           syncPendingRequests(session.id);
         } else {
           sessionManager.switch(activeID);
-          await context.workspaceState.update('openSessionIDs', openIDs);
 
           // Migrate legacy configuration into the active session.
           sessionStateStore.migrateLegacyState(activeID);
@@ -238,16 +236,12 @@ export async function activate(context: ExtensionContext): Promise<void> {
       const previousActiveID = sessionManager.activeSessionID;
       try {
         await sessionManager.archive(sessionID);
-        let openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
-        openIDs = openIDs.filter((id) => id !== sessionID);
-        await context.workspaceState.update('openSessionIDs', openIDs);
-
         ipc.send({ type: 'session:archived', sessionID });
 
         if (previousActiveID === sessionID) {
+          const openIDs = sessionManager.getOpenSessionIDs();
           if (openIDs.length > 0) {
-            const nextActiveID = openIDs[openIDs.length - 1];
-            sessionManager.switch(nextActiveID);
+            const nextActiveID = sessionManager.activeSessionID!;
             const state = sessionStateStore.getOrInitialize(
               nextActiveID,
               cachedModels,
@@ -279,20 +273,18 @@ export async function activate(context: ExtensionContext): Promise<void> {
       pendingBuffer.removeBySession(sessionID);
       const previousActiveID = sessionManager.activeSessionID;
 
-      let openIDs = context.workspaceState.get<string[]>('openSessionIDs') || [];
-      openIDs = openIDs.filter((id) => id !== sessionID);
-      await context.workspaceState.update('openSessionIDs', openIDs);
+      await sessionManager.close(sessionID);
 
       ipc.send({ type: 'session:deleted', sessionID });
 
+      const openIDs = sessionManager.getOpenSessionIDs();
       if (openIDs.length === 0) {
         await invokeCreateSession();
         return;
       }
 
       if (previousActiveID === sessionID) {
-        const nextActiveID = openIDs[openIDs.length - 1];
-        sessionManager.switch(nextActiveID);
+        const nextActiveID = sessionManager.activeSessionID!;
         const state = sessionStateStore.getOrInitialize(nextActiveID, cachedModels, cachedAgents);
         ipc.send({
           type: 'session:switched',
@@ -311,7 +303,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       // Clear all statuses to prevent memory leaks and unbounded map growth
       sessionStatuses.clear();
       pendingBuffer.clear();
-      void context.workspaceState.update('openSessionIDs', []);
+      void sessionManager.closeAll();
       ipc.send({ type: 'init', sessions: [] });
       void invokeCreateSession();
     });

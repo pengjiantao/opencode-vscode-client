@@ -5,7 +5,7 @@
  */
 
 import type { SessionStatus } from '@opencode-ai/sdk/v2/client';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import type { ExtensionContext, StatusBarItem } from 'vscode';
 import { window } from 'vscode';
 import { activate } from './index';
@@ -72,12 +72,20 @@ describe('Extension Status Bar Activation', () => {
   let mockStatusBarItem: StatusBarItem;
   let activeSessionListener: ((state: SessionManagerState) => void) | undefined;
   const mockUnsubscribeActiveSession = vi.fn();
+  let mockWorkspaceStateStore: Map<string, unknown>;
+  let activeSessionIDSpy: MockInstance<() => string | null> | undefined;
 
   beforeEach(() => {
+    if (activeSessionIDSpy) {
+      activeSessionIDSpy.mockRestore();
+      activeSessionIDSpy = undefined;
+    }
     vi.clearAllMocks();
     ipcHandlers.clear();
     sseHandlerCallback = undefined;
     activeSessionListener = undefined;
+    mockWorkspaceStateStore = new Map<string, unknown>();
+    mockWorkspaceStateStore.set('openSessionIDs', []);
 
     // Spy and intercept SessionManager active session subscription
     vi.spyOn(SessionManager.prototype, 'subscribe').mockImplementation((listener) => {
@@ -89,8 +97,13 @@ describe('Extension Status Bar Activation', () => {
     mockContext = {
       subscriptions: [],
       workspaceState: {
-        get: vi.fn().mockReturnValue([]),
-        update: vi.fn().mockResolvedValue(undefined),
+        get: vi.fn((key: string, defaultValue?: unknown) => {
+          return mockWorkspaceStateStore.has(key) ? mockWorkspaceStateStore.get(key) : defaultValue;
+        }),
+        update: vi.fn((key: string, value: unknown) => {
+          mockWorkspaceStateStore.set(key, value);
+          return Promise.resolve();
+        }),
       },
       globalState: {
         get: vi.fn().mockReturnValue(undefined),
@@ -125,11 +138,13 @@ describe('Extension Status Bar Activation', () => {
     await activate(mockContext);
 
     // Force initialization of activeSessionID
-    vi.spyOn(SessionManager.prototype, 'activeSessionID', 'get').mockReturnValue('session-1');
+    activeSessionIDSpy = vi
+      .spyOn(SessionManager.prototype, 'activeSessionID', 'get')
+      .mockReturnValue('session-1');
 
     // Simulate switching active session to trigger render check
     if (activeSessionListener) {
-      activeSessionListener({ activeSessionID: 'session-1', sessions: [], isConnected: true });
+      activeSessionListener({ activeSessionID: 'session-1' });
     }
 
     // 1. Verify "Ready" / Default Idle state
@@ -171,9 +186,11 @@ describe('Extension Status Bar Activation', () => {
     await activate(mockContext);
 
     // Simulate active session being null (no open session)
-    vi.spyOn(SessionManager.prototype, 'activeSessionID', 'get').mockReturnValue(null);
+    activeSessionIDSpy = vi
+      .spyOn(SessionManager.prototype, 'activeSessionID', 'get')
+      .mockReturnValue(null);
     if (activeSessionListener) {
-      activeSessionListener({ activeSessionID: null, sessions: [], isConnected: true });
+      activeSessionListener({ activeSessionID: null });
     }
 
     // Expect status bar item to be hidden
@@ -185,7 +202,9 @@ describe('Extension Status Bar Activation', () => {
     await activate(mockContext);
 
     // Setup active session status in the internal map
-    vi.spyOn(SessionManager.prototype, 'activeSessionID', 'get').mockReturnValue('session-1');
+    activeSessionIDSpy = vi
+      .spyOn(SessionManager.prototype, 'activeSessionID', 'get')
+      .mockReturnValue('session-1');
     if (sseHandlerCallback) {
       sseHandlerCallback({
         type: 'session.status',
@@ -230,7 +249,7 @@ describe('Extension Status Bar Activation', () => {
 
     // Active session status falls back to Ready as the map entry is deleted
     if (activeSessionListener) {
-      activeSessionListener({ activeSessionID: 'session-1', sessions: [], isConnected: true });
+      activeSessionListener({ activeSessionID: 'session-1' });
     }
     expect(mockStatusBarItem.text).toBe('$(circle-outline) OpenCode: Ready');
 
@@ -253,8 +272,146 @@ describe('Extension Status Bar Activation', () => {
     }
 
     if (activeSessionListener) {
-      activeSessionListener({ activeSessionID: 'session-1', sessions: [], isConnected: true });
+      activeSessionListener({ activeSessionID: 'session-1' });
     }
     expect(mockStatusBarItem.text).toBe('$(circle-outline) OpenCode: Ready');
+  });
+
+  describe('Session state persistence regression tests', () => {
+    it('restores the activeSessionID on init if it is in openSessionIDs', async () => {
+      mockWorkspaceStateStore.set('openSessionIDs', ['session-1', 'session-2']);
+      mockWorkspaceStateStore.set('activeSessionID', 'session-2');
+
+      await activate(mockContext);
+
+      const mockSessions = [
+        { id: 'session-1', title: 'Session 1', time: { created: Date.now(), updated: Date.now() } },
+        { id: 'session-2', title: 'Session 2', time: { created: Date.now(), updated: Date.now() } },
+      ];
+      vi.mocked(mockSdk.session.list).mockResolvedValue(mockSessions);
+
+      const initHandler = ipcHandlers.get('init');
+      expect(initHandler).toBeDefined();
+      if (initHandler) {
+        await initHandler();
+      }
+
+      expect(mockWorkspaceStateStore.get('activeSessionID')).toBe('session-2');
+      expect(mockIpcSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'session:switched',
+          sessionID: 'session-2',
+        }),
+      );
+    });
+
+    it('falls back to the first open session if activeSessionID is not in openSessionIDs', async () => {
+      mockWorkspaceStateStore.set('openSessionIDs', ['session-1', 'session-2']);
+      mockWorkspaceStateStore.set('activeSessionID', 'session-nonexistent');
+
+      await activate(mockContext);
+
+      const mockSessions = [
+        { id: 'session-1', title: 'Session 1', time: { created: Date.now(), updated: Date.now() } },
+        { id: 'session-2', title: 'Session 2', time: { created: Date.now(), updated: Date.now() } },
+      ];
+      vi.mocked(mockSdk.session.list).mockResolvedValue(mockSessions);
+
+      const initHandler = ipcHandlers.get('init');
+      expect(initHandler).toBeDefined();
+      if (initHandler) {
+        await initHandler();
+      }
+
+      expect(mockWorkspaceStateStore.get('activeSessionID')).toBe('session-1');
+    });
+
+    it('updates activeSessionID on session:switch', async () => {
+      mockWorkspaceStateStore.set('openSessionIDs', ['session-1', 'session-2']);
+      mockWorkspaceStateStore.set('activeSessionID', 'session-1');
+
+      await activate(mockContext);
+
+      const mockSessions = [
+        { id: 'session-1', title: 'Session 1', time: { created: Date.now(), updated: Date.now() } },
+        { id: 'session-2', title: 'Session 2', time: { created: Date.now(), updated: Date.now() } },
+      ];
+      vi.mocked(mockSdk.session.list).mockResolvedValue(mockSessions);
+
+      const initHandler = ipcHandlers.get('init');
+      if (initHandler) {
+        await initHandler();
+      }
+
+      const switchHandler = ipcHandlers.get('session:switch');
+      expect(switchHandler).toBeDefined();
+      if (switchHandler) {
+        await switchHandler({ sessionID: 'session-2' });
+      }
+
+      expect(mockWorkspaceStateStore.get('activeSessionID')).toBe('session-2');
+    });
+
+    it('updates activeSessionID on session:close of active session', async () => {
+      mockWorkspaceStateStore.set('openSessionIDs', ['session-1', 'session-2']);
+      mockWorkspaceStateStore.set('activeSessionID', 'session-2');
+
+      await activate(mockContext);
+
+      const mockSessions = [
+        { id: 'session-1', title: 'Session 1', time: { created: Date.now(), updated: Date.now() } },
+        { id: 'session-2', title: 'Session 2', time: { created: Date.now(), updated: Date.now() } },
+      ];
+      vi.mocked(mockSdk.session.list).mockResolvedValue(mockSessions);
+
+      const initHandler = ipcHandlers.get('init');
+      if (initHandler) {
+        await initHandler();
+      }
+
+      expect(mockWorkspaceStateStore.get('activeSessionID')).toBe('session-2');
+
+      const closeHandler = ipcHandlers.get('session:close');
+      expect(closeHandler).toBeDefined();
+      if (closeHandler) {
+        await closeHandler({ sessionID: 'session-2' });
+      }
+
+      expect(mockWorkspaceStateStore.get('openSessionIDs')).toEqual(['session-1']);
+      expect(mockWorkspaceStateStore.get('activeSessionID')).toBe('session-1');
+    });
+
+    it('clears activeSessionID when all sessions are closed', async () => {
+      mockWorkspaceStateStore.set('openSessionIDs', ['session-1']);
+      mockWorkspaceStateStore.set('activeSessionID', 'session-1');
+
+      await activate(mockContext);
+
+      const mockSessions = [
+        { id: 'session-1', title: 'Session 1', time: { created: Date.now(), updated: Date.now() } },
+      ];
+      vi.mocked(mockSdk.session.list).mockResolvedValue(mockSessions);
+
+      const initHandler = ipcHandlers.get('init');
+      if (initHandler) {
+        await initHandler();
+      }
+
+      const newSession = {
+        id: 'session-new',
+        title: 'Untitled',
+        time: { created: Date.now(), updated: Date.now() },
+      };
+      vi.mocked(mockSdk.session.create).mockResolvedValue(newSession);
+
+      const closeHandler = ipcHandlers.get('session:close');
+      expect(closeHandler).toBeDefined();
+      if (closeHandler) {
+        await closeHandler({ sessionID: 'session-1' });
+      }
+
+      expect(mockWorkspaceStateStore.get('openSessionIDs')).toEqual(['session-new']);
+      expect(mockWorkspaceStateStore.get('activeSessionID')).toBe('session-new');
+    });
   });
 });
