@@ -24,3 +24,5 @@ vitest.config.webview.ts
 *.vsix
 dist/extension/test/**
 node_modules
+.opencode/
+
