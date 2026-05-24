@@ -44,7 +44,7 @@ export function BashOutput({ command, output, status }: BashOutputProps) {
     <div className="tool-bash-output">
       <div className="bash-output-header">
         {showIcon && <Codicon name="$(sync~spin)" className="bash-output-icon" />}
-        <span className="bash-output-command" title={command}>
+        <span className="bash-output-command" data-custom-title={command}>
           {command}
         </span>
       </div>

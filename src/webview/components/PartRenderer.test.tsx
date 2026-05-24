@@ -498,7 +498,7 @@ describe('PartRenderer', () => {
       const cmdSpan = container.querySelector('.bash-output-command');
       expect(cmdSpan).toBeInTheDocument();
       expect(cmdSpan?.textContent).toBe('ls -la');
-      expect(cmdSpan?.getAttribute('title')).toBe('ls -la');
+      expect(cmdSpan?.getAttribute('data-custom-title')).toBe('ls -la');
 
       // Verify thinking/executing spinner icon is displayed in the running state
       expect(container.querySelector('.codicon-sync.codicon-modifier-spin')).toBeInTheDocument();
