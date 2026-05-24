@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.12](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.11...v0.1.12) (2026-05-24)
+
+### Bug Fixes
+
+- bash output auto-scroll timing and dynamic height ([5f1666c](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/5f1666c4c155dbdd2f775105683e1e379896cdd3))
+- enable horizontal mouse wheel scrolling on session tabs ([1b5db3a](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/1b5db3a212bcd7c069f0168bdc41a2209b72b4c1))
+- restore BASH tool command description in collapsible part header ([08446fa](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/08446fa59f721d3dd69c29d4fc25603b56170001))
+
 ### [0.1.11](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.10...v0.1.11) (2026-05-24)
 
 ### Bug Fixes
