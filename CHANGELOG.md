@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.11](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.10...v0.1.11) (2026-05-24)
+
+### Bug Fixes
+
+- prefer connected SDK models and extract session-aware IPC handlers ([3ccc25a](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/3ccc25adb75aea7845f14ab6dc6fa644d8735313))
+- replace native title with data-custom-title in BashOutput ([1622d1d](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/1622d1d06fee95a52724ed1f3986974f353621d6))
+
 ### [0.1.10](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.9...v0.1.10) (2026-05-24)
 
 ### Features
