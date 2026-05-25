@@ -3,8 +3,14 @@
  * Placed between ChatView and PromptInput to display pending session permissions.
  */
 
+import type { PermissionRequest } from '@opencode-ai/sdk/v2/client';
 import { useSessionStore } from '../store/sessionStore';
 import { Codicon } from './Codicon';
+
+/** Extended PermissionRequest including an optional sub-agent title. */
+interface ExtPermissionRequest extends PermissionRequest {
+  subagentTitle?: string;
+}
 
 interface PermissionBarProps {
   /** The currently active session ID to filter permission requests. */
@@ -103,8 +109,12 @@ export function PermissionBar({ sessionID, onReply }: PermissionBarProps) {
 
   return (
     <div className="permission-bar-container">
-      {activePermissions.map((perm) => {
-        const summary = getPermissionSummary(perm.permission, perm.metadata);
+      {(activePermissions as ExtPermissionRequest[]).map((perm) => {
+        const rawSummary = getPermissionSummary(perm.permission, perm.metadata);
+        // Prepend the sub-agent title to the summary if this request comes from a sub-agent.
+        const summary = perm.subagentTitle
+          ? `[Sub-agent: ${perm.subagentTitle}] ${rawSummary}`
+          : rawSummary;
         return (
           <div key={perm.id} className="permission-bar-row">
             <div className="permission-bar-left">

@@ -305,4 +305,29 @@ describe('QuestionBar', () => {
     expect(mockOnReject).toHaveBeenCalledWith('q-1');
     expect(useSessionStore.getState().pendingQuestions).toEqual([]);
   });
+
+  it('prepends sub-agent title to header if subagentTitle is present', () => {
+    const req = {
+      id: 'q-1',
+      sessionID: 'session-1',
+      questions: [
+        {
+          header: 'Confirm action',
+          question: 'Do you want to proceed?',
+          options: [{ label: 'Yes', description: '' }],
+        },
+      ],
+      subagentTitle: 'Run tests (@build subagent)',
+    } as unknown as QuestionRequest;
+
+    useSessionStore.setState({
+      pendingQuestions: [req],
+    });
+
+    render(<QuestionBar sessionID="session-1" onReply={mockOnReply} onReject={mockOnReject} />);
+
+    expect(
+      screen.getByText('[Sub-agent: Run tests (@build subagent)] Confirm action'),
+    ).toBeInTheDocument();
+  });
 });

@@ -8,6 +8,11 @@ import { useState } from 'react';
 import { useSessionStore } from '../store/sessionStore';
 import { Codicon } from './Codicon';
 
+/** Extended QuestionRequest including an optional sub-agent title. */
+interface ExtQuestionRequest extends QuestionRequest {
+  subagentTitle?: string;
+}
+
 /** Props interface for the QuestionBar component */
 interface QuestionBarProps {
   /** The currently active session ID to filter question requests. */
@@ -37,7 +42,7 @@ export function QuestionBar({ sessionID, onReply, onReject }: QuestionBarProps) 
       `[QuestionBar] Found ${activeQuestions.length} pending question requests. Only the first will be rendered.`,
     );
   }
-  const currentRequest: QuestionRequest | undefined = activeQuestions[0];
+  const currentRequest: ExtQuestionRequest | undefined = activeQuestions[0];
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   // Array of arrays representing chosen labels for each question
@@ -220,7 +225,11 @@ export function QuestionBar({ sessionID, onReply, onReject }: QuestionBarProps) 
       </div>
 
       <div className="question-bar-body">
-        <h3 className="question-bar-title">{q.header || 'Question'}</h3>
+        <h3 className="question-bar-title">
+          {currentRequest.subagentTitle
+            ? `[Sub-agent: ${currentRequest.subagentTitle}] ${q.header || 'Question'}`
+            : q.header || 'Question'}
+        </h3>
         <p className="question-bar-text">{q.question}</p>
 
         <div className="question-bar-options">

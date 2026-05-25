@@ -4,26 +4,26 @@
  * Registers all IPC message handlers for session lifecycle and prompt operations.
  */
 
-import type {
-  Part,
-  PermissionRequest,
-  QuestionRequest,
-  Session,
-  SessionStatus,
-} from '@opencode-ai/sdk/v2/client';
+import type { Part, Session, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import { window, workspace, type ExtensionContext } from 'vscode';
 import { pasteClipboardTextAsPlainText, registerExtensionCommands } from './commands';
+import { registerEventHandlers } from './event-handlers';
 import { IPCBridge } from './ipc';
 import { syncMetadata as importSyncMetadata } from './metadata';
 import { PendingRequestBuffer } from './pending-request-buffer';
 import type { SDKClient } from './sdk-client';
 import { createSDKClient } from './sdk-client-impl';
-import { handleCreateSession, handleSelectHistory } from './session-handlers';
+import {
+  handleCreateSession,
+  handleSelectHistory,
+  registerSessionLifecycleHandlers,
+} from './session-handlers';
 import { SessionManager } from './session-manager';
+import { SessionRelationTracker } from './session-relation-tracker';
 import { registerSessionStateHandlers } from './session-state-ipc-handlers';
 import { SessionStateStore } from './session-state-store';
 import { StatusBarManager } from './status-bar';
-import type { AgentInfo, ExtToWebview, ModelInfo } from './types';
+import type { AgentInfo, ModelInfo } from './types';
 import { handleCommandPart } from './utils/command-router';
 import { registerFileHandlers } from './utils/fileHandlers';
 import { OpencodeSidebarViewProvider } from './webview-provider';
@@ -45,6 +45,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
   const pendingBuffer = new PendingRequestBuffer();
   let cachedModels: ModelInfo[] = [];
   let cachedAgents: AgentInfo[] = [];
+
+  // Track parent-child session relationships and titles for sub-agents
+  const relationTracker = new SessionRelationTracker();
 
   /** Sends the current session's pending requests to the webview. */
   const syncPendingRequests = (sessionID: string): void => {
@@ -131,6 +134,15 @@ export async function activate(context: ExtensionContext): Promise<void> {
       try {
         const sessions = await sdk.session.list();
         const activeSessions = sessions.filter((s) => !(s.time as { archived?: unknown }).archived);
+
+        // Build the session parent-child relations and title mappings on startup.
+        relationTracker.clear();
+        for (const s of sessions) {
+          relationTracker.titleMap.set(s.id, s.title);
+          if (s.parentID) {
+            relationTracker.parentMap.set(s.id, s.parentID);
+          }
+        }
 
         let openIDs = sessionManager.getOpenSessionIDs();
         // Remove stale session IDs that no longer exist on the server
@@ -222,124 +234,18 @@ export async function activate(context: ExtensionContext): Promise<void> {
       void invokeCreateSession();
     });
 
-    ipc.on('session:switch', async (msg) => {
-      const { sessionID } = msg as { sessionID: string };
-      try {
-        await sessionManager.switch(sessionID);
-        const state = sessionStateStore.getOrInitialize(sessionID, cachedModels, cachedAgents);
-        ipc.send({
-          type: 'session:switched',
-          sessionID,
-          model: state.model,
-          agent: state.agent,
-          modelVariants: state.modelVariants,
-        });
-        const { messages, parts } = await sessionManager.getMessagesAndParts(sessionID);
-        ipc.send({
-          type: 'messages:list',
-          sessionID,
-          messages,
-          parts,
-          status: sessionStatuses.get(sessionID),
-        });
-        void syncMetadata();
-        syncPendingRequests(sessionID);
-      } catch (err) {
-        ipc.send({ type: 'error', message: (err as Error).message });
-      }
-    });
-
-    ipc.on('session:archive', async (msg) => {
-      const { sessionID } = msg as { sessionID: string };
-      sessionStateStore.delete(sessionID);
-      // Delete session status to prevent unbounded map growth
-      sessionStatuses.delete(sessionID);
-      pendingBuffer.removeBySession(sessionID);
-      const previousActiveID = sessionManager.activeSessionID;
-      try {
-        await sessionManager.archive(sessionID);
-        ipc.send({ type: 'session:archived', sessionID });
-
-        if (previousActiveID === sessionID) {
-          const openIDs = sessionManager.getOpenSessionIDs();
-          if (openIDs.length > 0) {
-            const nextActiveID = sessionManager.activeSessionID!;
-            const state = sessionStateStore.getOrInitialize(
-              nextActiveID,
-              cachedModels,
-              cachedAgents,
-            );
-            ipc.send({
-              type: 'session:switched',
-              sessionID: nextActiveID,
-              model: state.model,
-              agent: state.agent,
-              modelVariants: state.modelVariants,
-            });
-            const { messages, parts } = await sessionManager.getMessagesAndParts(nextActiveID);
-            ipc.send({
-              type: 'messages:list',
-              sessionID: nextActiveID,
-              messages,
-              parts,
-              status: sessionStatuses.get(nextActiveID),
-            });
-            syncPendingRequests(nextActiveID);
-          } else {
-            await invokeCreateSession();
-          }
-        }
-      } catch (err) {
-        ipc.send({ type: 'error', message: (err as Error).message });
-      }
-    });
-
-    ipc.on('session:close', async (msg) => {
-      const { sessionID } = msg as { sessionID: string };
-      // Delete session status to prevent unbounded map growth
-      sessionStatuses.delete(sessionID);
-      pendingBuffer.removeBySession(sessionID);
-      const previousActiveID = sessionManager.activeSessionID;
-
-      await sessionManager.close(sessionID);
-
-      ipc.send({ type: 'session:deleted', sessionID });
-
-      const openIDs = sessionManager.getOpenSessionIDs();
-      if (openIDs.length === 0) {
-        await invokeCreateSession();
-        return;
-      }
-
-      if (previousActiveID === sessionID) {
-        const nextActiveID = sessionManager.activeSessionID!;
-        const state = sessionStateStore.getOrInitialize(nextActiveID, cachedModels, cachedAgents);
-        ipc.send({
-          type: 'session:switched',
-          sessionID: nextActiveID,
-          model: state.model,
-          agent: state.agent,
-          modelVariants: state.modelVariants,
-        });
-        const { messages, parts } = await sessionManager.getMessagesAndParts(nextActiveID);
-        ipc.send({
-          type: 'messages:list',
-          sessionID: nextActiveID,
-          messages,
-          parts,
-          status: sessionStatuses.get(nextActiveID),
-        });
-        syncPendingRequests(nextActiveID);
-      }
-    });
-
-    ipc.on('session:close-all', () => {
-      // Clear all statuses to prevent memory leaks and unbounded map growth
-      sessionStatuses.clear();
-      pendingBuffer.clear();
-      void sessionManager.closeAll();
-      ipc.send({ type: 'init', sessions: [] });
-      void invokeCreateSession();
+    registerSessionLifecycleHandlers({
+      ipc,
+      sessionManager,
+      sessionStateStore,
+      getCachedModels: () => cachedModels,
+      getCachedAgents: () => cachedAgents,
+      syncMetadata,
+      syncPendingRequests,
+      sessionStatuses,
+      pendingBuffer,
+      relationTracker,
+      invokeCreateSession,
     });
 
     ipc.on('sessions:select-history', () => {
@@ -448,41 +354,14 @@ export async function activate(context: ExtensionContext): Promise<void> {
     });
 
     // Subscribe to events and register disposable to prevent memory leaks
-    const unsubscribeEvents = sdk.subscribeEvents((event: unknown) => {
-      const evt = event as {
-        type?: string;
-        properties?: { sessionID?: string; status?: SessionStatus; info?: { id?: string } };
-      };
-
-      if (evt.type === 'permission.asked') {
-        pendingBuffer.addPermission(evt.properties as unknown as PermissionRequest);
-      } else if (evt.type === 'permission.replied') {
-        const permID = (evt.properties as unknown as { requestID: string })?.requestID;
-        if (permID) {
-          pendingBuffer.removePermission(permID);
-        }
-      } else if (evt.type === 'question.asked') {
-        pendingBuffer.addQuestion(evt.properties as unknown as QuestionRequest);
-      } else if (evt.type === 'question.replied' || evt.type === 'question.rejected') {
-        const reqID = (evt.properties as unknown as { requestID: string })?.requestID;
-        if (reqID) {
-          pendingBuffer.removeQuestion(reqID);
-        }
-      }
-
-      // Forward SSE events to webview
-      ipc.send({ type: 'event:received', event } as ExtToWebview);
-
-      if (evt.type === 'session.status' && evt.properties?.sessionID && evt.properties?.status) {
-        sessionStatuses.set(evt.properties.sessionID, evt.properties.status);
-        statusBarManager.update();
-      } else if (evt.type === 'session.deleted' && evt.properties?.info?.id) {
-        // Clean up status of deleted sessions to prevent unbounded map growth
-        sessionStatuses.delete(evt.properties.info.id);
-        statusBarManager.update();
-      } else if (evt.type === 'lsp.updated') {
-        void syncMetadata();
-      }
+    const unsubscribeEvents = registerEventHandlers({
+      sdk,
+      ipc,
+      pendingBuffer,
+      sessionStatuses,
+      statusBarManager,
+      relationTracker,
+      syncMetadata,
     });
     context.subscriptions.push({ dispose: unsubscribeEvents });
 

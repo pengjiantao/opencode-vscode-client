@@ -3,10 +3,13 @@
  * Keeps index.ts focused and complies with file length limitations.
  */
 
+import type { SessionStatus } from '@opencode-ai/sdk/v2/client';
 import { window } from 'vscode';
 import type { IPCBridge } from './ipc';
+import type { PendingRequestBuffer } from './pending-request-buffer';
 import type { SDKClient } from './sdk-client';
 import type { SessionManager } from './session-manager';
+import type { SessionRelationTracker } from './session-relation-tracker';
 import type { SessionStateStore } from './session-state-store';
 import type { AgentInfo, ModelInfo } from './types';
 
@@ -140,4 +143,178 @@ export async function handleSelectHistory({
   } catch (err) {
     void window.showErrorMessage(`Failed to retrieve session history: ${(err as Error).message}`);
   }
+}
+
+/** Options required to register session lifecycle IPC message handlers. */
+export interface RegisterLifecycleHandlersOptions {
+  /** IPC bridge receiving messages from the webview. */
+  ipc: IPCBridge;
+  /** Session lifecycle manager. */
+  sessionManager: SessionManager;
+  /** State store for per-session configuration parameters. */
+  sessionStateStore: SessionStateStore;
+  /** Supplier function for cached language models. */
+  getCachedModels: () => ModelInfo[];
+  /** Supplier function for cached agents. */
+  getCachedAgents: () => AgentInfo[];
+  /** Callback to sync LSP/MCP metadata to the webview. */
+  syncMetadata: () => void;
+  /** Callback to sync pending permission/question requests for a session. */
+  syncPendingRequests: (sessionID: string) => void;
+  /** Map of session IDs to their active processing statuses. */
+  sessionStatuses: Map<string, SessionStatus>;
+  /** Buffer of pending requests in the extension. */
+  pendingBuffer: PendingRequestBuffer;
+  /** Relationship tracker for child session resolution. */
+  relationTracker: SessionRelationTracker;
+  /** Helper command to automatically create a fallback session. */
+  invokeCreateSession: () => Promise<void>;
+}
+
+/**
+ * Registers IPC handlers for session:switch, session:archive, session:close, and session:close-all.
+ * Handles the visual UI state shifts and state updates between active tabs.
+ *
+ * @param options Registration dependencies.
+ */
+export function registerSessionLifecycleHandlers({
+  ipc,
+  sessionManager,
+  sessionStateStore,
+  getCachedModels,
+  getCachedAgents,
+  syncMetadata,
+  syncPendingRequests,
+  sessionStatuses,
+  pendingBuffer,
+  relationTracker,
+  invokeCreateSession,
+}: RegisterLifecycleHandlersOptions): void {
+  ipc.on('session:switch', async (msg) => {
+    const { sessionID } = msg as { sessionID: string };
+    try {
+      await sessionManager.switch(sessionID);
+      const state = sessionStateStore.getOrInitialize(
+        sessionID,
+        getCachedModels(),
+        getCachedAgents(),
+      );
+      ipc.send({
+        type: 'session:switched',
+        sessionID,
+        model: state.model,
+        agent: state.agent,
+        modelVariants: state.modelVariants,
+      });
+      const { messages, parts } = await sessionManager.getMessagesAndParts(sessionID);
+      ipc.send({
+        type: 'messages:list',
+        sessionID,
+        messages,
+        parts,
+        status: sessionStatuses.get(sessionID),
+      });
+      void syncMetadata();
+      syncPendingRequests(sessionID);
+    } catch (err) {
+      ipc.send({ type: 'error', message: (err as Error).message });
+    }
+  });
+
+  ipc.on('session:archive', async (msg) => {
+    const { sessionID } = msg as { sessionID: string };
+    sessionStateStore.delete(sessionID);
+    sessionStatuses.delete(sessionID);
+    pendingBuffer.removeBySession(sessionID);
+    relationTracker.clean(sessionID);
+    const previousActiveID = sessionManager.activeSessionID;
+    try {
+      await sessionManager.archive(sessionID);
+      ipc.send({ type: 'session:archived', sessionID });
+
+      if (previousActiveID === sessionID) {
+        const openIDs = sessionManager.getOpenSessionIDs();
+        if (openIDs.length > 0) {
+          const nextActiveID = sessionManager.activeSessionID!;
+          const state = sessionStateStore.getOrInitialize(
+            nextActiveID,
+            getCachedModels(),
+            getCachedAgents(),
+          );
+          ipc.send({
+            type: 'session:switched',
+            sessionID: nextActiveID,
+            model: state.model,
+            agent: state.agent,
+            modelVariants: state.modelVariants,
+          });
+          const { messages, parts } = await sessionManager.getMessagesAndParts(nextActiveID);
+          ipc.send({
+            type: 'messages:list',
+            sessionID: nextActiveID,
+            messages,
+            parts,
+            status: sessionStatuses.get(nextActiveID),
+          });
+          syncPendingRequests(nextActiveID);
+        } else {
+          await invokeCreateSession();
+        }
+      }
+    } catch (err) {
+      ipc.send({ type: 'error', message: (err as Error).message });
+    }
+  });
+
+  ipc.on('session:close', async (msg) => {
+    const { sessionID } = msg as { sessionID: string };
+    sessionStatuses.delete(sessionID);
+    pendingBuffer.removeBySession(sessionID);
+    relationTracker.clean(sessionID);
+    const previousActiveID = sessionManager.activeSessionID;
+
+    await sessionManager.close(sessionID);
+
+    ipc.send({ type: 'session:deleted', sessionID });
+
+    const openIDs = sessionManager.getOpenSessionIDs();
+    if (openIDs.length === 0) {
+      await invokeCreateSession();
+      return;
+    }
+
+    if (previousActiveID === sessionID) {
+      const nextActiveID = sessionManager.activeSessionID!;
+      const state = sessionStateStore.getOrInitialize(
+        nextActiveID,
+        getCachedModels(),
+        getCachedAgents(),
+      );
+      ipc.send({
+        type: 'session:switched',
+        sessionID: nextActiveID,
+        model: state.model,
+        agent: state.agent,
+        modelVariants: state.modelVariants,
+      });
+      const { messages, parts } = await sessionManager.getMessagesAndParts(nextActiveID);
+      ipc.send({
+        type: 'messages:list',
+        sessionID: nextActiveID,
+        messages,
+        parts,
+        status: sessionStatuses.get(nextActiveID),
+      });
+      syncPendingRequests(nextActiveID);
+    }
+  });
+
+  ipc.on('session:close-all', () => {
+    sessionStatuses.clear();
+    pendingBuffer.clear();
+    relationTracker.clear();
+    void sessionManager.closeAll();
+    ipc.send({ type: 'init', sessions: [] });
+    void invokeCreateSession();
+  });
 }

@@ -158,4 +158,26 @@ describe('PermissionBar', () => {
     expect(mockOnReply).toHaveBeenCalledWith('perm-1', 'reject');
     expect(useSessionStore.getState().pendingPermissions).toEqual([]);
   });
+
+  it('prepends sub-agent title to description if subagentTitle is present', () => {
+    const perm = {
+      id: 'perm-1',
+      sessionID: 'session-1',
+      permission: 'bash',
+      patterns: [],
+      metadata: { command: 'npm run dev' },
+      always: [],
+      subagentTitle: 'Run tests (@build subagent)',
+    } as unknown as PermissionRequest;
+
+    useSessionStore.setState({
+      pendingPermissions: [perm],
+    });
+
+    render(<PermissionBar sessionID="session-1" onReply={mockOnReply} />);
+
+    expect(
+      screen.getByText('[Sub-agent: Run tests (@build subagent)] Execute command npm run dev'),
+    ).toBeInTheDocument();
+  });
 });
