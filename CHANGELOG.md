@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.18](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.17...v0.1.18) (2026-05-25)
+
+### Features
+
+- forward sub-agent permission and question requests to parent session ([db107f1](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/db107f1872b6045b1aa384507a0a9d693847fe35))
+
 ### [0.1.17](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.16...v0.1.17) (2026-05-25)
 
 ### Features
