@@ -31,6 +31,7 @@ export function useSession() {
   const removeSession = useSessionStore((s) => s.removeSession);
   const updateSession = useSessionStore((s) => s.updateSession);
   const addMessage = useSessionStore((s) => s.addMessage);
+  const updateMessage = useSessionStore((s) => s.updateMessage);
   const updatePart = useSessionStore((s) => s.updatePart);
   const updatePartDelta = useSessionStore((s) => s.updatePartDelta);
   const setSessionStatus = useSessionStore((s) => s.setSessionStatus);
@@ -172,6 +173,39 @@ export function useSession() {
         case 'question.rejected':
           removePendingQuestion((props as unknown as { requestID: string }).requestID);
           break;
+        case 'session.next.step.ended': {
+          const stepProps = (
+            event as unknown as {
+              properties: {
+                sessionID: string;
+                tokens: {
+                  input: number;
+                  output: number;
+                  reasoning: number;
+                  cache: { read: number; write: number };
+                };
+                cost: number;
+              };
+            }
+          ).properties;
+          const { messages: storeMessages } = useSessionStore.getState();
+          const sessionMessages = storeMessages[stepProps.sessionID] || [];
+
+          // Find the last assistant message in the session and update it with the
+          // finished step's tokens and cost so that statistics refresh in real-time.
+          for (let i = sessionMessages.length - 1; i >= 0; i--) {
+            const msg = sessionMessages[i];
+            if (msg.role === 'assistant') {
+              updateMessage({
+                ...msg,
+                tokens: stepProps.tokens,
+                cost: stepProps.cost,
+              });
+              break;
+            }
+          }
+          break;
+        }
         default:
           break;
       }
@@ -181,6 +215,7 @@ export function useSession() {
       updateSession,
       removeSession,
       addMessage,
+      updateMessage,
       updatePart,
       updatePartDelta,
       setSessionStatus,

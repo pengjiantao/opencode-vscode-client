@@ -49,11 +49,13 @@ export function PromptInputFooter({ models, activeModel }: PromptInputFooterProp
     );
   }, []);
 
-  // Retrieve the last assistant message to extract active usage statistics
+  // Retrieve the last assistant message to extract active usage statistics.
+  // We filter out messages without output tokens (e.g. initial states or
+  // incomplete steps) to align with TUI behavior.
   const lastAssistantMsg = React.useMemo(() => {
     for (let i = sessionMessages.length - 1; i >= 0; i--) {
       const msg = sessionMessages[i];
-      if (!isAssistantMessage(msg)) continue;
+      if (!isAssistantMessage(msg) || !msg.tokens || !(msg.tokens.output > 0)) continue;
       return msg;
     }
     return null;
@@ -131,6 +133,25 @@ export function PromptInputFooter({ models, activeModel }: PromptInputFooterProp
     `;
   }, [lastAssistantMsg, finalLimit, contextTotalTokens, contextPercentage, totalCost]);
 
+  const contextDisplay = React.useMemo(() => {
+    if (contextTotalTokens > 0) {
+      return (
+        <>
+          <span className="context-tokens-full">
+            {contextTotalTokens.toLocaleString()} / {(finalLimit || 0).toLocaleString()}{' '}
+          </span>
+          <span>({contextPercentage}%)</span>
+        </>
+      );
+    }
+    return (
+      <>
+        <span className="context-tokens-full">0 / {(finalLimit || 0).toLocaleString()} </span>
+        <span>(0%)</span>
+      </>
+    );
+  }, [contextTotalTokens, finalLimit, contextPercentage]);
+
   return (
     <div className="prompt-input-sub-footer">
       <div className="sub-footer-left">
@@ -151,23 +172,7 @@ export function PromptInputFooter({ models, activeModel }: PromptInputFooterProp
           data-testid="footer-context"
         >
           <Codicon name="graph" className="metadata-icon" />
-          <span>
-            {contextTotalTokens > 0 ? (
-              <>
-                <span className="context-tokens-full">
-                  {contextTotalTokens.toLocaleString()} / {(finalLimit || 0).toLocaleString()}{' '}
-                </span>
-                <span>({contextPercentage}%)</span>
-              </>
-            ) : (
-              <>
-                <span className="context-tokens-full">
-                  0 / {(finalLimit || 0).toLocaleString()}{' '}
-                </span>
-                <span>(0%)</span>
-              </>
-            )}
-          </span>
+          <span>{contextDisplay}</span>
         </div>
 
         <div

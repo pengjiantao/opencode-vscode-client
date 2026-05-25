@@ -3,6 +3,7 @@
  */
 
 import type {
+  AssistantMessage,
   Event,
   Message,
   Part,
@@ -335,6 +336,52 @@ describe('useSession', () => {
       });
 
       expect(useSessionStore.getState().pendingPermissions).toEqual([]);
+    });
+
+    it('handles session.next.step.ended event by updating the last assistant message', () => {
+      const { result } = renderHook(() => useSession());
+      const initialMessage = {
+        id: 'msg-1',
+        sessionID: 'session-1',
+        role: 'assistant',
+        cost: 0,
+        tokens: { input: 0, output: 0 },
+      } as unknown as Message;
+
+      act(() => {
+        useSessionStore.setState({
+          messages: {
+            'session-1': [initialMessage],
+          },
+        });
+      });
+
+      act(() => {
+        result.current.handleEvent({
+          type: 'session.next.step.ended',
+          properties: {
+            sessionID: 'session-1',
+            cost: 0.15,
+            tokens: {
+              input: 100,
+              output: 200,
+              reasoning: 50,
+              cache: { read: 10, write: 5 },
+            },
+          },
+        } as unknown as Event);
+      });
+
+      const updatedMessages = useSessionStore.getState().messages['session-1'] || [];
+      expect(updatedMessages.length).toBe(1);
+      const updatedMsg = updatedMessages[0] as AssistantMessage;
+      expect(updatedMsg.cost).toBe(0.15);
+      expect(updatedMsg.tokens).toEqual({
+        input: 100,
+        output: 200,
+        reasoning: 50,
+        cache: { read: 10, write: 5 },
+      });
     });
   });
 });

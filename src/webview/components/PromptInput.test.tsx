@@ -53,40 +53,40 @@ vi.mock('@vscode/webview-ui-toolkit/react', () => ({
   ),
 }));
 
-vi.mock('../store/sessionStore', () => ({
-  useSessionStore: vi.fn(<T,>(selector: (state: Record<string, unknown>) => T): T => {
-    const state = {
-      workspaceName: 'TestWorkspace',
-      lspServers: [{ name: 'typescript-lsp', status: 'running' }],
-      mcpServers: [{ name: 'git-mcp', status: 'connected' }],
-      skills: [{ name: 'customize-opencode', description: 'desc' }],
-      commands: [],
-      plugins: ['plugin-1'],
-      extensionVersion: '0.1.2',
-      activeSessionID: 'session-123',
-      fileInfos: {},
-      messages: {
-        'session-123': [
-          {
-            role: 'assistant',
-            cost: 0.05,
-            tokens: {
-              input: 1000,
-              output: 500,
-              reasoning: 200,
-              cache: { read: 100, write: 50 },
-            },
-            providerID: 'openai',
-            modelID: 'gpt-4',
-          },
-        ],
+const defaultMockState = {
+  workspaceName: 'TestWorkspace',
+  lspServers: [{ name: 'typescript-lsp', status: 'running' }],
+  mcpServers: [{ name: 'git-mcp', status: 'connected' }],
+  skills: [{ name: 'customize-opencode', description: 'desc' }],
+  commands: [],
+  plugins: ['plugin-1'],
+  extensionVersion: '0.1.2',
+  activeSessionID: 'session-123',
+  fileInfos: {},
+  messages: {
+    'session-123': [
+      {
+        role: 'assistant',
+        cost: 0.05,
+        tokens: {
+          input: 1000,
+          output: 500,
+          reasoning: 200,
+          cache: { read: 100, write: 50 },
+        },
+        providerID: 'openai',
+        modelID: 'gpt-4',
       },
-    };
-    return selector(state);
-  }),
+    ],
+  },
+};
+
+vi.mock('../store/sessionStore', () => ({
+  useSessionStore: vi.fn(),
 }));
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
+import { SessionStore, useSessionStore } from '../store/sessionStore';
 
 const mockOnSubmit = vi.fn<(text: string, parts: Part[]) => void>();
 const mockOnModelChange = vi.fn();
@@ -95,6 +95,9 @@ const mockOnAgentChange = vi.fn();
 describe('PromptInput', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useSessionStore).mockImplementation(<T,>(selector: (state: SessionStore) => T): T => {
+      return selector(defaultMockState as unknown as SessionStore);
+    });
   });
 
   it('renders text area with placeholder', () => {
@@ -361,6 +364,92 @@ describe('PromptInput', () => {
     expect(screen.getByTestId('footer-context')).toHaveTextContent('1,850 / 100,000 (2%)');
     // Total Cost: 0.05
     expect(screen.getByTestId('footer-cost')).toHaveTextContent('$0.050');
+  });
+
+  /** Regression: footer token and cost statistics are always rendered, showing initial/fallback states correctly. */
+  it('regression: footer token and cost statistics are always rendered, showing initial/fallback states correctly', () => {
+    // 1. Test new session (no messages)
+    vi.mocked(useSessionStore).mockImplementation(<T,>(selector: (state: SessionStore) => T): T => {
+      const state = {
+        workspaceName: 'TestWorkspace',
+        lspServers: [],
+        mcpServers: [],
+        skills: [],
+        commands: [],
+        plugins: [],
+        extensionVersion: '0.1.2',
+        activeSessionID: 'session-123',
+        fileInfos: {},
+        messages: {
+          'session-123': [],
+        },
+      };
+      return selector(state as unknown as SessionStore);
+    });
+
+    const { rerender } = render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[{ id: 'openai/gpt-4', name: 'GPT-4', contextLimit: 100000 }]}
+        agents={[{ id: 'agent-1', name: 'Agent 1' }]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    // Context tokens should show initial 0 state, cost should show $0.000
+    expect(screen.getByTestId('footer-context')).toHaveTextContent('0 / 100,000 (0%)');
+    expect(screen.getByTestId('footer-cost')).toHaveTextContent('$0.000');
+
+    // 2. Test message sent but first assistant step not finished
+    vi.mocked(useSessionStore).mockImplementation(<T,>(selector: (state: SessionStore) => T): T => {
+      const state = {
+        workspaceName: 'TestWorkspace',
+        lspServers: [],
+        mcpServers: [],
+        skills: [],
+        commands: [],
+        plugins: [],
+        extensionVersion: '0.1.2',
+        activeSessionID: 'session-123',
+        fileInfos: {},
+        messages: {
+          'session-123': [
+            {
+              role: 'user',
+              content: 'hello',
+            },
+            {
+              role: 'assistant',
+              cost: 0,
+              tokens: {
+                input: 1000,
+                output: 0,
+                reasoning: 0,
+                cache: { read: 0, write: 0 },
+              },
+              providerID: 'openai',
+              modelID: 'gpt-4',
+            },
+          ],
+        },
+      };
+      return selector(state as unknown as SessionStore);
+    });
+
+    rerender(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[{ id: 'openai/gpt-4', name: 'GPT-4', contextLimit: 100000 }]}
+        agents={[{ id: 'agent-1', name: 'Agent 1' }]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    // Context tokens should render 0 / 100,000 (0%) and cost should show $0.000
+    expect(screen.getByTestId('footer-context')).toHaveTextContent('0 / 100,000 (0%)');
+    expect(screen.getByTestId('footer-cost')).toHaveTextContent('$0.000');
   });
 
   /** Regression: workspace name container has correct DOM structure and classes to prevent visual overlapping. */

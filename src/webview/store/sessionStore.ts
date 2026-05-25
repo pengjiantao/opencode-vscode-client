@@ -15,7 +15,7 @@ import { create } from 'zustand';
 import type { CommandInfo, LspServerInfo, McpServerInfo, SkillInfo } from '../../shared/types';
 
 /** Full shape of the session store's state and actions. */
-interface SessionStore {
+export interface SessionStore {
   /** All known sessions (open/running). */
   sessions: Session[];
   /** Currently active session ID. */
