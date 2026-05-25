@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.15](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.14...v0.1.15) (2026-05-25)
+
+### Bug Fixes
+
+- restore sessionStatus on webview rebuild to prevent premature action buttons ([59ab74f](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/59ab74f7a40fc499da0e7dbca40fd9ad7cf4b349))
+
 ### [0.1.14](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.13...v0.1.14) (2026-05-25)
 
 ### Features
