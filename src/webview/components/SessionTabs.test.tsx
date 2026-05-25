@@ -128,4 +128,52 @@ describe('SessionTabs', () => {
 
     expect((tabsList as HTMLElement & { scrollLeft: number }).scrollLeft).toBe(100);
   });
+
+  it('automatically scrolls active tab into view when active session changes', () => {
+    const scrollIntoViewSpy = vi.fn();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoViewSpy;
+
+    try {
+      const sessions = [
+        createMockSession({ id: 'session-1', title: 'Session 1' }),
+        createMockSession({ id: 'session-2', title: 'Session 2' }),
+      ];
+
+      const { rerender } = render(
+        <SessionTabs
+          sessions={sessions}
+          activeSessionID="session-1"
+          onSwitch={() => {}}
+          onClose={() => {}}
+          onCloseAll={() => {}}
+        />,
+      );
+
+      // Verifies scrollIntoView is called upon initial render/mount for the active session
+      expect(scrollIntoViewSpy).toHaveBeenCalledTimes(1);
+      expect(scrollIntoViewSpy).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+
+      // Change activeSessionID and rerender to verify auto-scroll fires again
+      rerender(
+        <SessionTabs
+          sessions={sessions}
+          activeSessionID="session-2"
+          onSwitch={() => {}}
+          onClose={() => {}}
+          onCloseAll={() => {}}
+        />,
+      );
+
+      expect(scrollIntoViewSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      // Restore original scrollIntoView
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+    }
+  });
 });

@@ -3,6 +3,7 @@
  */
 
 import type { Session } from '@opencode-ai/sdk/v2/client';
+import { useEffect, useRef } from 'react';
 import { IconButton } from './IconButton';
 import { Popover } from './Popover';
 
@@ -31,9 +32,28 @@ export function SessionTabs({
   onClose,
   onCloseAll,
 }: SessionTabsProps) {
+  const tabsListRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!activeSessionID) {
+      return;
+    }
+    // Query the active tab element within our list and scroll it into view.
+    // We check typeof scrollIntoView to be safe in non-browser or test contexts.
+    const activeTab = tabsListRef.current?.querySelector('.tab.active');
+    if (activeTab && typeof activeTab.scrollIntoView === 'function') {
+      activeTab.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    }
+  }, [activeSessionID, sessions]);
+
   return (
     <div className="session-tabs">
       <div
+        ref={tabsListRef}
         className="tabs-list"
         onWheel={(e) => {
           // Translate vertical scroll into horizontal scroll for tab overflow
