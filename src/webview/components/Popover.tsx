@@ -71,7 +71,10 @@ export function Popover({
   };
 
   return (
-    <div className={`popover-container ${className}`} ref={containerRef}>
+    <div
+      className={`popover-container ${isOpen ? 'open' : ''} ${className}`.trim()}
+      ref={containerRef}
+    >
       <div className="popover-trigger-wrapper" onClick={() => setIsOpen(!isOpen)}>
         {trigger}
       </div>

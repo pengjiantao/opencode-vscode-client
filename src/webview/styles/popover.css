@@ -2,6 +2,8 @@
 .popover-container {
   position: relative;
   display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .popover-trigger-wrapper {
@@ -13,6 +15,9 @@
   border: none;
   padding: 0;
   margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
 }
 
 .popover-content {

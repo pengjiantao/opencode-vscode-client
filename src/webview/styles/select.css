@@ -1,6 +1,8 @@
 /* Reusable Select (Combobox) styling, matching native VS Code styles */
 .select-container {
-  display: inline-block;
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .select-trigger {
@@ -18,8 +20,9 @@
   font-size: var(--vscode-font-size, 13px);
   cursor: pointer;
   outline: none;
-  min-width: auto; /* let it adapt to content naturally */
+  min-width: 0; /* let it adapt to content naturally but allow shrinking */
   max-width: 280px; /* maximum bounds for trigger button */
+  width: 100%;
   text-align: left;
   user-select: none;
   transition: background-color 0.15s ease;
@@ -30,7 +33,8 @@
   border-color: transparent;
 }
 
-.select-trigger:focus:not(:disabled) {
+.select-trigger:focus:not(:disabled),
+.select-container.open .select-trigger:not(:disabled) {
   border-color: var(--vscode-focusBorder, #007fd4);
 }
 

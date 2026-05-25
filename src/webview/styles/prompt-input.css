@@ -52,7 +52,7 @@
 .prompt-input-footer {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
   padding: 6px 8px 4px;
   border-top: 1px dashed
     var(
@@ -60,12 +60,16 @@
       var(--vscode-editorGroupHeader-tabsBorder, var(--vscode-border-color, #454545))
     );
   background-color: transparent;
+  gap: 8px;
 }
 
 .prompt-input-footer .selectors {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   align-items: center;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .prompt-input-footer vscode-dropdown {
