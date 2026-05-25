@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.16](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.15...v0.1.16) (2026-05-25)
+
+### Features
+
+- auto-scroll active session tab into view on switch ([c02753a](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c02753a6c6f29ca93d82bcee774b8ab0217301bf))
+
+### Bug Fixes
+
+- preserve session tab order on webview reload ([c434a4c](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c434a4cbc03c32d8d5a0e2d85ff15881a8dc939f))
+
 ### [0.1.15](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.14...v0.1.15) (2026-05-25)
 
 ### Bug Fixes
