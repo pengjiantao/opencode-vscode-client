@@ -494,5 +494,47 @@ describe('Extension Status Bar Activation', () => {
         }),
       );
     });
+
+    it('preserves the order of openSessionIDs on init even if sdk.session.list returns them in desc/reverse order', async () => {
+      // openSessionIDs order is 1 -> 2 -> 3 (oldest to newest)
+      mockWorkspaceStateStore.set('openSessionIDs', ['session-1', 'session-2', 'session-3']);
+      mockWorkspaceStateStore.set('activeSessionID', 'session-3');
+
+      await activate(mockContext);
+
+      // Backend returns them in desc order (3 -> 2 -> 1)
+      const mockSessions = [
+        {
+          id: 'session-3',
+          title: 'Session 3',
+          time: { created: Date.now() + 2, updated: Date.now() + 2 },
+        },
+        {
+          id: 'session-2',
+          title: 'Session 2',
+          time: { created: Date.now() + 1, updated: Date.now() + 1 },
+        },
+        { id: 'session-1', title: 'Session 1', time: { created: Date.now(), updated: Date.now() } },
+      ];
+      vi.mocked(mockSdk.session.list).mockResolvedValue(mockSessions);
+
+      const initHandler = ipcHandlers.get('init');
+      expect(initHandler).toBeDefined();
+      if (initHandler) {
+        await initHandler();
+      }
+
+      // Verify that the init message contains sessions in the correct order: [session-1, session-2, session-3]
+      expect(mockIpcSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'init',
+          sessions: [
+            expect.objectContaining({ id: 'session-1' }),
+            expect.objectContaining({ id: 'session-2' }),
+            expect.objectContaining({ id: 'session-3' }),
+          ],
+        }),
+      );
+    });
   });
 });

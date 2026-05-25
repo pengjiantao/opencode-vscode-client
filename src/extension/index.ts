@@ -8,6 +8,7 @@ import type {
   Part,
   PermissionRequest,
   QuestionRequest,
+  Session,
   SessionStatus,
 } from '@opencode-ai/sdk/v2/client';
 import { window, workspace, type ExtensionContext } from 'vscode';
@@ -184,7 +185,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
           // Migrate legacy configuration into the active session.
           sessionStateStore.migrateLegacyState(activeID);
 
-          const openSessions = activeSessions.filter((s) => openIDs.includes(s.id));
+          const openSessions = openIDs
+            .map((id) => activeSessions.find((s) => s.id === id))
+            .filter((s): s is Session => s !== undefined);
           const state = sessionStateStore.getOrInitialize(activeID, cachedModels, cachedAgents);
           ipc.send({
             type: 'init',
