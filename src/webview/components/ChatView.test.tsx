@@ -107,4 +107,42 @@ describe('ChatView', () => {
 
     expect(chatView.scrollTop).toBe(100);
   });
+
+  describe('Session Status Actions rendering', () => {
+    it('does not render actions buttons in the message turn when sessionStatus is busy', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+      const messages = [userMsg, assistantMsg];
+
+      useSessionStore.setState({
+        sessionStatus: {
+          'session-1': { type: 'busy' },
+        },
+      });
+
+      render(<ChatView sessionID="session-1" messages={messages} parts={{}} />);
+
+      expect(screen.queryByText('Copy Answer')).not.toBeInTheDocument();
+      expect(screen.queryByText('To Top')).not.toBeInTheDocument();
+      expect(screen.queryByText('To Recent User')).not.toBeInTheDocument();
+    });
+
+    it('renders actions buttons in the message turn when sessionStatus is idle', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+      const messages = [userMsg, assistantMsg];
+
+      useSessionStore.setState({
+        sessionStatus: {
+          'session-1': { type: 'idle' },
+        },
+      });
+
+      render(<ChatView sessionID="session-1" messages={messages} parts={{}} />);
+
+      expect(screen.getByText('Copy Answer')).toBeInTheDocument();
+      expect(screen.getByText('To Top')).toBeInTheDocument();
+      expect(screen.getByText('To Recent User')).toBeInTheDocument();
+    });
+  });
 });

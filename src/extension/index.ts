@@ -170,7 +170,13 @@ export async function activate(context: ExtensionContext): Promise<void> {
             agent: state.agent,
             modelVariants: state.modelVariants,
           });
-          ipc.send({ type: 'messages:list', sessionID: session.id, messages: [], parts: [] });
+          ipc.send({
+            type: 'messages:list',
+            sessionID: session.id,
+            messages: [],
+            parts: [],
+            status: sessionStatuses.get(session.id),
+          });
           syncPendingRequests(session.id);
         } else {
           await sessionManager.switch(activeID);
@@ -193,7 +199,13 @@ export async function activate(context: ExtensionContext): Promise<void> {
           });
 
           const { messages, parts } = await sessionManager.getMessagesAndParts(activeID);
-          ipc.send({ type: 'messages:list', sessionID: activeID, messages, parts });
+          ipc.send({
+            type: 'messages:list',
+            sessionID: activeID,
+            messages,
+            parts,
+            status: sessionStatuses.get(activeID),
+          });
           syncPendingRequests(activeID);
         }
       } catch (err) {
@@ -220,7 +232,13 @@ export async function activate(context: ExtensionContext): Promise<void> {
           modelVariants: state.modelVariants,
         });
         const { messages, parts } = await sessionManager.getMessagesAndParts(sessionID);
-        ipc.send({ type: 'messages:list', sessionID, messages, parts });
+        ipc.send({
+          type: 'messages:list',
+          sessionID,
+          messages,
+          parts,
+          status: sessionStatuses.get(sessionID),
+        });
         void syncMetadata();
         syncPendingRequests(sessionID);
       } catch (err) {
@@ -256,7 +274,13 @@ export async function activate(context: ExtensionContext): Promise<void> {
               modelVariants: state.modelVariants,
             });
             const { messages, parts } = await sessionManager.getMessagesAndParts(nextActiveID);
-            ipc.send({ type: 'messages:list', sessionID: nextActiveID, messages, parts });
+            ipc.send({
+              type: 'messages:list',
+              sessionID: nextActiveID,
+              messages,
+              parts,
+              status: sessionStatuses.get(nextActiveID),
+            });
             syncPendingRequests(nextActiveID);
           } else {
             await invokeCreateSession();
@@ -295,7 +319,13 @@ export async function activate(context: ExtensionContext): Promise<void> {
           modelVariants: state.modelVariants,
         });
         const { messages, parts } = await sessionManager.getMessagesAndParts(nextActiveID);
-        ipc.send({ type: 'messages:list', sessionID: nextActiveID, messages, parts });
+        ipc.send({
+          type: 'messages:list',
+          sessionID: nextActiveID,
+          messages,
+          parts,
+          status: sessionStatuses.get(nextActiveID),
+        });
         syncPendingRequests(nextActiveID);
       }
     });

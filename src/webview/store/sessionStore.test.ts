@@ -99,6 +99,21 @@ describe('sessionStore', () => {
       expect(useSessionStore.getState().parts[message.id]).toHaveLength(1);
       expect(useSessionStore.getState().parts[message.id][0]).toEqual(part);
     });
+
+    it('sets session messages, parts, and status in bulk', () => {
+      const message = createMockUserMessage();
+      const part = createMockTextPart();
+      part.messageID = message.id;
+      const status = { type: 'busy' as const };
+
+      useSessionStore.getState().setSessionMessagesAndParts('session-1', [message], [part], status);
+
+      expect(useSessionStore.getState().messages['session-1']).toHaveLength(1);
+      expect(useSessionStore.getState().messages['session-1'][0]).toEqual(message);
+      expect(useSessionStore.getState().parts[message.id]).toHaveLength(1);
+      expect(useSessionStore.getState().parts[message.id][0]).toEqual(part);
+      expect(useSessionStore.getState().sessionStatus['session-1']).toEqual(status);
+    });
   });
 
   describe('setSessionStatus', () => {

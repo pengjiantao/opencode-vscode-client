@@ -413,5 +413,86 @@ describe('Extension Status Bar Activation', () => {
       expect(mockWorkspaceStateStore.get('openSessionIDs')).toEqual(['session-new']);
       expect(mockWorkspaceStateStore.get('activeSessionID')).toBe('session-new');
     });
+
+    it('restores the active session status on init from sessionStatuses', async () => {
+      mockWorkspaceStateStore.set('openSessionIDs', ['session-1', 'session-2']);
+      mockWorkspaceStateStore.set('activeSessionID', 'session-2');
+
+      await activate(mockContext);
+
+      const mockSessions = [
+        { id: 'session-1', title: 'Session 1', time: { created: Date.now(), updated: Date.now() } },
+        { id: 'session-2', title: 'Session 2', time: { created: Date.now(), updated: Date.now() } },
+      ];
+      vi.mocked(mockSdk.session.list).mockResolvedValue(mockSessions);
+
+      const session2Status = { type: 'busy' } as SessionStatus;
+      if (sseHandlerCallback) {
+        sseHandlerCallback({
+          type: 'session.status',
+          properties: {
+            sessionID: 'session-2',
+            status: session2Status,
+          },
+        });
+      }
+
+      const initHandler = ipcHandlers.get('init');
+      expect(initHandler).toBeDefined();
+      if (initHandler) {
+        await initHandler();
+      }
+
+      expect(mockIpcSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'messages:list',
+          sessionID: 'session-2',
+          status: session2Status,
+        }),
+      );
+    });
+
+    it('restores the active session status on session:switch from sessionStatuses', async () => {
+      mockWorkspaceStateStore.set('openSessionIDs', ['session-1', 'session-2']);
+      mockWorkspaceStateStore.set('activeSessionID', 'session-1');
+
+      await activate(mockContext);
+
+      const mockSessions = [
+        { id: 'session-1', title: 'Session 1', time: { created: Date.now(), updated: Date.now() } },
+        { id: 'session-2', title: 'Session 2', time: { created: Date.now(), updated: Date.now() } },
+      ];
+      vi.mocked(mockSdk.session.list).mockResolvedValue(mockSessions);
+
+      const initHandler = ipcHandlers.get('init');
+      if (initHandler) {
+        await initHandler();
+      }
+
+      const session2Status = { type: 'busy' } as SessionStatus;
+      if (sseHandlerCallback) {
+        sseHandlerCallback({
+          type: 'session.status',
+          properties: {
+            sessionID: 'session-2',
+            status: session2Status,
+          },
+        });
+      }
+
+      const switchHandler = ipcHandlers.get('session:switch');
+      expect(switchHandler).toBeDefined();
+      if (switchHandler) {
+        await switchHandler({ sessionID: 'session-2' });
+      }
+
+      expect(mockIpcSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'messages:list',
+          sessionID: 'session-2',
+          status: session2Status,
+        }),
+      );
+    });
   });
 });

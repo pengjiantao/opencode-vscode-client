@@ -54,7 +54,18 @@ interface SessionStore {
   removePendingPermission: (id: string) => void;
   addPendingQuestion: (question: QuestionRequest) => void;
   removePendingQuestion: (id: string) => void;
-  setSessionMessagesAndParts: (sessionID: string, messages: Message[], parts: Part[]) => void;
+  /**
+   * Bulk-sets messages and their associated parts for a session, rebuilding the parts map.
+   * Optionally restores the session's processing status (e.g., 'busy') so the webview
+   * can correctly show/hide action buttons after reconstruction.
+   */
+  setSessionMessagesAndParts: (
+    sessionID: string,
+    messages: Message[],
+    parts: Part[],
+    /** Optional session status to restore on webview rebuild. */
+    status?: SessionStatus,
+  ) => void;
   setPendingRequests: (
     sessionID: string,
     permissions: PermissionRequest[],
@@ -157,8 +168,8 @@ export const useSessionStore = create<SessionStore>((set) => ({
       },
     })),
 
-  /** Bulk-sets messages and their associated parts for a session, rebuilding the parts map. */
-  setSessionMessagesAndParts: (sessionID, messages, parts) =>
+  /** Bulk-sets messages and their associated parts for a session, rebuilding the parts map and restoring status. */
+  setSessionMessagesAndParts: (sessionID, messages, parts, status) =>
     set((state) => {
       // Initialize empty part arrays for each message, then populate
       const partsMap: Record<string, Part[]> = { ...state.parts };
@@ -171,12 +182,16 @@ export const useSessionStore = create<SessionStore>((set) => ({
         }
         partsMap[p.messageID].push(p);
       }
+      const newSessionStatus = status
+        ? { ...state.sessionStatus, [sessionID]: status }
+        : state.sessionStatus;
       return {
         messages: {
           ...state.messages,
           [sessionID]: messages,
         },
         parts: partsMap,
+        sessionStatus: newSessionStatus,
       };
     }),
 

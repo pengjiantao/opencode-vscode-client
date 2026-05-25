@@ -95,7 +95,12 @@ export function App() {
           setAgents(message.agents);
           break;
         case 'messages:list':
-          setSessionMessagesAndParts(message.sessionID, message.messages, message.parts);
+          setSessionMessagesAndParts(
+            message.sessionID,
+            message.messages,
+            message.parts,
+            message.status,
+          );
           break;
         case 'settings:open':
           setShowSettings(true);

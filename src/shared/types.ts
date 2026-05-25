@@ -10,6 +10,7 @@ import type {
   PermissionRequest,
   QuestionRequest,
   Session,
+  SessionStatus,
 } from '@opencode-ai/sdk/v2/client';
 
 export type { Event };
@@ -164,7 +165,13 @@ export type ExtToWebview =
   | { type: 'settings:open' }
   | { type: 'models:list'; models: ModelInfo[] }
   | { type: 'agents:list'; agents: AgentInfo[] }
-  | { type: 'messages:list'; sessionID: string; messages: Message[]; parts: Part[] }
+  | {
+      type: 'messages:list';
+      sessionID: string;
+      messages: Message[];
+      parts: Part[];
+      status?: SessionStatus;
+    }
   | {
       type: 'file:query-response';
       path: string;
