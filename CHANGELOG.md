@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.17](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.16...v0.1.17) (2026-05-25)
+
+### Features
+
+- add Codicon icons to empty states, remove defunct new-session button ([0af3105](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/0af3105b7c248440d53804af6696c6e7c71db314))
+
+### Bug Fixes
+
+- add responsive width constraints to popover/select layout ([409f791](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/409f79174058231b054aceddbbaaafdfda03c031))
+
 ### [0.1.16](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.15...v0.1.16) (2026-05-25)
 
 ### Features
