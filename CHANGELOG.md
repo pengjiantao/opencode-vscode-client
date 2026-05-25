@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.19](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.18...v0.1.19) (2026-05-25)
+
+### Bug Fixes
+
+- clean up test warnings and console.error spy leak ([5af6526](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/5af65262752ada26da64719bf8937760b3348776))
+- filter out sub-agent child sessions from history picker ([9df4633](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/9df46333793639f26194c4d7091ed4a9889ee090))
+- prevent Enter from aborting running session ([0a145df](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/0a145dfdef14ae43b0b085eb97451052afff2807))
+- update token/cost statistics in real-time on step end ([0c8a9f9](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/0c8a9f96356e80a40523c77e6c9fa136035e99a7))
+
 ### [0.1.18](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.17...v0.1.18) (2026-05-25)
 
 ### Features
