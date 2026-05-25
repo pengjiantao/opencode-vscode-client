@@ -7,6 +7,7 @@ import type { Part } from '@opencode-ai/sdk/v2/client';
 import { useEffect, useState } from 'react';
 import type { AgentInfo, ExtToWebview, ModelInfo } from '../shared/types';
 import { ChatView } from './components/ChatView';
+import { Codicon } from './components/Codicon';
 import { PermissionBar } from './components/PermissionBar';
 import { PromptInput } from './components/PromptInput';
 import { QuestionBar } from './components/QuestionBar';
@@ -154,10 +155,6 @@ export function App() {
     setPendingRequests,
   ]);
 
-  const handleCreateSession = () => {
-    send({ type: 'session:create' } as never);
-  };
-
   const handleSwitchSession = (sessionID: string) => {
     send({ type: 'session:switch', sessionID } as never);
   };
@@ -256,8 +253,8 @@ export function App() {
         </>
       ) : (
         <div className="no-session">
-          <p>No active session. Create a new session to start.</p>
-          <button onClick={handleCreateSession}>New Session</button>
+          <Codicon name="comment-discussion" className="no-session-icon" />
+          <p className="no-session-text">No active session. Create a new session to start.</p>
         </div>
       )}
 

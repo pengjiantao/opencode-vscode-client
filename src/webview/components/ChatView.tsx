@@ -6,6 +6,7 @@
 import type { Message, Part } from '@opencode-ai/sdk/v2/client';
 import { useMemo } from 'react';
 import { useSessionStore } from '../store/sessionStore';
+import { Codicon } from './Codicon';
 import { MessageTurn } from './MessageTurn';
 import { ScrollFadeContainer } from './ScrollFadeContainer';
 
@@ -86,7 +87,8 @@ export function ChatView({ sessionID, messages, parts }: ChatViewProps) {
 
       {turns.length === 0 && (
         <div className="empty-chat">
-          <p>Start a conversation by typing a message below.</p>
+          <Codicon name="comment-discussion" className="empty-chat-icon" />
+          <p className="empty-chat-text">Start a conversation by typing a message below.</p>
         </div>
       )}
     </ScrollFadeContainer>

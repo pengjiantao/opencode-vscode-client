@@ -12,17 +12,52 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  color: var(--vscode-input-foreground);
+  gap: 8px;
+  color: var(--vscode-descriptionForeground, var(--vscode-input-foreground));
+  opacity: 0.85;
+  padding: 24px;
+  text-align: center;
+}
+
+.no-session-icon {
+  font-size: 48px !important;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.4;
+  margin-bottom: 8px;
+}
+
+.no-session-text {
+  font-size: var(--vscode-font-size, 13px);
+  line-height: 1.4;
+  margin: 0;
+  max-width: 260px;
 }
 
 .empty-chat {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: var(--vscode-input-foreground);
-  opacity: 0.7;
+  gap: 8px;
+  color: var(--vscode-descriptionForeground, var(--vscode-input-foreground));
+  opacity: 0.85;
+  padding: 24px;
+  text-align: center;
+}
+
+.empty-chat-icon {
+  font-size: 48px !important;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.4;
+  margin-bottom: 8px;
+}
+
+.empty-chat-text {
+  font-size: var(--vscode-font-size, 13px);
+  line-height: 1.4;
+  margin: 0;
+  max-width: 260px;
 }
 
 /* Thinking indicator — 3-dot ripple shown while assistant is generating.
