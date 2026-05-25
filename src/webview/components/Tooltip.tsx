@@ -59,16 +59,69 @@ export function Tooltip() {
     const triggerRect = activeTarget.getBoundingClientRect();
     const tooltipRect = tooltipRef.current.getBoundingClientRect();
 
-    // Standard behavior: center horizontally, align 8px above target element
-    let left = triggerRect.left + (triggerRect.width - tooltipRect.width) / 2;
-    let top = triggerRect.top - tooltipRect.height - 8;
-
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    // Viewport collision checking: if space is limited on top, display below the target
-    if (top < 8) {
-      top = triggerRect.bottom + 8;
+    let left: number;
+    let top: number;
+
+    // Check if the hovered element is inside a popover/dropdown menu list
+    const popoverContainer = activeTarget.closest('.popover-content');
+
+    if (popoverContainer) {
+      const popoverRect = popoverContainer.getBoundingClientRect();
+
+      // Check available space on all four sides of the popover container
+      const spaceRight = viewportWidth - (popoverRect.right + tooltipRect.width + 8);
+      const spaceLeft = popoverRect.left - tooltipRect.width - 8;
+      const spaceTop = popoverRect.top - tooltipRect.height - 8;
+      const spaceBottom = viewportHeight - (popoverRect.bottom + tooltipRect.height + 8);
+
+      // Determine best placement in order of priority: Right, Left, Top, Bottom
+      let placement: 'right' | 'left' | 'top' | 'bottom';
+      if (spaceRight >= 0) {
+        placement = 'right';
+      } else if (spaceLeft >= 0) {
+        placement = 'left';
+      } else if (spaceTop >= 0) {
+        placement = 'top';
+      } else if (spaceBottom >= 0) {
+        placement = 'bottom';
+      } else {
+        // Fallback to whichever side has the most space
+        const spaces = [
+          { dir: 'right' as const, val: spaceRight },
+          { dir: 'left' as const, val: spaceLeft },
+          { dir: 'top' as const, val: spaceTop },
+          { dir: 'bottom' as const, val: spaceBottom },
+        ];
+        spaces.sort((a, b) => b.val - a.val);
+        placement = spaces[0].dir;
+      }
+
+      // Calculate position relative to popover container, using trigger option element as anchor
+      if (placement === 'right') {
+        left = popoverRect.right + 8;
+        top = triggerRect.top + (triggerRect.height - tooltipRect.height) / 2;
+      } else if (placement === 'left') {
+        left = popoverRect.left - tooltipRect.width - 8;
+        top = triggerRect.top + (triggerRect.height - tooltipRect.height) / 2;
+      } else if (placement === 'top') {
+        left = triggerRect.left + (triggerRect.width - tooltipRect.width) / 2;
+        top = popoverRect.top - tooltipRect.height - 8;
+      } else {
+        left = triggerRect.left + (triggerRect.width - tooltipRect.width) / 2;
+        top = popoverRect.bottom + 8;
+      }
+    } else {
+      // Standard behavior: center horizontally, align 8px above target element
+      left = triggerRect.left + (triggerRect.width - tooltipRect.width) / 2;
+      top = triggerRect.top - tooltipRect.height - 8;
+
+      // Viewport collision checking: if space is limited on top, display below the target
+      if (top < 8) {
+        top = triggerRect.bottom + 8;
+      }
     }
 
     // Keep horizontal coordinate strictly within viewport margins

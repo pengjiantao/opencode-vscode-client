@@ -553,4 +553,172 @@ describe('Tooltip Component', () => {
     // and place it at top: 300 - 100 - 8 = 192px.
     expect(tooltip.style.top).toBe('262px');
   });
+
+  it('should position the tooltip to the right of the popover container when there is space', () => {
+    // Mock viewport boundaries
+    const originalInnerWidth = window.innerWidth;
+    const originalInnerHeight = window.innerHeight;
+    Object.defineProperty(window, 'innerWidth', { writable: true, value: 1000 });
+    Object.defineProperty(window, 'innerHeight', { writable: true, value: 800 });
+
+    const { unmount } = render(
+      <div>
+        <Tooltip />
+        <div
+          className="popover-content"
+          data-testid="popover"
+          style={{
+            position: 'absolute',
+            left: '100px',
+            top: '100px',
+            width: '200px',
+            height: '300px',
+          }}
+        >
+          <button data-testid="option" data-custom-title="Popover Option Content">
+            Option
+          </button>
+        </div>
+      </div>,
+    );
+
+    const popover = screen.getByTestId('popover');
+    const option = screen.getByTestId('option');
+
+    // Mock popover position (left: 100, top: 100, width: 200, height: 300, right: 300, bottom: 400)
+    popover.getBoundingClientRect = () =>
+      ({
+        left: 100,
+        top: 100,
+        width: 200,
+        height: 300,
+        right: 300,
+        bottom: 400,
+      }) as DOMRect;
+
+    // Mock option position (left: 110, top: 120, width: 180, height: 30, right: 290, bottom: 150)
+    option.getBoundingClientRect = () =>
+      ({
+        left: 110,
+        top: 120,
+        width: 180,
+        height: 30,
+        right: 290,
+        bottom: 150,
+      }) as DOMRect;
+
+    // Show tooltip
+    fireEvent.mouseOver(option);
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    const tooltip = screen.getByTestId('custom-tooltip');
+    expect(tooltip).toBeInTheDocument();
+
+    // Mock tooltip size
+    tooltip.getBoundingClientRect = () =>
+      ({
+        width: 150,
+        height: 40,
+      }) as DOMRect;
+
+    // Trigger positioning update
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    // Check position:
+    // Placement should be 'right' since viewport is 1000, popover.right is 300, space on right is 1000 - 300 = 700 (enough for tooltip width 150 + 8)
+    // Horizontal: popoverRect.right (300) + 8 = 308px
+    // Vertical: option.top (120) + (option.height (30) - tooltip.height (40)) / 2 = 120 - 5 = 115px
+    expect(tooltip.style.left).toBe('308px');
+    expect(tooltip.style.top).toBe('115px');
+
+    Object.defineProperty(window, 'innerWidth', { value: originalInnerWidth });
+    Object.defineProperty(window, 'innerHeight', { value: originalInnerHeight });
+    unmount();
+  });
+
+  it('should position the tooltip to the left of the popover container when right space is restricted', () => {
+    const originalInnerWidth = window.innerWidth;
+    const originalInnerHeight = window.innerHeight;
+    Object.defineProperty(window, 'innerWidth', { writable: true, value: 500 });
+    Object.defineProperty(window, 'innerHeight', { writable: true, value: 800 });
+
+    const { unmount } = render(
+      <div>
+        <Tooltip />
+        <div
+          className="popover-content"
+          data-testid="popover"
+          style={{
+            position: 'absolute',
+            left: '300px',
+            top: '100px',
+            width: '180px',
+            height: '300px',
+          }}
+        >
+          <button data-testid="option" data-custom-title="Popover Option Content">
+            Option
+          </button>
+        </div>
+      </div>,
+    );
+
+    const popover = screen.getByTestId('popover');
+    const option = screen.getByTestId('option');
+
+    popover.getBoundingClientRect = () =>
+      ({
+        left: 300,
+        top: 100,
+        width: 180,
+        height: 300,
+        right: 480,
+        bottom: 400,
+      }) as DOMRect;
+
+    option.getBoundingClientRect = () =>
+      ({
+        left: 310,
+        top: 120,
+        width: 160,
+        height: 30,
+        right: 470,
+        bottom: 150,
+      }) as DOMRect;
+
+    fireEvent.mouseOver(option);
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    const tooltip = screen.getByTestId('custom-tooltip');
+    expect(tooltip).toBeInTheDocument();
+
+    tooltip.getBoundingClientRect = () =>
+      ({
+        width: 150,
+        height: 40,
+      }) as DOMRect;
+
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    // Check position:
+    // Viewport width = 500, popover.right = 480. Space right = 500 - 480 - 150 - 8 = -138 (insufficient)
+    // popover.left = 300. Space left = 300 - 150 - 8 = 142 (enough)
+    // Placement choice: 'left'
+    // Horizontal: popoverRect.left (300) - tooltipRect.width (150) - 8 = 142px
+    // Vertical: option.top (120) + (option.height (30) - tooltip.height (40)) / 2 = 115px
+    expect(tooltip.style.left).toBe('142px');
+    expect(tooltip.style.top).toBe('115px');
+
+    Object.defineProperty(window, 'innerWidth', { value: originalInnerWidth });
+    Object.defineProperty(window, 'innerHeight', { value: originalInnerHeight });
+    unmount();
+  });
 });
