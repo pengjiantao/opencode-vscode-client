@@ -306,39 +306,45 @@ describe('Extension IPC & Permission Event Handlers', () => {
   });
 
   it('regression: handles image read failure gracefully', async () => {
-    await activate(mockContext);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const selectHandler = ipcHandlers.get('file:select');
-    expect(selectHandler).toBeDefined();
+    try {
+      await activate(mockContext);
 
-    const mockUris = [Uri.file('/some/bad-image.png')];
-    vi.spyOn(window, 'showOpenDialog').mockResolvedValue(mockUris);
+      const selectHandler = ipcHandlers.get('file:select');
+      expect(selectHandler).toBeDefined();
 
-    vi.mocked(fs.promises.stat).mockResolvedValue({
-      isFile: () => true,
-      isDirectory: () => false,
-      size: 200,
-    } as unknown as fs.Stats);
+      const mockUris = [Uri.file('/some/bad-image.png')];
+      vi.spyOn(window, 'showOpenDialog').mockResolvedValue(mockUris);
 
-    vi.mocked(fs.promises.readFile).mockRejectedValue(new Error('Read error'));
-    mockIpcSend.mockClear();
+      vi.mocked(fs.promises.stat).mockResolvedValue({
+        isFile: () => true,
+        isDirectory: () => false,
+        size: 200,
+      } as unknown as fs.Stats);
 
-    if (selectHandler) {
-      await selectHandler();
+      vi.mocked(fs.promises.readFile).mockRejectedValue(new Error('Read error'));
+      mockIpcSend.mockClear();
+
+      if (selectHandler) {
+        await selectHandler();
+      }
+
+      expect(mockIpcSend).toHaveBeenCalledWith({
+        type: 'file:selected',
+        files: [
+          {
+            name: 'bad-image.png',
+            fsPath: '/some/bad-image.png',
+            size: 200,
+            mime: 'image/png',
+            dataUrl: undefined,
+          },
+        ],
+      });
+    } finally {
+      consoleErrorSpy.mockRestore();
     }
-
-    expect(mockIpcSend).toHaveBeenCalledWith({
-      type: 'file:selected',
-      files: [
-        {
-          name: 'bad-image.png',
-          fsPath: '/some/bad-image.png',
-          size: 200,
-          mime: 'image/png',
-          dataUrl: undefined,
-        },
-      ],
-    });
   });
 
   it('regression: forwards permission.asked event to webview and does not show native dialog', async () => {

@@ -362,7 +362,9 @@ describe('PromptInput - Editor & Mention Popover', () => {
     );
 
     const textarea = screen.getByPlaceholderText('Type a message... (Shift+Enter for new line)');
-    textarea.focus();
+    act(() => {
+      textarea.focus();
+    });
 
     const textNode = document.createTextNode('@');
     textarea.appendChild(textNode);

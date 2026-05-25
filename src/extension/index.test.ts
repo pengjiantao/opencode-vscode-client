@@ -34,6 +34,17 @@ const mockSdk = {
   permission: {
     reply: vi.fn().mockResolvedValue(undefined),
   },
+  lsp: {
+    status: vi.fn().mockResolvedValue([]),
+  },
+  mcp: {
+    status: vi.fn().mockResolvedValue({}),
+  },
+  config: {
+    get: vi.fn().mockResolvedValue({ plugin: [] }),
+  },
+  getSkills: vi.fn().mockResolvedValue([]),
+  getCommands: vi.fn().mockResolvedValue([]),
   getModels: vi.fn().mockResolvedValue([]),
   getAgents: vi.fn().mockResolvedValue([]),
 };
