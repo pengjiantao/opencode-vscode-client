@@ -2,6 +2,7 @@
  * @file Keyboard shortcut regression tests for PromptInput.
  */
 
+import type { SessionStatus } from '@opencode-ai/sdk/v2/client';
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -69,5 +70,28 @@ describe('PromptInput keyboard shortcuts', () => {
     expect(window.vscode.postMessage).toHaveBeenCalledWith({
       type: 'clipboard:paste-plain-text',
     });
+  });
+
+  it('regression: does not abort on Enter when session is running', () => {
+    const onAbort = vi.fn();
+    const status: SessionStatus = { type: 'busy' };
+    render(
+      <PromptInput
+        onSubmit={vi.fn()}
+        onAbort={onAbort}
+        models={[]}
+        agents={[]}
+        onModelChange={vi.fn()}
+        onAgentChange={vi.fn()}
+        status={status}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByTestId('prompt-editor'), {
+      key: 'Enter',
+      code: 'Enter',
+    });
+
+    expect(onAbort).not.toHaveBeenCalled();
   });
 });

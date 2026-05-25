@@ -378,7 +378,9 @@ export function PromptInput({
 
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      if (!isRunning) {
+        handleSubmit();
+      }
     }
   };
 
