@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.14](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.13...v0.1.14) (2026-05-25)
+
+### Features
+
+- add popover-aware tooltip positioning ([d114474](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/d114474700e3533a683d2ffd4b575bddcbd8a6b6))
+
 ### [0.1.13](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.12...v0.1.13) (2026-05-24)
 
 ### Bug Fixes
