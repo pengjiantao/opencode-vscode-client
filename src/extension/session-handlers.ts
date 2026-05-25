@@ -96,7 +96,9 @@ export async function handleSelectHistory({
 }: SelectHistoryOptions): Promise<void> {
   try {
     const sessions = await sdk.session.list();
-    const activeSessions = sessions.filter((s) => !(s.time as { archived?: unknown }).archived);
+    const activeSessions = sessions.filter(
+      (s) => !(s.time as { archived?: unknown }).archived && !s.parentID,
+    );
     if (activeSessions.length === 0) {
       void window.showInformationMessage('No previous sessions found.');
       return;

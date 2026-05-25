@@ -231,6 +231,31 @@ describe('session handlers', () => {
       });
     });
 
+    it('filters out sub-agent sessions with parentID', async () => {
+      const parentSession = createMockSession({ id: 'parent-session' });
+      const childSession = createMockSession({ id: 'child-session', parentID: 'parent-session' });
+      vi.mocked(mockSdk.session.list).mockResolvedValue([parentSession, childSession]);
+      vi.mocked(window.showQuickPick).mockResolvedValue(undefined);
+
+      await handleSelectHistory({
+        sdk: mockSdk,
+        sessionManager: mockSessionManager,
+        sessionStateStore: mockSessionStateStore,
+        cachedModels,
+        cachedAgents,
+        ipc: mockIpc,
+        syncPendingRequests,
+      });
+
+      const items = vi.mocked(window.showQuickPick).mock.calls[0][0] as Array<{
+        label: string;
+        sessionID: string;
+      }>;
+      const sessionIDs = items.map((i) => i.sessionID);
+      expect(sessionIDs).toContain('parent-session');
+      expect(sessionIDs).not.toContain('child-session');
+    });
+
     it('shows error on failure', async () => {
       vi.mocked(mockSdk.session.list).mockRejectedValue(new Error('Fetch failed'));
 

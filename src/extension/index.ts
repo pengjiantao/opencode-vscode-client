@@ -133,7 +133,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
       try {
         const sessions = await sdk.session.list();
-        const activeSessions = sessions.filter((s) => !(s.time as { archived?: unknown }).archived);
+        const activeSessions = sessions.filter(
+          (s) => !(s.time as { archived?: unknown }).archived && !s.parentID,
+        );
 
         // Build the session parent-child relations and title mappings on startup.
         relationTracker.clear();
