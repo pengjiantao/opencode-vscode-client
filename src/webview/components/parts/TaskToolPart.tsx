@@ -9,6 +9,7 @@ import { useMemo, useState } from 'react';
 import { useSessionStore } from '../../store/sessionStore';
 import { Codicon } from '../Codicon';
 import { Markdown } from '../Markdown';
+import { ScrollFadeContainer } from '../ScrollFadeContainer';
 import { getToolDescription } from './ToolPart';
 
 interface TaskToolPartProps {
@@ -197,23 +198,6 @@ export function TaskToolPart({
         </span>
       </div>
 
-      {isFinished && (
-        <div className="task-finished-container">
-          {promptInput && (
-            <div className="tool-input">
-              <span className="section-label">Prompt Input</span>
-              <Markdown text={promptInput} />
-            </div>
-          )}
-          {finalOutput && (
-            <div className="tool-output">
-              <span className="section-label">Sub-agent Output</span>
-              <Markdown text={finalOutput} />
-            </div>
-          )}
-        </div>
-      )}
-
       <div
         className="collapsible-wrapper"
         style={{
@@ -237,11 +221,22 @@ export function TaskToolPart({
             </div>
           )}
 
-          {isFinished && !collapsed && (
+          {isFinished && (
             <div className="subagent-finished-details">
-              <button className="subagent-interactive-link" onClick={handleOpenSubagent}>
-                View sub-agent session details
-              </button>
+              {promptInput && (
+                <div className="tool-input">
+                  <span className="section-label section-label-themed">Prompt Input</span>
+                  <Markdown text={promptInput} />
+                </div>
+              )}
+              {finalOutput && (
+                <div className="tool-output tool-output-scroll-fade">
+                  <span className="section-label section-label-themed">Sub-agent Output</span>
+                  <ScrollFadeContainer maxHeight={500}>
+                    <Markdown text={finalOutput} />
+                  </ScrollFadeContainer>
+                </div>
+              )}
             </div>
           )}
         </div>

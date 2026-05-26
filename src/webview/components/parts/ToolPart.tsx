@@ -249,7 +249,7 @@ export function ToolPart({
           state.input?.path ||
           '') as string;
         // Return only the diff element, omitting label and wrapping div as per instructions
-        return <DiffPart diff={diffText} filePath={filePath} />;
+        return <DiffPart diff={diffText} filePath={filePath} status={state.status} />;
       }
     }
 

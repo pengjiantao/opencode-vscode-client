@@ -4,12 +4,15 @@
 
 import { useIPC } from '../../hooks/useIPC';
 import { parseDiff } from '../../utils/diff-parser';
+import { Codicon } from '../Codicon';
 
 interface DiffPartProps {
   /** The raw unified diff string to render. */
   diff: string;
   /** Optional file path to show context. */
   filePath?: string;
+  /** Optional execution status to show a success/error icon in the header. */
+  status?: 'pending' | 'running' | 'completed' | 'error';
 }
 
 /**
@@ -30,7 +33,7 @@ function getHunkNewStart(header: string): number | null {
  * Renders a unified diff in a tabular structure with separate line numbers
  * and change symbols. Fits natively within VS Code's design system.
  */
-export function DiffPart({ diff, filePath }: DiffPartProps) {
+export function DiffPart({ diff, filePath, status }: DiffPartProps) {
   const { send } = useIPC(() => {});
   const parsed = parseDiff(diff);
 
@@ -45,6 +48,13 @@ export function DiffPart({ diff, filePath }: DiffPartProps) {
       </div>
     );
   }
+
+  const statusIcon =
+    status === 'completed' ? (
+      <Codicon name="$(check)" className="diff-file-header-icon diff-file-header-icon-success" />
+    ) : status === 'error' ? (
+      <Codicon name="$(error)" className="diff-file-header-icon diff-file-header-icon-error" />
+    ) : null;
 
   return (
     <div className="diff-part-container">
@@ -65,7 +75,10 @@ export function DiffPart({ diff, filePath }: DiffPartProps) {
               }
             : {})}
         >
-          <span className="diff-file-name">{resolvedPath}</span>
+          {statusIcon}
+          <span className="diff-file-name" data-custom-title={resolvedPath}>
+            {resolvedPath}
+          </span>
         </div>
       )}
       <div className="diff-table-wrapper">

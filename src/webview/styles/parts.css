@@ -93,8 +93,12 @@
   margin-bottom: 4px;
 }
 
-.tool-part .tool-output pre,
-.tool-part .task-finished-container .tool-input pre {
+.tool-part .section-label-themed {
+  color: var(--vscode-textLink-foreground);
+  opacity: 1;
+}
+
+.tool-part .tool-output pre {
   margin: 0;
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 12px;
@@ -108,20 +112,34 @@
   border: none;
   max-height: 250px;
   overflow: auto;
-  opacity: 0.6;
 }
 
 .tool-part .tool-output .markdown-body,
-.tool-part .task-finished-container .tool-input .markdown-body {
+.tool-part .subagent-finished-details .tool-output .markdown-body,
+.tool-part .subagent-finished-details .tool-input .markdown-body {
   background-color: var(
     --vscode-textCodeBlock-background,
     color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background))
   );
   padding: 8px;
   border-radius: 4px;
-  max-height: 250px;
   overflow: auto;
-  opacity: 0.6;
+}
+
+.tool-part .tool-output .markdown-body,
+.tool-part .subagent-finished-details .tool-output .markdown-body {
+  max-height: 500px;
+}
+
+.tool-part .subagent-finished-details .tool-input .markdown-body {
+  max-height: 250px;
+}
+
+/* When a ScrollFadeContainer is used inside tool-output, let the fade container handle
+   scrolling so the inner markdown-body must not create its own scroll box. */
+.tool-part .tool-output-scroll-fade .markdown-body {
+  max-height: none;
+  overflow: visible;
 }
 
 .tool-part .tool-input pre {
@@ -133,7 +151,6 @@
   padding: 0;
   border-radius: 0;
   border: none;
-  opacity: 0.6;
 }
 
 .tool-part.status-error .tool-header:hover {
@@ -209,7 +226,6 @@
   margin-left: 0;
   margin-bottom: 4px;
   border-left: none;
-  opacity: 0.6;
 }
 
 /* Markdown document styling inside chat */
@@ -262,10 +278,13 @@
 /* Code block markdown rendering container */
 .code-block-container {
   margin: 12px 0;
-  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  border: none;
   border-radius: 6px;
   overflow: hidden;
-  background-color: color-mix(in srgb, currentColor 5%, transparent);
+  background-color: var(
+    --vscode-textCodeBlock-background,
+    color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background))
+  );
 }
 
 .code-block-header {
@@ -273,8 +292,17 @@
   justify-content: space-between;
   align-items: center;
   padding: 6px 12px;
-  background-color: color-mix(in srgb, currentColor 8%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--webview-foreground) 8%,
+    var(--vscode-textCodeBlock-background, var(--webview-background))
+  );
+  border-bottom: 1px solid
+    color-mix(
+      in srgb,
+      var(--webview-foreground) 10%,
+      var(--vscode-textCodeBlock-background, var(--webview-background))
+    );
 }
 
 .code-lang {
@@ -562,9 +590,28 @@ pre.code-block code {
 }
 
 .diff-file-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 6px 12px;
-  background-color: color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background));
+  background-color: color-mix(in srgb, var(--webview-foreground) 10%, var(--webview-background));
   border-bottom: 1px solid var(--vscode-border-color, var(--vscode-editor-widget-border, #454545));
+}
+
+.diff-file-header-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.diff-file-header-icon-success {
+  color: var(
+    --vscode-testing-iconPassed,
+    var(--vscode-notebookStatusSuccessIcon-foreground, #89d185)
+  );
+}
+
+.diff-file-header-icon-error {
+  color: var(--vscode-error-foreground, #f48771);
 }
 
 .diff-file-name {
@@ -572,6 +619,10 @@ pre.code-block code {
   font-size: 11px;
   font-weight: 600;
   color: var(--vscode-descriptionForeground, var(--webview-foreground));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .diff-table-wrapper {
@@ -628,8 +679,7 @@ pre.code-block code {
 }
 
 .diff-code {
-  white-space: pre-wrap;
-  word-break: break-all;
+  white-space: pre;
   padding: 1px 8px;
 }
 
@@ -808,11 +858,6 @@ pre.code-block code {
 .task-header-stats {
   font-weight: normal;
   opacity: 0.85;
-}
-
-.task-finished-container {
-  margin-top: 4px;
-  padding-left: 12px;
 }
 
 .subagent-executing-details,
