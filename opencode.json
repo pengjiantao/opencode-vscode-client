@@ -4,6 +4,11 @@
     "external_directory": {
       "*": "deny",
       "/home/fiyqkrc/Documents/project/opencode/**": "allow"
+    },
+    "bash": {
+      "git reset *": "deny",
+      "git rebase *": "deny",
+      "git merge *": "deny"
     }
   },
   "default_agent": "spec-explorer"
