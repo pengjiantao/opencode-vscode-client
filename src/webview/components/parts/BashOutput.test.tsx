@@ -35,6 +35,24 @@ describe('BashOutput', () => {
     expect(container.querySelector('.codicon-sync')).not.toBeInTheDocument();
   });
 
+  it('shows checkmark icon when status is completed', () => {
+    const { container } = render(<BashOutput command="ls" output="output" status="completed" />);
+
+    expect(container.querySelector('.codicon-check')).toBeInTheDocument();
+  });
+
+  it('shows error icon when status is error', () => {
+    const { container } = render(<BashOutput command="ls" output="output" status="error" />);
+
+    expect(container.querySelector('.codicon-error')).toBeInTheDocument();
+  });
+
+  it('shows no icon when status is pending', () => {
+    const { container } = render(<BashOutput command="ls" output="output" status="pending" />);
+
+    expect(container.querySelector('.bash-output-icon')).not.toBeInTheDocument();
+  });
+
   it('returns null when output is empty', () => {
     const { container } = render(<BashOutput command="ls" output="" status="running" />);
 

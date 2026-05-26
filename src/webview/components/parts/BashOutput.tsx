@@ -18,7 +18,7 @@ export interface BashOutputProps {
  * Renders the custom bash execution output with a terminal-like header and an auto-anchoring scroll container.
  * Auto-scroll is only triggered when the user is already near the bottom (within 40px margin of error)
  * so we don't disrupt the user if they've manually scrolled up to inspect previous output.
- * If the command is running, shows the loading/thinking spinner icon; once completed or errored, the icon is hidden.
+ * Shows a status icon: checkmark on completed, error icon on error, spinner on running, nothing on pending.
  */
 export function BashOutput({ command, output, status }: BashOutputProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -43,12 +43,19 @@ export function BashOutput({ command, output, status }: BashOutputProps) {
     return null;
   }
 
-  const showIcon = status === 'running';
+  const statusIcon =
+    status === 'completed' ? (
+      <Codicon name="$(check)" className="bash-output-icon bash-output-icon-success" />
+    ) : status === 'error' ? (
+      <Codicon name="$(error)" className="bash-output-icon bash-output-icon-error" />
+    ) : status === 'running' ? (
+      <Codicon name="$(sync~spin)" className="bash-output-icon" />
+    ) : null;
 
   return (
     <div className="tool-bash-output">
       <div className="bash-output-header">
-        {showIcon && <Codicon name="$(sync~spin)" className="bash-output-icon" />}
+        {statusIcon}
         <span className="bash-output-command" data-custom-title={command}>
           {command}
         </span>

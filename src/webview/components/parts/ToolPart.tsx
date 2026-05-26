@@ -351,7 +351,9 @@ export function ToolPart({
       )}
       <div className="tool-header" onClick={() => setCollapsed(!collapsed)}>
         <Codicon name={getToolIcon(tool)} className="tool-header-icon" />
-        <span className="tool-name">{getSummaryText()}</span>
+        <span className="tool-name" data-custom-title={getSummaryText()}>
+          {getSummaryText()}
+        </span>
       </div>
 
       <div

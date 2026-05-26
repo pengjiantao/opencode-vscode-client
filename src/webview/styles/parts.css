@@ -70,6 +70,13 @@
   transform: translateY(2px);
 }
 
+.tool-part .tool-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 /* Inward indentation for expanded content */
 .tool-part .tool-content {
   padding: 8px 12px 8px 12px;
@@ -580,7 +587,7 @@ pre.code-block code {
 /* Diff Rendering Styles */
 .diff-part-container {
   margin: 8px 0;
-  border: 1px solid var(--vscode-border-color, var(--vscode-editor-widget-border, #454545));
+  border: none;
   border-radius: 6px;
   overflow: hidden;
   background-color: var(
@@ -594,8 +601,17 @@ pre.code-block code {
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background-color: color-mix(in srgb, var(--webview-foreground) 10%, var(--webview-background));
-  border-bottom: 1px solid var(--vscode-border-color, var(--vscode-editor-widget-border, #454545));
+  background-color: color-mix(
+    in srgb,
+    var(--webview-foreground) 8%,
+    var(--vscode-textCodeBlock-background, var(--webview-background))
+  );
+  border-bottom: 1px solid
+    color-mix(
+      in srgb,
+      var(--webview-foreground) 10%,
+      var(--vscode-textCodeBlock-background, var(--webview-background))
+    );
 }
 
 .diff-file-header-icon {
@@ -639,11 +655,6 @@ pre.code-block code {
 }
 
 .diff-hunk-header {
-  background-color: color-mix(
-    in srgb,
-    var(--vscode-editor-background, #1e1e1e) 40%,
-    var(--vscode-textCodeBlock-background, #252526)
-  );
   color: var(
     --vscode-descriptionForeground,
     color-mix(in srgb, var(--webview-foreground) 60%, transparent)
@@ -716,7 +727,11 @@ pre.code-block code {
 }
 
 .diff-file-header[role='button']:hover {
-  background-color: color-mix(in srgb, var(--webview-foreground) 10%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--webview-foreground) 12%,
+    var(--vscode-textCodeBlock-background, var(--webview-background))
+  );
 }
 
 .diff-hunk-header-row[role='button']:hover .diff-hunk-header {
@@ -782,7 +797,7 @@ pre.code-block code {
 
 /* Custom Bash output rendering style block */
 .tool-bash-output {
-  border: 1px solid var(--vscode-border-color, var(--vscode-editor-widget-border, #454545));
+  border: none;
   border-radius: 6px;
   overflow: hidden;
   background-color: var(
@@ -797,8 +812,17 @@ pre.code-block code {
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background-color: color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background));
-  border-bottom: 1px solid var(--vscode-border-color, var(--vscode-editor-widget-border, #454545));
+  background-color: color-mix(
+    in srgb,
+    var(--webview-foreground) 8%,
+    var(--vscode-textCodeBlock-background, var(--webview-background))
+  );
+  border-bottom: 1px solid
+    color-mix(
+      in srgb,
+      var(--webview-foreground) 10%,
+      var(--vscode-textCodeBlock-background, var(--webview-background))
+    );
 }
 
 .bash-output-icon {
@@ -808,6 +832,17 @@ pre.code-block code {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
+}
+
+.bash-output-icon-success {
+  color: var(
+    --vscode-testing-iconPassed,
+    var(--vscode-notebookStatusSuccessIcon-foreground, #89d185)
+  );
+}
+
+.bash-output-icon-error {
+  color: var(--vscode-error-foreground, #f48771);
 }
 
 .bash-output-command {
