@@ -3,7 +3,7 @@
  * Keeps index.ts focused and complies with file length limitations.
  */
 
-import type { SessionStatus } from '@opencode-ai/sdk/v2/client';
+import type { Message, Part, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import { window } from 'vscode';
 import type { IPCBridge } from './ipc';
 import type { PendingRequestBuffer } from './pending-request-buffer';
@@ -139,7 +139,7 @@ export async function handleSelectHistory({
       agent: state.agent,
       modelVariants: state.modelVariants,
     });
-    const { messages, parts } = await sessionManager.getMessagesAndParts(sessionID);
+    const { messages, parts } = await getMessagesAndPartsRecursive(sessionManager, sessionID);
     ipc.send({ type: 'messages:list', sessionID, messages, parts });
     syncPendingRequests(sessionID);
   } catch (err) {
@@ -147,8 +147,63 @@ export async function handleSelectHistory({
   }
 }
 
+/**
+ * Recursively retrieves all messages and parts for a session and all its child sessions.
+ *
+ * @param sessionManager The session manager instance.
+ * @param sessionID The starting session ID.
+ * @param visited A set of already visited session IDs to prevent cycles.
+ * @returns A promise resolving to the accumulated messages and parts.
+ */
+export async function getMessagesAndPartsRecursive(
+  sessionManager: SessionManager,
+  sessionID: string,
+  visited = new Set<string>(),
+): Promise<{ messages: Message[]; parts: Part[] }> {
+  if (visited.has(sessionID)) {
+    return { messages: [], parts: [] };
+  }
+  visited.add(sessionID);
+
+  try {
+    const { messages, parts } = await sessionManager.getMessagesAndParts(sessionID);
+    const allMessages = [...messages];
+    const allParts = [...parts];
+
+    // Find any child session IDs from tool parts of type 'task'
+    const childSessionIDs: string[] = [];
+    for (const part of parts) {
+      if (part.type === 'tool' && part.tool === 'task') {
+        const state = part.state;
+        const metadata =
+          state && 'metadata' in state
+            ? (state as { metadata?: Record<string, unknown> }).metadata
+            : undefined;
+        const childID = metadata?.sessionId || metadata?.sessionID;
+        if (typeof childID === 'string' && childID) {
+          childSessionIDs.push(childID);
+        }
+      }
+    }
+
+    for (const childID of childSessionIDs) {
+      const childData = await getMessagesAndPartsRecursive(sessionManager, childID, visited);
+      allMessages.push(...childData.messages);
+      allParts.push(...childData.parts);
+    }
+
+    return { messages: allMessages, parts: allParts };
+  } catch (err) {
+    // Gracefully fallback to empty lists if a child session fails to load
+    console.error(`Failed to fetch messages for session ${sessionID} recursively:`, err);
+    return { messages: [], parts: [] };
+  }
+}
+
 /** Options required to register session lifecycle IPC message handlers. */
 export interface RegisterLifecycleHandlersOptions {
+  /** The SDK client. */
+  sdk: SDKClient;
   /** IPC bridge receiving messages from the webview. */
   ipc: IPCBridge;
   /** Session lifecycle manager. */
@@ -180,6 +235,7 @@ export interface RegisterLifecycleHandlersOptions {
  * @param options Registration dependencies.
  */
 export function registerSessionLifecycleHandlers({
+  sdk,
   ipc,
   sessionManager,
   sessionStateStore,
@@ -195,6 +251,24 @@ export function registerSessionLifecycleHandlers({
   ipc.on('session:switch', async (msg) => {
     const { sessionID } = msg as { sessionID: string };
     try {
+      const openIDs = sessionManager.getOpenSessionIDs();
+      // If the session is not currently tracked as an open session, but it is a valid
+      // child session, we dynamically retrieve it and register it into open sessions
+      if (!openIDs.includes(sessionID)) {
+        try {
+          const session = await sdk.session.get(sessionID);
+          openIDs.push(sessionID);
+          await sessionManager.setOpenSessionIDs(openIDs);
+          ipc.send({ type: 'session:created', session });
+        } catch (err) {
+          console.error(`Failed to load child session ${sessionID} from SDK:`, err);
+          ipc.send({
+            type: 'error',
+            message: `Failed to load child session: ${(err as Error).message}`,
+          });
+          return;
+        }
+      }
       await sessionManager.switch(sessionID);
       const state = sessionStateStore.getOrInitialize(
         sessionID,
@@ -208,7 +282,7 @@ export function registerSessionLifecycleHandlers({
         agent: state.agent,
         modelVariants: state.modelVariants,
       });
-      const { messages, parts } = await sessionManager.getMessagesAndParts(sessionID);
+      const { messages, parts } = await getMessagesAndPartsRecursive(sessionManager, sessionID);
       ipc.send({
         type: 'messages:list',
         sessionID,
@@ -250,7 +324,10 @@ export function registerSessionLifecycleHandlers({
             agent: state.agent,
             modelVariants: state.modelVariants,
           });
-          const { messages, parts } = await sessionManager.getMessagesAndParts(nextActiveID);
+          const { messages, parts } = await getMessagesAndPartsRecursive(
+            sessionManager,
+            nextActiveID,
+          );
           ipc.send({
             type: 'messages:list',
             sessionID: nextActiveID,
@@ -299,7 +376,7 @@ export function registerSessionLifecycleHandlers({
         agent: state.agent,
         modelVariants: state.modelVariants,
       });
-      const { messages, parts } = await sessionManager.getMessagesAndParts(nextActiveID);
+      const { messages, parts } = await getMessagesAndPartsRecursive(sessionManager, nextActiveID);
       ipc.send({
         type: 'messages:list',
         sessionID: nextActiveID,

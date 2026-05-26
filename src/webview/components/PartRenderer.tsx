@@ -8,6 +8,7 @@ import { Chip } from './Chip';
 import { Codicon } from './Codicon';
 import { FilePart } from './parts/FilePart';
 import { ReasoningPart } from './parts/ReasoningPart';
+import { TaskToolPart } from './parts/TaskToolPart';
 import { TextPart } from './parts/TextPart';
 import { ToolPart, isBashTool } from './parts/ToolPart';
 
@@ -78,6 +79,26 @@ export function PartRenderer({
         ? (metadata?.output as string | undefined) || completedOutput
         : completedOutput;
       const error = state.status === 'error' ? (state as { error: string }).error : undefined;
+
+      if (part.tool.toLowerCase() === 'task') {
+        return (
+          <TaskToolPart
+            tool={part.tool}
+            state={{
+              status: state.status,
+              input: state.input,
+              output,
+              title,
+              error,
+              time,
+              metadata,
+            }}
+            hasPredecessor={hasPredecessor}
+            hasSuccessor={hasSuccessor}
+          />
+        );
+      }
+
       return (
         <ToolPart
           tool={part.tool}

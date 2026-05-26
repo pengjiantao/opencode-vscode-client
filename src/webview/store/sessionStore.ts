@@ -168,9 +168,23 @@ export const useSessionStore = create<SessionStore>((set) => ({
       },
     })),
 
-  /** Bulk-sets messages and their associated parts for a session, rebuilding the parts map and restoring status. */
   setSessionMessagesAndParts: (sessionID, messages, parts, status) =>
     set((state) => {
+      // Group messages by their respective sessionID.
+      // We start with a copy of the existing messages map.
+      const groupedMessages: Record<string, Message[]> = { ...state.messages };
+      // Clear out the active session's message list to replace it.
+      groupedMessages[sessionID] = [];
+      // Also clear out any child sessions that are present in the incoming messages,
+      // so we do not end up appending duplicates.
+      for (const m of messages) {
+        groupedMessages[m.sessionID] = [];
+      }
+      // Populate the lists.
+      for (const m of messages) {
+        groupedMessages[m.sessionID].push(m);
+      }
+
       // Initialize empty part arrays for each message, then populate
       const partsMap: Record<string, Part[]> = { ...state.parts };
       for (const m of messages) {
@@ -186,10 +200,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
         ? { ...state.sessionStatus, [sessionID]: status }
         : state.sessionStatus;
       return {
-        messages: {
-          ...state.messages,
-          [sessionID]: messages,
-        },
+        messages: groupedMessages,
         parts: partsMap,
         sessionStatus: newSessionStatus,
       };

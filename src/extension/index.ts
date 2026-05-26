@@ -14,6 +14,7 @@ import { PendingRequestBuffer } from './pending-request-buffer';
 import type { SDKClient } from './sdk-client';
 import { createSDKClient } from './sdk-client-impl';
 import {
+  getMessagesAndPartsRecursive,
   handleCreateSession,
   handleSelectHistory,
   registerSessionLifecycleHandlers,
@@ -147,8 +148,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
         }
 
         let openIDs = sessionManager.getOpenSessionIDs();
-        // Remove stale session IDs that no longer exist on the server
-        openIDs = openIDs.filter((id) => activeSessions.some((s) => s.id === id));
+        // Remove stale session IDs that no longer exist on the server (including child sessions)
+        openIDs = openIDs.filter((id) =>
+          sessions.some((s) => s.id === id && !(s.time as { archived?: unknown }).archived),
+        );
 
         // Load activeSessionID from sessionManager's unified persistence
         let activeID = sessionManager.activeSessionID;
@@ -200,7 +203,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
           sessionStateStore.migrateLegacyState(activeID);
 
           const openSessions = openIDs
-            .map((id) => activeSessions.find((s) => s.id === id))
+            .map((id) => sessions.find((s) => s.id === id))
             .filter((s): s is Session => s !== undefined);
           const state = sessionStateStore.getOrInitialize(activeID, cachedModels, cachedAgents);
           ipc.send({
@@ -215,7 +218,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
             modelVariants: state.modelVariants,
           });
 
-          const { messages, parts } = await sessionManager.getMessagesAndParts(activeID);
+          const { messages, parts } = await getMessagesAndPartsRecursive(sessionManager, activeID);
           ipc.send({
             type: 'messages:list',
             sessionID: activeID,
@@ -237,6 +240,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     });
 
     registerSessionLifecycleHandlers({
+      sdk,
       ipc,
       sessionManager,
       sessionStateStore,

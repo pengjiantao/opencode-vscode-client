@@ -11,6 +11,7 @@ import type { IPCBridge } from './ipc';
 import type { PendingRequestBuffer } from './pending-request-buffer';
 import type { SDKClient } from './sdk-client';
 import {
+  getMessagesAndPartsRecursive,
   handleCreateSession,
   handleSelectHistory,
   registerSessionLifecycleHandlers,
@@ -26,12 +27,20 @@ describe('session handlers', () => {
   let mockSessionManager: SessionManager;
   let mockIpc: IPCBridge;
   let syncPendingRequests: ReturnType<typeof vi.fn>;
+  let mockSdk: SDKClient;
   const cachedModels: ModelInfo[] = [{ id: 'model-1', name: 'Model 1' }];
   const cachedAgents: AgentInfo[] = [{ id: 'agent-1', name: 'Agent 1' }];
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockWorkspaceStateStore = {};
+
+    mockSdk = {
+      session: {
+        list: vi.fn(),
+        get: vi.fn(),
+      },
+    } as unknown as SDKClient;
 
     mockSessionStateStore = {
       getOrInitialize: vi.fn().mockReturnValue({
@@ -116,14 +125,8 @@ describe('session handlers', () => {
   });
 
   describe('handleSelectHistory', () => {
-    let mockSdk: SDKClient;
-
     beforeEach(() => {
-      mockSdk = {
-        session: {
-          list: vi.fn(),
-        },
-      } as unknown as SDKClient;
+      // Use the globally defined mockSdk for history tests
     });
 
     it('shows info when no sessions', async () => {
@@ -307,6 +310,7 @@ describe('session handlers', () => {
       mockSyncMetadata = vi.fn();
 
       registerSessionLifecycleHandlers({
+        sdk: mockSdk,
         ipc: mockIpc,
         sessionManager: mockSessionManager,
         sessionStateStore: mockSessionStateStore,
@@ -326,6 +330,7 @@ describe('session handlers', () => {
       expect(switchHandler).toBeDefined();
 
       mockSessionStatuses.set('session-2', { type: 'busy' });
+      vi.mocked(mockSessionManager.getOpenSessionIDs).mockReturnValue(['session-2']);
 
       if (switchHandler) {
         await switchHandler({ sessionID: 'session-2' });
@@ -348,6 +353,49 @@ describe('session handlers', () => {
       });
       expect(mockSyncMetadata).toHaveBeenCalled();
       expect(syncPendingRequests).toHaveBeenCalledWith('session-2');
+    });
+
+    it('handles session:switch when child session is not in openIDs and SDK load succeeds', async () => {
+      const switchHandler = handlers.get('session:switch');
+      expect(switchHandler).toBeDefined();
+
+      vi.mocked(mockSessionManager.getOpenSessionIDs).mockReturnValue(['session-1']);
+      const mockSession = createMockSession({ id: 'child-session-id' });
+      vi.mocked(mockSdk.session.get).mockResolvedValue(mockSession);
+
+      if (switchHandler) {
+        await switchHandler({ sessionID: 'child-session-id' });
+      }
+
+      expect(mockSdk.session.get).toHaveBeenCalledWith('child-session-id');
+      expect(mockSessionManager.setOpenSessionIDs).toHaveBeenCalledWith([
+        'session-1',
+        'child-session-id',
+      ]);
+      expect(mockIpc.send).toHaveBeenCalledWith({
+        type: 'session:created',
+        session: mockSession,
+      });
+      expect(mockSessionManager.switch).toHaveBeenCalledWith('child-session-id');
+    });
+
+    it('handles session:switch when child session is not in openIDs and SDK load fails', async () => {
+      const switchHandler = handlers.get('session:switch');
+      expect(switchHandler).toBeDefined();
+
+      vi.mocked(mockSessionManager.getOpenSessionIDs).mockReturnValue(['session-1']);
+      vi.mocked(mockSdk.session.get).mockRejectedValue(new Error('SDK load error'));
+
+      if (switchHandler) {
+        await switchHandler({ sessionID: 'child-session-id' });
+      }
+
+      expect(mockSdk.session.get).toHaveBeenCalledWith('child-session-id');
+      expect(mockSessionManager.switch).not.toHaveBeenCalledWith('child-session-id');
+      expect(mockIpc.send).toHaveBeenCalledWith({
+        type: 'error',
+        message: 'Failed to load child session: SDK load error',
+      });
     });
 
     it('handles session:archive and falls back to create session if no open sessions left', async () => {
@@ -419,6 +467,49 @@ describe('session handlers', () => {
       expect(mockPendingBuffer.clear).toHaveBeenCalled();
       expect(mockIpc.send).toHaveBeenCalledWith({ type: 'init', sessions: [] });
       expect(mockInvokeCreateSession).toHaveBeenCalled();
+    });
+  });
+
+  describe('getMessagesAndPartsRecursive', () => {
+    it('fetches parent and child session messages and parts recursively', async () => {
+      const mockSessionManagerForRec = {
+        getMessagesAndParts: vi.fn().mockImplementation((sessionID: string) => {
+          if (sessionID === 'parent-session') {
+            return Promise.resolve({
+              messages: [{ id: 'msg-parent', role: 'assistant', sessionID: 'parent-session' }],
+              parts: [
+                {
+                  id: 'part-parent-1',
+                  messageID: 'msg-parent',
+                  type: 'tool',
+                  tool: 'task',
+                  state: {
+                    status: 'completed',
+                    metadata: { sessionId: 'child-session-1' },
+                  },
+                },
+              ],
+            });
+          } else if (sessionID === 'child-session-1') {
+            return Promise.resolve({
+              messages: [{ id: 'msg-child', role: 'assistant', sessionID: 'child-session-1' }],
+              parts: [
+                {
+                  id: 'part-child-1',
+                  messageID: 'msg-child',
+                  type: 'text',
+                  text: 'child output',
+                },
+              ],
+            });
+          }
+          return Promise.resolve({ messages: [], parts: [] });
+        }),
+      } as unknown as SessionManager;
+
+      const result = await getMessagesAndPartsRecursive(mockSessionManagerForRec, 'parent-session');
+      expect(result.messages.map((m) => m.id)).toEqual(['msg-parent', 'msg-child']);
+      expect(result.parts.map((p) => p.id)).toEqual(['part-parent-1', 'part-child-1']);
     });
   });
 });

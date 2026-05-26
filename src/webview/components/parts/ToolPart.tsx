@@ -107,6 +107,73 @@ function getSyntheticWriteDiff(input?: Record<string, unknown>): string | undefi
   return `${diffHeader}\n${diffBody}`;
 }
 
+/**
+ * Generates a user-friendly descriptive text for a tool execution.
+ * Inspects tool input arguments to construct descriptions showing files,
+ * search queries, or commands, falling back to the title or tool name.
+ *
+ * @param tool The name of the tool.
+ * @param input Optional tool execution input parameters.
+ * @param title Optional title provided by the execution state.
+ * @returns Human-readable description of the tool's action.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function getToolDescription(
+  tool: string,
+  input?: Record<string, unknown>,
+  title?: string,
+): string {
+  const name = tool.toLowerCase();
+
+  // Extract file path inputs from the tool arguments
+  const filePath = (input?.filePath ||
+    input?.TargetFile ||
+    input?.targetFile ||
+    input?.path ||
+    input?.AbsolutePath) as string | undefined;
+
+  // Extract command line strings for run/bash tools
+  const command = (input?.command || input?.CommandLine) as string | undefined;
+
+  // Extract search queries for grep or general search
+  const query = (input?.query || input?.Query) as string | undefined;
+
+  // Extract directory path details
+  const dirPath = (input?.DirectoryPath || input?.path) as string | undefined;
+
+  // Helper to extract the last path segment (filename or directory name)
+  const getBasename = (fullPath?: string): string => {
+    if (!fullPath) return '';
+    const cleanPath = fullPath.replace(/\\/g, '/');
+    const segments = cleanPath.split('/').filter(Boolean);
+    return segments[segments.length - 1] || '';
+  };
+
+  const basename = getBasename(filePath);
+
+  if (name === 'read_file' || name === 'view_file') {
+    return title || (basename ? `Read file ${basename}` : 'Read file');
+  }
+  if (name === 'write_file' || name === 'write_to_file') {
+    return title || (basename ? `Create file ${basename}` : 'Create file');
+  }
+  if (name === 'edit' || name === 'replace_file_content' || name === 'multi_replace_file_content') {
+    return title || (basename ? `Edit file ${basename}` : 'Edit file');
+  }
+  if (name === 'grep_search') {
+    return title || (query ? `Search for "${query}"` : 'Search content');
+  }
+  if (name === 'list_dir' || name === 'list_directory') {
+    const dirBasename = getBasename(dirPath);
+    return title || (dirBasename ? `List directory ${dirBasename}` : 'List directory');
+  }
+  if (isBashTool(tool)) {
+    return title || (command ? `Run command "${command}"` : 'Run command');
+  }
+
+  return title || tool;
+}
+
 /** Displays a tool execution in a collapsible borderless box, default collapsed. */
 export function ToolPart({
   tool,
@@ -144,10 +211,12 @@ export function ToolPart({
 
   // Omit "Tool:" prefix to keep the sidebar presentation compact and developer-centric
   const getSummaryText = () => {
-    if (isBash) {
-      return state.title ? `BASH - ${state.title}` : 'BASH';
+    const desc = getToolDescription(tool, state.input, state.title);
+    const prefix = isBash ? 'BASH' : tool.toUpperCase();
+    if (desc === prefix || desc === tool) {
+      return prefix;
     }
-    return `${tool.toUpperCase()}${state.title ? ` - ${state.title}` : ''}`;
+    return `${prefix} - ${desc}`;
   };
 
   const dotClassName = `timeline-dot tool-dot status-${state.status}`;
