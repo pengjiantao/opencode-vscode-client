@@ -8,6 +8,7 @@ import type { Part, Session, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import { window, workspace, type ExtensionContext } from 'vscode';
 import { pasteClipboardTextAsPlainText, registerExtensionCommands } from './commands';
 import { registerEventHandlers } from './event-handlers';
+import { handleSelectHistory } from './history-handlers';
 import { IPCBridge } from './ipc';
 import { syncMetadata as importSyncMetadata } from './metadata';
 import { PendingRequestBuffer } from './pending-request-buffer';
@@ -16,7 +17,6 @@ import { createSDKClient } from './sdk-client-impl';
 import {
   getMessagesAndPartsRecursive,
   handleCreateSession,
-  handleSelectHistory,
   registerSessionLifecycleHandlers,
 } from './session-handlers';
 import { SessionManager } from './session-manager';
@@ -93,6 +93,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
       cachedAgents,
       ipc,
       syncPendingRequests,
+      sessionStatuses,
+      pendingBuffer,
+      relationTracker,
     });
   };
 
@@ -144,9 +147,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
       try {
         const sessions = await sdk.session.list();
-        const activeSessions = sessions.filter(
-          (s) => !(s.time as { archived?: unknown }).archived && !s.parentID,
-        );
+        const activeSessions = sessions.filter((s) => !s.time.archived && !s.parentID);
 
         // Build the session parent-child relations and title mappings on startup.
         relationTracker.clear();
@@ -159,9 +160,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
         let openIDs = sessionManager.getOpenSessionIDs();
         // Remove stale session IDs that no longer exist on the server (including child sessions)
-        openIDs = openIDs.filter((id) =>
-          sessions.some((s) => s.id === id && !(s.time as { archived?: unknown }).archived),
-        );
+        openIDs = openIDs.filter((id) => sessions.some((s) => s.id === id && !s.time.archived));
 
         // Load activeSessionID from sessionManager's unified persistence
         let activeID = sessionManager.activeSessionID;
@@ -261,7 +260,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
       sessionStatuses,
       pendingBuffer,
       relationTracker,
-      invokeCreateSession,
       invokeCloseAllSessions,
     });
 

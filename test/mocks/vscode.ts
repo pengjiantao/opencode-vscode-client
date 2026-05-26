@@ -31,6 +31,12 @@ export const mockVscode = {
   ThemeColor: class {
     constructor(public readonly id: string) {}
   },
+  ThemeIcon: class ThemeIcon {
+    constructor(
+      public readonly id: string,
+      public readonly color?: unknown,
+    ) {}
+  },
   commands: {
     executeCommand: vi.fn(),
     registerCommand: vi.fn(() => ({ dispose: vi.fn() })),
@@ -43,6 +49,20 @@ export const mockVscode = {
     showTextDocument: vi.fn(),
     showOpenDialog: vi.fn(),
     registerWebviewViewProvider: vi.fn(() => ({ dispose: vi.fn() })),
+    createQuickPick: vi.fn(() => ({
+      title: '',
+      placeholder: '',
+      items: [],
+      buttons: [],
+      show: vi.fn(),
+      hide: vi.fn(),
+      dispose: vi.fn(),
+      selectedItems: [],
+      onDidAccept: vi.fn(() => ({ dispose: vi.fn() })),
+      onDidTriggerButton: vi.fn(() => ({ dispose: vi.fn() })),
+      onDidTriggerItemButton: vi.fn(() => ({ dispose: vi.fn() })),
+      onDidHide: vi.fn(() => ({ dispose: vi.fn() })),
+    })),
     createStatusBarItem: vi.fn(() => ({
       show: vi.fn(),
       hide: vi.fn(),

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 /**
  * @file Unit tests for SessionManager — session CRUD, switching, archiving, and prompt sanitization.
  */
@@ -306,6 +307,25 @@ describe('SessionManager', () => {
       await manager.archive('s2');
       expect(manager.getOpenSessionIDs()).toEqual(['s1']);
       expect(manager.activeSessionID).toBe('s1');
+    });
+
+    it('should archive a closed session successfully without throwing', async () => {
+      const manager = new SessionManager(mockSdk, mockMemento);
+      mockState['openSessionIDs'] = ['s1'];
+      mockState['activeSessionID'] = 's1';
+
+      await manager.archive('s-closed');
+
+      // The open list and active ID shouldn't be affected since 's-closed' wasn't open/active
+      expect(manager.getOpenSessionIDs()).toEqual(['s1']);
+      expect(manager.activeSessionID).toBe('s1');
+
+      // But the SDK session update should still have been called for 's-closed'
+      expect(vi.mocked(mockSdk.session.get)).toHaveBeenCalledWith('s-closed');
+      expect(vi.mocked(mockSdk.session.update)).toHaveBeenCalledWith(
+        's-closed',
+        expect.any(Object),
+      );
     });
 
     it('should remove from open list and update active ID on close()', async () => {

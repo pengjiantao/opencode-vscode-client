@@ -150,9 +150,6 @@ export class SessionManager {
    */
   async archive(id: string): Promise<void> {
     let openIDs = this.getOpenSessionIDs();
-    if (!openIDs.includes(id)) {
-      throw new Error(`Session ${id} not found`);
-    }
 
     const session = await this.sdk.session.get(id);
 
@@ -162,8 +159,10 @@ export class SessionManager {
     });
 
     const wasActive = this.activeSessionID === id;
-    openIDs = openIDs.filter((oid) => oid !== id);
-    await this.setOpenSessionIDs(openIDs);
+    if (openIDs.includes(id)) {
+      openIDs = openIDs.filter((oid) => oid !== id);
+      await this.setOpenSessionIDs(openIDs);
+    }
 
     if (wasActive) {
       const nextActiveID = openIDs.length > 0 ? openIDs[openIDs.length - 1] : null;
