@@ -8,6 +8,7 @@ import type { Message, Part } from '@opencode-ai/sdk/v2/client';
 import { useMemo, useState } from 'react';
 import { useSessionStore } from '../../store/sessionStore';
 import { Codicon } from '../Codicon';
+import { Markdown } from '../Markdown';
 import { getToolDescription } from './ToolPart';
 
 interface TaskToolPartProps {
@@ -111,9 +112,11 @@ export function TaskToolPart({
   const description = (state.input?.description as string | undefined) || '';
 
   // Retrieve messages and parts from the session store for the child session
-  const childMessages = useSessionStore(
-    (s) => (childSessionID ? s.messages[childSessionID] : undefined) || EMPTY_MESSAGES,
+  const rawChildMessages = useSessionStore((s) =>
+    childSessionID ? s.messages[childSessionID] : undefined,
   );
+  // Memoize child messages to avoid recreating the array reference and triggering hook dependency warnings
+  const childMessages = useMemo(() => rawChildMessages || EMPTY_MESSAGES, [rawChildMessages]);
   const allParts = useSessionStore((s) => s.parts);
 
   // Compute the total tool calls executed by the sub-agent
@@ -199,13 +202,13 @@ export function TaskToolPart({
           {promptInput && (
             <div className="tool-input">
               <span className="section-label">Prompt Input</span>
-              <pre>{promptInput}</pre>
+              <Markdown text={promptInput} />
             </div>
           )}
           {finalOutput && (
             <div className="tool-output">
               <span className="section-label">Sub-agent Output</span>
-              <pre>{finalOutput}</pre>
+              <Markdown text={finalOutput} />
             </div>
           )}
         </div>

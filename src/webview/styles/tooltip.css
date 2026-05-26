@@ -148,16 +148,16 @@
 
 .tooltip-markdown-inline-code {
   font-family: var(--vscode-editor-font-family, monospace);
-  background-color: var(--vscode-editor-widget-background, #252526);
+  background-color: color-mix(in srgb, currentColor 10%, transparent);
   padding: 1px 4px;
   border-radius: 3px;
-  border: 1px solid var(--vscode-editor-widget-border, #454545);
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
 }
 
 .tooltip-markdown-code {
   font-family: var(--vscode-editor-font-family, monospace);
-  background-color: var(--vscode-editor-widget-background, #252526);
-  border: 1px solid var(--vscode-editor-widget-border, #454545);
+  background-color: color-mix(in srgb, currentColor 6%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
   padding: 8px 10px;
   border-radius: 4px;
   margin: 6px 0;

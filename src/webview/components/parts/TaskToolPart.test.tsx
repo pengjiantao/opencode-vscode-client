@@ -98,7 +98,7 @@ describe('TaskToolPart', () => {
       time: { start: startTime, end: Date.now() },
     };
 
-    render(<TaskToolPart tool="task" state={state} />);
+    const { container } = render(<TaskToolPart tool="task" state={state} />);
 
     // Should display 'Called tool 1 times' as only 1 tool part was mock-returned
     expect(screen.getByText('Called tool 1 times')).toBeInTheDocument();
@@ -106,10 +106,12 @@ describe('TaskToolPart', () => {
     // Should display duration text containing 1m 15s (75 seconds)
     expect(screen.getByText(/\(took 1m 15s\)/)).toBeInTheDocument();
 
-    // Check prompt and output are wrapped and displayed
+    // Check prompt and output are wrapped and displayed as Markdown
     expect(screen.getByText('Prompt Input')).toBeInTheDocument();
+    expect(container.querySelector('.tool-input .markdown-body')).toBeInTheDocument();
     expect(screen.getByText('Run tests in directory')).toBeInTheDocument();
     expect(screen.getByText('Sub-agent Output')).toBeInTheDocument();
+    expect(container.querySelector('.tool-output .markdown-body')).toBeInTheDocument();
     expect(screen.getByText('Tests passed successfully.')).toBeInTheDocument();
 
     // Interactivity test: click on the call count link should switch to sub-agent

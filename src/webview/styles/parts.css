@@ -111,6 +111,19 @@
   opacity: 0.6;
 }
 
+.tool-part .tool-output .markdown-body,
+.tool-part .task-finished-container .tool-input .markdown-body {
+  background-color: var(
+    --vscode-textCodeBlock-background,
+    color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background))
+  );
+  padding: 8px;
+  border-radius: 4px;
+  max-height: 250px;
+  overflow: auto;
+  opacity: 0.6;
+}
+
 .tool-part .tool-input pre {
   margin: 0;
   font-family: var(--vscode-editor-font-family, monospace);
@@ -239,10 +252,8 @@
 
 .markdown-body code {
   font-family: var(--vscode-editor-font-family, monospace);
-  background-color: var(
-    --vscode-textCodeBlock-background,
-    color-mix(in srgb, var(--webview-foreground) 8%, transparent)
-  );
+  background-color: color-mix(in srgb, currentColor 10%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
   padding: 2px 4px;
   border-radius: 4px;
   font-size: 0.9em;
@@ -251,13 +262,10 @@
 /* Code block markdown rendering container */
 .code-block-container {
   margin: 12px 0;
-  border: none;
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
   border-radius: 6px;
   overflow: hidden;
-  background-color: var(
-    --vscode-textCodeBlock-background,
-    color-mix(in srgb, var(--webview-foreground) 8%, transparent)
-  );
+  background-color: color-mix(in srgb, currentColor 5%, transparent);
 }
 
 .code-block-header {
@@ -265,11 +273,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 6px 12px;
-  background-color: var(
-    --vscode-textCodeBlock-background,
-    color-mix(in srgb, var(--webview-foreground) 8%, transparent)
-  );
-  border-bottom: 1px solid var(--vscode-border-color);
+  background-color: color-mix(in srgb, currentColor 8%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
 }
 
 .code-lang {
@@ -286,10 +291,7 @@ pre.code-block {
   overflow-x: auto;
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 12px;
-  background-color: var(
-    --vscode-textCodeBlock-background,
-    color-mix(in srgb, var(--webview-foreground) 8%, transparent)
-  );
+  background-color: transparent;
   line-height: 1.5;
 }
 
@@ -418,8 +420,7 @@ pre.code-block code {
   overflow-x: auto;
   margin: 12px 0;
   border-radius: 6px;
-  border: 1px solid
-    var(--vscode-widget-border, var(--vscode-border-color, rgba(128, 128, 128, 0.3)));
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
 }
 
 .markdown-table {
@@ -427,26 +428,22 @@ pre.code-block code {
   width: 100%;
   font-size: 13px;
   line-height: 1.5;
-  color: var(--webview-foreground);
+  color: inherit;
 }
 
 .markdown-table th,
 .markdown-table td {
   padding: 8px 12px;
-  border: 1px solid
-    var(--vscode-widget-border, var(--vscode-border-color, rgba(128, 128, 128, 0.3)));
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
 }
 
 .markdown-table th {
   font-weight: 600;
-  background-color: var(
-    --vscode-textCodeBlock-background,
-    color-mix(in srgb, var(--webview-foreground) 8%, transparent)
-  );
+  background-color: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 .markdown-table tr:nth-child(even) {
-  background-color: color-mix(in srgb, var(--webview-foreground) 3%, transparent);
+  background-color: color-mix(in srgb, currentColor 4%, transparent);
 }
 
 .markdown-table td code {
