@@ -372,6 +372,22 @@ describe('PartRenderer', () => {
       expect(preElement?.textContent).toContain('MATCHCOUNT 10');
     });
 
+    it('regression: glob tool without title still shows descriptive summary from input.pattern', () => {
+      const part = createMockToolPart('glob');
+      part.state = {
+        status: 'completed',
+        input: { pattern: '**/test/**/*' },
+        output: 'No files found',
+        title: '',
+        time: { start: Date.now(), end: Date.now() + 100 },
+        metadata: {},
+      };
+      render(<PartRenderer part={part} />);
+
+      // Header must contain the pattern, not just "GLOB"
+      expect(screen.getByText('GLOB - Search files matching "**/test/**/*"')).toBeInTheDocument();
+    });
+
     it('regression: renders edit tool output as DiffPart when metadata contains diff', () => {
       const part = createMockToolPart('edit');
       part.state = {

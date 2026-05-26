@@ -163,6 +163,10 @@ export function getToolDescription(
   if (name === 'grep_search') {
     return title || (query ? `Search for "${query}"` : 'Search content');
   }
+  if (name === 'glob') {
+    const pattern = (input?.pattern || input?.Pattern) as string | undefined;
+    return title || (pattern ? `Search files matching "${pattern}"` : 'Search files');
+  }
   if (name === 'list_dir' || name === 'list_directory') {
     const dirBasename = getBasename(dirPath);
     return title || (dirBasename ? `List directory ${dirBasename}` : 'List directory');
