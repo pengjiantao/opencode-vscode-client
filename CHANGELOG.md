@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.20](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.19...v0.1.20) (2026-05-26)
+
+### Features
+
+- add session history management with QuickPick UI and batch operations ([1ea3406](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/1ea3406f3353f4bab45863b9db8a4cf45b56507e))
+- add status icons to diff viewer and improve task subagent output display ([07cf2f9](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/07cf2f9cd1244fd22cfef4086008c2af28313ca4))
+- add text truncation to tool name in ToolPart ([493f1c3](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/493f1c3d909fac81cf62fb2ff69e0ee2ddd3bd15))
+- move Close All Sessions to native status bar, conditionally show overflow menu in SessionTabs ([791c22d](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/791c22d1fb6ba87356a017bb5900139a2f566b4e))
+- recursively fetch child session messages and render TaskToolPart ([31a45b8](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/31a45b8fa683c20aeab076b47dca5c309b97a69d))
+- render markdown in TaskToolPart, migrate styles to theme-agnostic color-mix ([89a05a5](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/89a05a53674ddbc51cb2fc212e3b9a13f12ee916))
+
+### Bug Fixes
+
+- **ToolPart:** show glob pattern in description when title is empty ([895d1f0](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/895d1f039ce417dbd4797e172e60795c7552ba77))
+
 ### [0.1.19](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.18...v0.1.19) (2026-05-25)
 
 ### Bug Fixes
