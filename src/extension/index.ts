@@ -73,6 +73,16 @@ export async function activate(context: ExtensionContext): Promise<void> {
     });
   };
 
+  /** Closes all open sessions and initializes a fallback new session. */
+  const invokeCloseAllSessions = async (): Promise<void> => {
+    sessionStatuses.clear();
+    pendingBuffer.clear();
+    relationTracker.clear();
+    await sessionManager.closeAll();
+    ipc.send({ type: 'init', sessions: [] });
+    await invokeCreateSession();
+  };
+
   /** Calls the extracted handleSelectHistory command handler. */
   const invokeSelectHistory = async (): Promise<void> => {
     await handleSelectHistory({
@@ -252,6 +262,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       pendingBuffer,
       relationTracker,
       invokeCreateSession,
+      invokeCloseAllSessions,
     });
 
     ipc.on('sessions:select-history', () => {
@@ -384,6 +395,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       provider,
       () => void invokeCreateSession(),
       () => void invokeSelectHistory(),
+      () => void invokeCloseAllSessions(),
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

@@ -148,6 +148,11 @@
         "command": "opencode-sidebar.pasteAsPlainText",
         "title": "Paste as Plain Text",
         "category": "OpenCode"
+      },
+      {
+        "command": "opencode-sidebar.closeAllSessions",
+        "title": "Close All Sessions",
+        "category": "OpenCode"
       }
     ],
     "menus": {

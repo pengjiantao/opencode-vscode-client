@@ -284,6 +284,7 @@ describe('session handlers', () => {
     let mockPendingBuffer: PendingRequestBuffer;
     let mockRelationTracker: SessionRelationTracker;
     let mockInvokeCreateSession: ReturnType<typeof vi.fn>;
+    let mockInvokeCloseAllSessions: ReturnType<typeof vi.fn>;
     let mockSyncMetadata: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
@@ -307,6 +308,7 @@ describe('session handlers', () => {
       } as unknown as SessionRelationTracker;
 
       mockInvokeCreateSession = vi.fn();
+      mockInvokeCloseAllSessions = vi.fn();
       mockSyncMetadata = vi.fn();
 
       registerSessionLifecycleHandlers({
@@ -322,6 +324,7 @@ describe('session handlers', () => {
         pendingBuffer: mockPendingBuffer,
         relationTracker: mockRelationTracker,
         invokeCreateSession: mockInvokeCreateSession,
+        invokeCloseAllSessions: mockInvokeCloseAllSessions,
       });
     });
 
@@ -462,11 +465,7 @@ describe('session handlers', () => {
         await closeAllHandler();
       }
 
-      expect(mockSessionManager.closeAll).toHaveBeenCalled();
-      expect(mockRelationTracker.clear).toHaveBeenCalled();
-      expect(mockPendingBuffer.clear).toHaveBeenCalled();
-      expect(mockIpc.send).toHaveBeenCalledWith({ type: 'init', sessions: [] });
-      expect(mockInvokeCreateSession).toHaveBeenCalled();
+      expect(mockInvokeCloseAllSessions).toHaveBeenCalled();
     });
   });
 

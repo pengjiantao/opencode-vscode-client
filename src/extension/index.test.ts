@@ -136,8 +136,8 @@ describe('Extension Status Bar Activation', () => {
   it('registers status bar item and subscriptions to context.subscriptions (disposable checks)', async () => {
     await activate(mockContext);
 
-    // Verify native VS Code status bar creation
-    expect(window.createStatusBarItem).toHaveBeenCalledTimes(1);
+    // Verify native VS Code status bar creation (called twice for status and close all)
+    expect(window.createStatusBarItem).toHaveBeenCalledTimes(2);
 
     // Verify disposables are pushed to context.subscriptions (Memory Leak Prevention)
     expect(mockContext.subscriptions).toContain(mockStatusBarItem);

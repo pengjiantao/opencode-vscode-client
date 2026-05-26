@@ -3,7 +3,7 @@
  */
 
 import type { Session } from '@opencode-ai/sdk/v2/client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { IconButton } from './IconButton';
 import { Popover } from './Popover';
 
@@ -17,22 +17,15 @@ export interface SessionTabsProps {
   onSwitch: (sessionID: string) => void;
   /** Callback fired when the close button on a specific tab is clicked. */
   onClose: (sessionID: string) => void;
-  /** Callback fired when 'Close All Sessions' action is clicked. */
-  onCloseAll: () => void;
 }
 
 /**
  * Top tab bar for managing multiple open sessions.
  * Displays horizontal list of sessions and a Popover actions menu.
  */
-export function SessionTabs({
-  sessions,
-  activeSessionID,
-  onSwitch,
-  onClose,
-  onCloseAll,
-}: SessionTabsProps) {
+export function SessionTabs({ sessions, activeSessionID, onSwitch, onClose }: SessionTabsProps) {
   const tabsListRef = useRef<HTMLDivElement>(null);
+  const [showMore, setShowMore] = useState(false);
 
   useEffect(() => {
     if (!activeSessionID) {
@@ -49,6 +42,34 @@ export function SessionTabs({
       });
     }
   }, [activeSessionID, sessions]);
+
+  // Keep track of scroll overflow to show the 'More Actions' menu dynamically.
+  // We use ResizeObserver to recheck whenever the tabs list or container sizes change.
+  useEffect(() => {
+    const tabsList = tabsListRef.current;
+    const parent = tabsList?.parentElement;
+    if (!tabsList || !parent) {
+      return;
+    }
+
+    const checkOverflow = () => {
+      // scrollWidth is total width of all tabs.
+      // parent.clientWidth is the available width inside the tabs bar container.
+      setShowMore(tabsList.scrollWidth > parent.clientWidth);
+    };
+
+    // Initial check on mount/render
+    checkOverflow();
+
+    const resizeObserver = new ResizeObserver(() => {
+      checkOverflow();
+    });
+    resizeObserver.observe(parent);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [sessions]);
 
   return (
     <div className="session-tabs">
@@ -83,53 +104,43 @@ export function SessionTabs({
         ))}
       </div>
 
-      <div className="tabs-actions">
-        <Popover
-          placement="bottom"
-          popoverClassName="more-menu-popover-container"
-          trigger={<IconButton name="ellipsis" title="More Actions" size="medium" />}
-        >
-          {({ close }) => (
-            <div className="more-menu-popover">
-              <div className="popover-group">
-                <div className="popover-group-header">Switch Session</div>
-                <div className="popover-options-list">
-                  {sessions.map((s) => (
-                    <div
-                      key={s.id}
-                      className={`popover-option ${s.id === activeSessionID ? 'selected' : ''}`}
-                      onClick={() => {
-                        onSwitch(s.id);
-                        close();
-                      }}
-                    >
-                      <span className="option-text" data-custom-title={s.title || 'Untitled'}>
-                        {s.title || 'Untitled'}
-                      </span>
-                      {s.id === activeSessionID && <span className="check-icon">✓</span>}
-                    </div>
-                  ))}
-                  {sessions.length === 0 && (
-                    <div className="popover-no-results">No open sessions</div>
-                  )}
+      {showMore && (
+        <div className="tabs-actions">
+          <Popover
+            placement="bottom"
+            popoverClassName="more-menu-popover-container"
+            trigger={<IconButton name="ellipsis" title="More Actions" size="medium" />}
+          >
+            {({ close }) => (
+              <div className="more-menu-popover">
+                <div className="popover-group">
+                  <div className="popover-group-header">Switch Session</div>
+                  <div className="popover-options-list">
+                    {sessions.map((s) => (
+                      <div
+                        key={s.id}
+                        className={`popover-option ${s.id === activeSessionID ? 'selected' : ''}`}
+                        onClick={() => {
+                          onSwitch(s.id);
+                          close();
+                        }}
+                      >
+                        <span className="option-text" data-custom-title={s.title || 'Untitled'}>
+                          {s.title || 'Untitled'}
+                        </span>
+                        {s.id === activeSessionID && <span className="check-icon">✓</span>}
+                      </div>
+                    ))}
+                    {sessions.length === 0 && (
+                      <div className="popover-no-results">No open sessions</div>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="popover-group">
-                <div className="popover-group-header">Actions</div>
-                <div
-                  className="popover-option danger"
-                  onClick={() => {
-                    onCloseAll();
-                    close();
-                  }}
-                >
-                  Close All Sessions
-                </div>
-              </div>
-            </div>
-          )}
-        </Popover>
-      </div>
+            )}
+          </Popover>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,9 +3,17 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockSession } from '../../test/mocks/sdk';
 import { SessionTabs } from './SessionTabs';
+
+// Mock ResizeObserver globally for this test suite
+class MockResizeObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+global.ResizeObserver = MockResizeObserver;
 
 vi.mock('@vscode/webview-ui-toolkit/react', () => ({
   VSCodeButton: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
@@ -14,8 +22,20 @@ vi.mock('@vscode/webview-ui-toolkit/react', () => ({
 }));
 
 describe('SessionTabs', () => {
+  const originalScrollWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollWidth');
+  const originalClientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    if (originalScrollWidth) {
+      Object.defineProperty(HTMLElement.prototype, 'scrollWidth', originalScrollWidth);
+    }
+    if (originalClientWidth) {
+      Object.defineProperty(HTMLElement.prototype, 'clientWidth', originalClientWidth);
+    }
   });
 
   it('renders tabs for all sessions', () => {
@@ -30,7 +50,6 @@ describe('SessionTabs', () => {
         activeSessionID="session-1"
         onSwitch={() => {}}
         onClose={() => {}}
-        onCloseAll={() => {}}
       />,
     );
 
@@ -50,7 +69,6 @@ describe('SessionTabs', () => {
         activeSessionID="session-2"
         onSwitch={() => {}}
         onClose={() => {}}
-        onCloseAll={() => {}}
       />,
     );
 
@@ -68,7 +86,6 @@ describe('SessionTabs', () => {
         activeSessionID={null}
         onSwitch={onSwitch}
         onClose={() => {}}
-        onCloseAll={() => {}}
       />,
     );
 
@@ -86,7 +103,6 @@ describe('SessionTabs', () => {
         activeSessionID="session-1"
         onSwitch={() => {}}
         onClose={onClose}
-        onCloseAll={() => {}}
       />,
     );
 
@@ -109,7 +125,6 @@ describe('SessionTabs', () => {
         activeSessionID="s1"
         onSwitch={() => {}}
         onClose={() => {}}
-        onCloseAll={() => {}}
       />,
     );
 
@@ -147,7 +162,6 @@ describe('SessionTabs', () => {
           activeSessionID="session-1"
           onSwitch={() => {}}
           onClose={() => {}}
-          onCloseAll={() => {}}
         />,
       );
 
@@ -166,7 +180,6 @@ describe('SessionTabs', () => {
           activeSessionID="session-2"
           onSwitch={() => {}}
           onClose={() => {}}
-          onCloseAll={() => {}}
         />,
       );
 
@@ -175,5 +188,55 @@ describe('SessionTabs', () => {
       // Restore original scrollIntoView
       Element.prototype.scrollIntoView = originalScrollIntoView;
     }
+  });
+
+  it('renders "More Actions" menu only when session tabs overflow', () => {
+    const sessions = [
+      createMockSession({ id: 's1', title: 'Session 1' }),
+      createMockSession({ id: 's2', title: 'Session 2' }),
+    ];
+
+    // Mock scrollWidth and clientWidth to simulate NO overflow
+    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', {
+      configurable: true,
+      value: 100,
+    });
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      value: 200,
+    });
+
+    const { rerender } = render(
+      <SessionTabs
+        sessions={sessions}
+        activeSessionID="s1"
+        onSwitch={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'More Actions' })).not.toBeInTheDocument();
+
+    // Now mock scrollWidth and clientWidth to simulate overflow
+    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', {
+      configurable: true,
+      value: 300,
+    });
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      value: 200,
+    });
+
+    // Rerender to trigger useEffect ResizeObserver check
+    rerender(
+      <SessionTabs
+        sessions={[...sessions]}
+        activeSessionID="s1"
+        onSwitch={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'More Actions' })).toBeInTheDocument();
   });
 });

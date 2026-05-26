@@ -15,6 +15,7 @@ import { OpencodeSidebarViewProvider } from './webview-provider';
  * @param provider The webview sidebar view provider.
  * @param handleCreateSession Callback to create a new session.
  * @param handleSelectHistory Callback to show select history QuickPick.
+ * @param handleCloseAll Callback to close all sessions.
  */
 export function registerExtensionCommands(
   context: ExtensionContext,
@@ -22,6 +23,7 @@ export function registerExtensionCommands(
   provider: OpencodeSidebarViewProvider,
   handleCreateSession: () => void,
   handleSelectHistory: () => void,
+  handleCloseAll: () => void,
 ): void {
   context.subscriptions.push(
     commands.registerCommand('opencode-sidebar.focus', () => {
@@ -38,6 +40,12 @@ export function registerExtensionCommands(
   context.subscriptions.push(
     commands.registerCommand('opencode-sidebar.showHistory', () => {
       handleSelectHistory();
+    }),
+  );
+
+  context.subscriptions.push(
+    commands.registerCommand('opencode-sidebar.closeAllSessions', () => {
+      handleCloseAll();
     }),
   );
 

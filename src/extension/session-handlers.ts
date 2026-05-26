@@ -226,6 +226,8 @@ export interface RegisterLifecycleHandlersOptions {
   relationTracker: SessionRelationTracker;
   /** Helper command to automatically create a fallback session. */
   invokeCreateSession: () => Promise<void>;
+  /** Helper command to close all sessions. */
+  invokeCloseAllSessions: () => Promise<void>;
 }
 
 /**
@@ -247,6 +249,7 @@ export function registerSessionLifecycleHandlers({
   pendingBuffer,
   relationTracker,
   invokeCreateSession,
+  invokeCloseAllSessions,
 }: RegisterLifecycleHandlersOptions): void {
   ipc.on('session:switch', async (msg) => {
     const { sessionID } = msg as { sessionID: string };
@@ -389,11 +392,6 @@ export function registerSessionLifecycleHandlers({
   });
 
   ipc.on('session:close-all', () => {
-    sessionStatuses.clear();
-    pendingBuffer.clear();
-    relationTracker.clear();
-    void sessionManager.closeAll();
-    ipc.send({ type: 'init', sessions: [] });
-    void invokeCreateSession();
+    void invokeCloseAllSessions();
   });
 }

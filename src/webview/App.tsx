@@ -163,10 +163,6 @@ export function App() {
     send({ type: 'session:close', sessionID } as never);
   };
 
-  const handleCloseAllSessions = () => {
-    send({ type: 'session:close-all' } as never);
-  };
-
   const handleSubmitPrompt = (text: string, parts?: Part[]) => {
     console.log(
       '[Webview] handleSubmitPrompt called with text:',
@@ -230,7 +226,6 @@ export function App() {
         activeSessionID={activeSessionID}
         onSwitch={handleSwitchSession}
         onClose={handleCloseSession}
-        onCloseAll={handleCloseAllSessions}
       />
 
       {activeSessionID ? (

@@ -18,6 +18,7 @@ import type { SessionManager } from './session-manager';
  */
 export class StatusBarManager {
   private readonly statusBarItem: StatusBarItem;
+  private readonly closeAllStatusBarItem: StatusBarItem;
   private readonly sessionStatuses: Map<string, SessionStatus>;
   private readonly sessionManager: SessionManager;
 
@@ -44,11 +45,22 @@ export class StatusBarManager {
     this.statusBarItem.show();
     context.subscriptions.push(this.statusBarItem);
 
+    // Initialize native status bar item to trigger closing all active sessions
+    this.closeAllStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Right, 99);
+    this.closeAllStatusBarItem.name = 'OpenCode Close All';
+    this.closeAllStatusBarItem.command = 'opencode-sidebar.closeAllSessions';
+    this.closeAllStatusBarItem.text = '$(close-all) Close All';
+    this.closeAllStatusBarItem.tooltip = 'Close All Sessions';
+    context.subscriptions.push(this.closeAllStatusBarItem);
+
     // Keep status bar in sync when active session changes, registering a disposable for clean cleanup
     const unsubscribeActiveSession = sessionManager.subscribe(() => {
       this.update();
     });
     context.subscriptions.push({ dispose: unsubscribeActiveSession });
+
+    // Initial update to sync status bar items state with the current sessions
+    this.update();
   }
 
   /**
@@ -59,7 +71,16 @@ export class StatusBarManager {
     const activeSessionID = this.sessionManager.activeSessionID;
     if (!activeSessionID) {
       this.statusBarItem.hide();
+      this.closeAllStatusBarItem.hide();
       return;
+    }
+
+    // Toggle the Close All status bar item based on existence of open sessions
+    const openSessions = this.sessionManager.getOpenSessionIDs();
+    if (openSessions.length > 0) {
+      this.closeAllStatusBarItem.show();
+    } else {
+      this.closeAllStatusBarItem.hide();
     }
 
     const status = this.sessionStatuses.get(activeSessionID);
