@@ -167,6 +167,15 @@
   box-sizing: border-box;
 }
 
+.tooltip-markdown-code code {
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  font-size: inherit;
+  font-family: inherit;
+}
+
 .tooltip-markdown-code::-webkit-scrollbar {
   width: 6px;
   height: 6px;
