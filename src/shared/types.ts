@@ -162,7 +162,6 @@ export type ExtToWebview =
       type: 'init';
       sessions: Session[];
     }
-  | { type: 'settings:open' }
   | { type: 'models:list'; models: ModelInfo[] }
   | { type: 'agents:list'; agents: AgentInfo[] }
   | {

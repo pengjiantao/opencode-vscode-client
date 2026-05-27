@@ -394,6 +394,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       () => void invokeCreateSession(),
       () => void invokeSelectHistory(),
       () => void invokeCloseAllSessions(),
+      sdk,
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

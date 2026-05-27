@@ -37,6 +37,10 @@ export const mockVscode = {
       public readonly color?: unknown,
     ) {}
   },
+  QuickPickItemKind: {
+    Separator: 1,
+    Default: 0,
+  },
   commands: {
     executeCommand: vi.fn(),
     registerCommand: vi.fn(() => ({ dispose: vi.fn() })),

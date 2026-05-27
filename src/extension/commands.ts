@@ -3,8 +3,19 @@
  */
 
 import * as path from 'path';
-import { commands, env, window, type ExtensionContext } from 'vscode';
+import {
+  commands,
+  env,
+  QuickPickItemKind,
+  ThemeIcon,
+  window,
+  type ExtensionContext,
+  type QuickInputButton,
+  type QuickPickItem,
+} from 'vscode';
 import { IPCBridge } from './ipc';
+import type { SDKClient } from './sdk-client';
+import { getConfiguration, setConfiguration } from './utils/config';
 import { OpencodeSidebarViewProvider } from './webview-provider';
 
 /**
@@ -24,6 +35,7 @@ export function registerExtensionCommands(
   handleCreateSession: () => void,
   handleSelectHistory: () => void,
   handleCloseAll: () => void,
+  sdk: SDKClient,
 ): void {
   context.subscriptions.push(
     commands.registerCommand('opencode-sidebar.focus', () => {
@@ -51,7 +63,7 @@ export function registerExtensionCommands(
 
   context.subscriptions.push(
     commands.registerCommand('opencode-sidebar.openSettings', () => {
-      ipc.send({ type: 'settings:open' });
+      void showDefaultSettingsQuickPick(sdk);
     }),
   );
 
@@ -242,4 +254,254 @@ async function copyTerminalSelectionSafely(): Promise<string | undefined> {
   }
 
   return text;
+}
+
+/**
+ * Shows a QuickPick to choose which default setting to configure (model or agent).
+ */
+export async function showDefaultSettingsQuickPick(sdk: SDKClient): Promise<void> {
+  const config = getConfiguration();
+
+  interface SettingPickItem extends QuickPickItem {
+    setting: 'model' | 'agent';
+  }
+
+  const items: SettingPickItem[] = [
+    {
+      label: '$(robot) Default Model',
+      description: config.model || '(not set)',
+      setting: 'model',
+    },
+    {
+      label: '$(terminal) Default Agent',
+      description: config.agent || '(not set)',
+      setting: 'agent',
+    },
+  ];
+
+  const quickPick = window.createQuickPick<SettingPickItem>();
+  quickPick.title = 'OpenCode Settings';
+  quickPick.placeholder = 'Select a setting to configure';
+  quickPick.items = items;
+
+  const result = await new Promise<SettingPickItem | undefined>((resolve) => {
+    quickPick.onDidAccept(() => {
+      const selected = quickPick.selectedItems[0];
+      quickPick.hide();
+      resolve(selected);
+    });
+    quickPick.onDidHide(() => {
+      if (quickPick.selectedItems.length === 0) {
+        resolve(undefined);
+      }
+      quickPick.dispose();
+    });
+    quickPick.show();
+  });
+
+  if (!result) return;
+
+  if (result.setting === 'model') {
+    await showModelQuickPick(sdk);
+  } else {
+    await showAgentQuickPick(sdk);
+  }
+}
+
+/**
+ * Shows a QuickPick populated with available models grouped by provider.
+ * Only shows connected providers. Marks the currently configured default.
+ * Uses a title bar button to clear the default when one is set.
+ */
+export async function showModelQuickPick(sdk: SDKClient): Promise<void> {
+  let models;
+  try {
+    models = await sdk.getModels();
+  } catch {
+    void window.showErrorMessage('Failed to load available models.');
+    return;
+  }
+
+  if (models.length === 0) {
+    void window.showInformationMessage('No models available. Check your provider connections.');
+    return;
+  }
+
+  const { model: currentModel } = getConfiguration();
+
+  const connected = models.filter((m) => m.isConnected !== false);
+  if (connected.length === 0) {
+    void window.showInformationMessage(
+      'No connected providers. Check your provider configuration.',
+    );
+    return;
+  }
+
+  const byProvider = new Map<string, typeof connected>();
+  for (const m of connected) {
+    const key = m.providerName ?? m.providerId ?? 'Unknown';
+    const list = byProvider.get(key);
+    if (list) {
+      list.push(m);
+    } else {
+      byProvider.set(key, [m]);
+    }
+  }
+
+  interface ModelPickItem extends QuickPickItem {
+    id: string;
+  }
+
+  const items: ModelPickItem[] = [];
+  for (const [provider, providerModels] of byProvider) {
+    items.push({
+      label: provider,
+      kind: QuickPickItemKind.Separator,
+      id: '',
+    });
+    for (const m of providerModels) {
+      const isCurrent = m.id === currentModel;
+      items.push({
+        label: `${isCurrent ? '$(check) ' : ''}${m.name}`,
+        description: m.id,
+        id: m.id,
+      });
+    }
+  }
+
+  const quickPick = window.createQuickPick<ModelPickItem>();
+  quickPick.title = 'Default Model';
+  quickPick.placeholder = 'Select a default model for new sessions';
+  quickPick.items = items;
+
+  const clearButton: QuickInputButton = {
+    iconPath: new ThemeIcon('close'),
+    tooltip: currentModel ? `Clear Default (${currentModel})` : 'Clear Default',
+  };
+
+  if (currentModel) {
+    quickPick.buttons = [clearButton];
+  }
+
+  const result = await new Promise<ModelPickItem | 'clear' | undefined>((resolve) => {
+    let resolved = false;
+    quickPick.onDidAccept(() => {
+      if (resolved) return;
+      resolved = true;
+      const selected = quickPick.selectedItems[0];
+      quickPick.hide();
+      resolve(selected);
+    });
+    quickPick.onDidTriggerButton((button) => {
+      if (resolved) return;
+      if (button === clearButton) {
+        resolved = true;
+        quickPick.hide();
+        resolve('clear');
+      }
+    });
+    quickPick.onDidHide(() => {
+      if (!resolved) {
+        resolve(undefined);
+      }
+      quickPick.dispose();
+    });
+    quickPick.show();
+  });
+
+  if (result === undefined) return;
+
+  if (result === 'clear') {
+    setConfiguration('model', '');
+    void window.showInformationMessage('Default model cleared.');
+    return;
+  }
+
+  setConfiguration('model', result.id);
+  void window.showInformationMessage(`Default model set to ${result.id}.`);
+}
+
+/**
+ * Shows a QuickPick populated with available agents.
+ * Filters out hidden and subagent entries.
+ * Uses a title bar button to clear the default when one is set.
+ */
+export async function showAgentQuickPick(sdk: SDKClient): Promise<void> {
+  let agents;
+  try {
+    agents = await sdk.getAgents();
+  } catch {
+    void window.showErrorMessage('Failed to load available agents.');
+    return;
+  }
+
+  if (agents.length === 0) {
+    void window.showInformationMessage('No agents available.');
+    return;
+  }
+
+  const { agent: currentAgent } = getConfiguration();
+
+  const visible = agents.filter((a) => a.mode !== 'subagent' && a.hidden !== true);
+
+  interface AgentPickItem extends QuickPickItem {
+    id: string;
+  }
+
+  const items: AgentPickItem[] = visible.map((a) => ({
+    label: `${a.id === currentAgent ? '$(check) ' : ''}${a.name}`,
+    description: a.mode ? `mode: ${a.mode}` : '',
+    id: a.id,
+  }));
+
+  const quickPick = window.createQuickPick<AgentPickItem>();
+  quickPick.title = 'Default Agent';
+  quickPick.placeholder = 'Select a default agent for new sessions';
+  quickPick.items = items;
+
+  const clearButton: QuickInputButton = {
+    iconPath: new ThemeIcon('close'),
+    tooltip: currentAgent ? `Clear Default (${currentAgent})` : 'Clear Default',
+  };
+
+  if (currentAgent) {
+    quickPick.buttons = [clearButton];
+  }
+
+  const result = await new Promise<AgentPickItem | 'clear' | undefined>((resolve) => {
+    let resolved = false;
+    quickPick.onDidAccept(() => {
+      if (resolved) return;
+      resolved = true;
+      const selected = quickPick.selectedItems[0];
+      quickPick.hide();
+      resolve(selected);
+    });
+    quickPick.onDidTriggerButton((button) => {
+      if (resolved) return;
+      if (button === clearButton) {
+        resolved = true;
+        quickPick.hide();
+        resolve('clear');
+      }
+    });
+    quickPick.onDidHide(() => {
+      if (!resolved) {
+        resolve(undefined);
+      }
+      quickPick.dispose();
+    });
+    quickPick.show();
+  });
+
+  if (result === undefined) return;
+
+  if (result === 'clear') {
+    setConfiguration('agent', '');
+    void window.showInformationMessage('Default agent cleared.');
+    return;
+  }
+
+  setConfiguration('agent', result.id);
+  void window.showInformationMessage(`Default agent set to ${result.id}.`);
 }

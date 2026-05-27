@@ -5,12 +5,15 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { workspace, WorkspaceConfiguration } from 'vscode';
-import { getConfiguration } from './config';
+import { getConfiguration, setConfiguration } from './config';
+
+const updateMock = vi.fn();
 
 vi.mock('vscode', () => {
   const getMock = vi.fn((key: string, defaultValue: unknown) => defaultValue);
   const getConfigurationMock = vi.fn(() => ({
     get: getMock,
+    update: updateMock,
   }));
   return {
     workspace: {
@@ -37,11 +40,22 @@ describe('config', () => {
     });
     workspaceMock.mockReturnValueOnce({
       get: mockGet,
+      update: updateMock,
     } as unknown as WorkspaceConfiguration);
 
     const config = getConfiguration();
     expect(config.model).toBe('provider/model-x');
     expect(config.agent).toBe('agent-y');
     expect(config.maxCacheFiles).toBe(100);
+  });
+
+  it('should call config.update with correct arguments for setConfiguration', () => {
+    setConfiguration('model', 'anthropic/claude-sonnet-4-20250514');
+    expect(updateMock).toHaveBeenCalledWith('model', 'anthropic/claude-sonnet-4-20250514', true);
+  });
+
+  it('should clear a configuration value when set to empty string', () => {
+    setConfiguration('agent', '');
+    expect(updateMock).toHaveBeenCalledWith('agent', '', true);
   });
 });

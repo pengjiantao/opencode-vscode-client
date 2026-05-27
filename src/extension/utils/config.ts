@@ -17,6 +17,9 @@ export interface ExtensionConfig {
   maxCacheFiles: number;
 }
 
+/** Supported configuration keys that can be written. */
+export type ConfigKey = keyof ExtensionConfig;
+
 /**
  * Retrieves the current unified extension configurations from vscode workspace settings.
  *
@@ -29,4 +32,15 @@ export function getConfiguration(): ExtensionConfig {
     agent: config.get<string>('agent', ''),
     maxCacheFiles: config.get<number>('maxCacheFiles', 2000),
   };
+}
+
+/**
+ * Updates a single opencode configuration value and persists it.
+ *
+ * @param key The configuration key to update.
+ * @param value The new value to set.
+ */
+export function setConfiguration<K extends ConfigKey>(key: K, value: ExtensionConfig[K]): void {
+  const config = workspace.getConfiguration('opencode');
+  void config.update(key, value, true);
 }

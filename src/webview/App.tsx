@@ -12,7 +12,6 @@ import { PermissionBar } from './components/PermissionBar';
 import { PromptInput } from './components/PromptInput';
 import { QuestionBar } from './components/QuestionBar';
 import { SessionTabs } from './components/SessionTabs';
-import { SettingsPanel } from './components/SettingsPanel';
 import { Tooltip } from './components/Tooltip';
 import { useEvents } from './hooks/useEvents';
 import { useIPC } from './hooks/useIPC';
@@ -31,7 +30,6 @@ declare global {
 
 /** Main application component — orchestrates IPC, session state, and child components. */
 export function App() {
-  const [showSettings, setShowSettings] = useState(false);
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [activeModel, setActiveModel] = useState<string>('');
@@ -102,9 +100,6 @@ export function App() {
             message.parts,
             message.status,
           );
-          break;
-        case 'settings:open':
-          setShowSettings(true);
           break;
         case 'file:query-response':
           setFileInfo(message.path, {
@@ -274,7 +269,6 @@ export function App() {
         />
       )}
 
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       <Tooltip />
     </div>
   );
