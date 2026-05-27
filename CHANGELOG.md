@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.22](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.21...v0.1.22) (2026-05-27)
+
+### Features
+
+- add message revert/redo (undo) feature ([c79ef22](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c79ef2247e2897b15f9733cfc1069b3fe9f24799))
+
 ### [0.1.21](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.20...v0.1.21) (2026-05-27)
 
 ### Features
