@@ -1,7 +1,7 @@
 {
   "name": "opencode-vscode-client",
   "publisher": "fiyqkrc",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "displayName": "OpenCode Vscode Client",
   "description": "VS Code Sidebar Extension for OpenCode SDK - AI-powered programming assistant",
   "license": "MIT",

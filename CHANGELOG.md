@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.21](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.20...v0.1.21) (2026-05-27)
+
+### Features
+
+- replace SettingsPanel with native VS Code QuickPick UI ([7a595fe](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/7a595fe925cde7452380b9d12b2e4ca07f6110db))
+
 ### [0.1.20](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.19...v0.1.20) (2026-05-26)
 
 ### Features
