@@ -1,6 +1,7 @@
 /**
  * @file PromptInputHeader component rendering the LSP, MCP, Skills, and extension version status bar.
  * Positioned above the input field to prevent clutter on narrow viewports.
+ * Also displays a Redo button when a revert is active.
  */
 
 import React from 'react';
@@ -19,6 +20,8 @@ export interface PromptInputHeaderProps {
   skills?: SkillInfo[];
   /** Optional extension version string. Falls back to session store. */
   extensionVersion?: string;
+  /** Callback when the user clicks the Redo button. */
+  onRedo?: () => void;
 }
 
 /**
@@ -31,17 +34,25 @@ export function PromptInputHeader({
   mcpServers: customMcpServers,
   skills: customSkills,
   extensionVersion: customExtensionVersion,
+  onRedo,
 }: PromptInputHeaderProps = {}) {
   // Retrieve session state details directly from Zustand store
   const storeLspServers = useSessionStore((s) => s.lspServers);
   const storeMcpServers = useSessionStore((s) => s.mcpServers);
   const storeSkills = useSessionStore((s) => s.skills);
   const storeExtensionVersion = useSessionStore((s) => s.extensionVersion);
+  const activeSessionID = useSessionStore((s) => s.activeSessionID);
+  const sessions = useSessionStore((s) => s.sessions);
 
   const lspServers = customLspServers ?? storeLspServers;
   const mcpServers = customMcpServers ?? storeMcpServers;
   const skills = customSkills ?? storeSkills;
   const extensionVersion = customExtensionVersion ?? storeExtensionVersion;
+
+  const activeSession = activeSessionID
+    ? (sessions ?? []).find((s) => s.id === activeSessionID)
+    : undefined;
+  const hasRevert = !!activeSession?.revert?.messageID;
 
   // Compile rich HTML tooltips for hover displays.
   // Memoization ensures we don't rebuild HTML strings unnecessarily on every render.
@@ -174,6 +185,20 @@ export function PromptInputHeader({
           {extensionVersion}
         </span>
       </div>
+
+      {hasRevert && onRedo && (
+        <div
+          className="metadata-item redo"
+          onClick={onRedo}
+          data-custom-title="Redo — restore reverted messages"
+          data-testid="header-redo"
+        >
+          <Codicon name="redo" className="metadata-icon" />
+          <span>
+            <span className="metadata-label">Redo</span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }

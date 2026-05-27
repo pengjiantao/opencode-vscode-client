@@ -50,6 +50,14 @@
   border: none;
 }
 
+.user-message-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+  padding-right: 4px;
+}
+
 .assistant-message .message-content {
   border: none;
 }
@@ -86,4 +94,105 @@
 
 .action-btn span {
   font-weight: 500;
+}
+
+/* Revert (undo) button styling */
+.action-btn.revert-btn {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.action-btn.revert-btn:hover:not(.disabled) {
+  color: var(--vscode-errorForeground, #f48771);
+  background-color: var(--vscode-inputValidation-errorBackground, rgba(255, 0, 0, 0.1));
+}
+
+.action-btn.revert-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Revert confirmation dialog overlay */
+.revert-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.revert-confirm-dialog {
+  background: var(--vscode-editorWidget-background, #252526);
+  border: 1px solid var(--vscode-editorWidget-border, #454545);
+  border-radius: 6px;
+  padding: 16px;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.revert-confirm-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vscode-editor-foreground, #cccccc);
+}
+
+.revert-confirm-icon {
+  color: var(--vscode-editorWarning-foreground, #cca700);
+  font-size: 16px;
+}
+
+.revert-confirm-body {
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground, #888888);
+  line-height: 1.5;
+}
+
+.revert-confirm-body p {
+  margin: 0 0 6px;
+}
+
+.revert-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.revert-confirm-btn {
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+
+.revert-confirm-btn.cancel {
+  background: transparent;
+  color: var(--vscode-editor-foreground, #cccccc);
+  border-color: var(--vscode-editorWidget-border, #454545);
+}
+
+.revert-confirm-btn.cancel:hover {
+  background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.08));
+}
+
+.revert-confirm-btn.confirm {
+  background: var(--vscode-errorForeground, #f48771);
+  color: var(--vscode-editor-background, #1e1e1e);
+  border-color: transparent;
+}
+
+.revert-confirm-btn.confirm:hover {
+  opacity: 0.9;
 }

@@ -102,6 +102,23 @@
   user-select: none;
 }
 
+.prompt-input-header .metadata-item.redo {
+  margin-left: auto;
+  color: var(--vscode-textLink-foreground, #007fd4);
+  cursor: pointer;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition:
+    color 0.12s ease,
+    background-color 0.12s ease;
+}
+
+.prompt-input-header .metadata-item.redo:hover {
+  color: var(--vscode-textLink-activeForeground, #0062a3);
+  background-color: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05));
+}
+
 /* Responsive adjustment for narrow screens */
 @media (max-width: 500px) {
   .prompt-input-header,

@@ -46,6 +46,7 @@ export interface SessionStore {
   updateSession: (session: Session) => void;
   addMessage: (sessionID: string, message: Message) => void;
   updateMessage: (message: Message) => void;
+  removeMessagesFrom: (sessionID: string, fromMessageID: string) => void;
   addPart: (messageID: string, part: Part) => void;
   updatePart: (part: Part) => void;
   updatePartDelta: (messageID: string, partID: string, field: string, delta: string) => void;
@@ -167,6 +168,26 @@ export const useSessionStore = create<SessionStore>((set) => ({
         ),
       },
     })),
+
+  /** Removes the target message and all subsequent messages from a session's store.
+   *  Also removes associated parts. Uses array position (not string comparison) to
+   *  determine ordering, avoiding lexicographic pitfalls with varying ID formats. */
+  removeMessagesFrom: (sessionID, fromMessageID) =>
+    set((state) => {
+      const sessionMessages = state.messages[sessionID] || [];
+      const idx = sessionMessages.findIndex((m) => m.id === fromMessageID);
+      if (idx === -1) return {};
+      const removedIds = new Set(sessionMessages.slice(idx).map((m) => m.id));
+      const newMessages = sessionMessages.slice(0, idx);
+      const newParts = { ...state.parts };
+      for (const id of removedIds) {
+        delete newParts[id];
+      }
+      return {
+        messages: { ...state.messages, [sessionID]: newMessages },
+        parts: newParts,
+      };
+    }),
 
   setSessionMessagesAndParts: (sessionID, messages, parts, status) =>
     set((state) => {

@@ -14,6 +14,7 @@ import { usePromptEditor } from '../hooks/usePromptEditor';
 import { usePromptSelectionIPC } from '../hooks/usePromptSelectionIPC';
 import { useSessionStore } from '../store/sessionStore';
 import { getTooltipHtml } from '../utils/chipUtils';
+import { restoreUserMessageToEditor } from '../utils/editorRestore';
 import { getPromptData } from '../utils/promptSerializer';
 import { AgentSelector } from './AgentSelector';
 import { CommandListPopover } from './CommandListPopover';
@@ -50,6 +51,12 @@ interface PromptInputProps {
   onVariantChange?: (model: string, variant: string) => void;
   /** Disable input state */
   disabled?: boolean;
+  /** Parts to restore into the editor (e.g. from a revert action). Triggers on change. */
+  restoreParts?: Part[];
+  /** Callback when the user clicks the Redo button in the header. */
+  onRedo?: () => void;
+  /** Callback fired after restoreParts have been consumed by the editor. */
+  onRestoreComplete?: () => void;
 }
 
 /** Bottom input bar with inline editable rich chips, selectors, and execution controls. */
@@ -66,6 +73,9 @@ export function PromptInput({
   onAgentChange,
   onVariantChange,
   disabled = false,
+  restoreParts,
+  onRedo,
+  onRestoreComplete,
 }: PromptInputProps) {
   const [isFocused, setIsFocused] = React.useState(false);
   const [hasContent, setHasContent] = React.useState(false);
@@ -248,6 +258,17 @@ export function PromptInput({
     };
   }, [mentionTimeoutRef]);
 
+  // Restore parts into the editor when restoreParts prop changes (e.g. from revert action)
+  React.useEffect(() => {
+    if (restoreParts && restoreParts.length > 0 && editorRef.current) {
+      restoreUserMessageToEditor(editorRef.current, restoreParts);
+      const { text } = getPromptData(editorRef.current, activeSessionID, fileInfos);
+      setHasContent(text.trim().length > 0);
+      // Notify parent that restore is complete so it can clear restoreParts
+      onRestoreComplete?.();
+    }
+  }, [restoreParts, activeSessionID, fileInfos, onRestoreComplete]);
+
   const updateMentionState = React.useCallback(() => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) {
@@ -401,7 +422,7 @@ export function PromptInput({
         skillsOnly={commandState.skillsOnly}
       />
 
-      <PromptInputHeader />
+      <PromptInputHeader onRedo={onRedo} />
 
       <div className={`prompt-input-container ${isFocused ? 'focused' : ''}`}>
         <div

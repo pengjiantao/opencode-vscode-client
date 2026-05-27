@@ -111,6 +111,20 @@ export function createSDKClient(directory?: string): SDKClient {
       abort: async (id: string) => {
         await client.session.abort({ sessionID: id });
       },
+      revert: async (sessionID: string, messageID: string, partID?: string): Promise<Session> => {
+        const result = await client.session.revert({
+          sessionID,
+          messageID,
+          partID,
+        });
+        if (!result.data) throw new Error('Failed to revert session');
+        return result.data;
+      },
+      unrevert: async (sessionID: string): Promise<Session> => {
+        const result = await client.session.unrevert({ sessionID });
+        if (!result.data) throw new Error('Failed to unrevert session');
+        return result.data;
+      },
       command: async (options: CommandOptions): Promise<void> => {
         const { id, cmd, args, model, agent, variant } = options;
         const result = await client.session.command({

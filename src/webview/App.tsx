@@ -35,6 +35,7 @@ export function App() {
   const [activeModel, setActiveModel] = useState<string>('');
   const [activeAgent, setActiveAgent] = useState<string>('');
   const [modelVariants, setModelVariants] = useState<Record<string, string>>({});
+  const [restoreParts, setRestoreParts] = useState<Part[]>([]);
 
   const sessions = useSessionStore((s) => s.sessions);
   const activeSessionID = useSessionStore((s) => s.activeSessionID);
@@ -207,6 +208,51 @@ export function App() {
     send({ type: 'question:reject', requestID } as never);
   };
 
+  /** Handles revert: sends IPC and restores user message parts to the input box. */
+  const handleRevert = (messageID: string) => {
+    if (!activeSessionID) return;
+    // Collect user message parts for restoring to input box
+    const sessionMessages = messages[activeSessionID] || [];
+    const userMsg = sessionMessages.find((m) => m.id === messageID);
+    if (userMsg) {
+      const userParts = (parts[messageID] || []).filter(
+        (p) => !(p as { synthetic?: boolean }).synthetic,
+      );
+      // Set restore parts (triggers useEffect in PromptInput to populate editor)
+      setRestoreParts([...userParts]);
+    }
+    // Send revert IPC to extension host.
+    // The host will send back the updated messages:list after the operation.
+    send({ type: 'session:revert', sessionID: activeSessionID, messageID } as never);
+  };
+
+  /** Handles redo: finds next user message forward or fully restores. */
+  const handleRedo = () => {
+    if (!activeSessionID) return;
+    const activeSession = sessions.find((s) => s.id === activeSessionID);
+    const revertMessageID = activeSession?.revert?.messageID;
+    if (!revertMessageID) return;
+
+    const sessionMessages = messages[activeSessionID] || [];
+    // Use array index (not string comparison) to find the next user message
+    const revertIdx = sessionMessages.findIndex((m) => m.id === revertMessageID);
+    const nextUserMsg =
+      revertIdx >= 0
+        ? sessionMessages.slice(revertIdx + 1).find((m) => m.role === 'user')
+        : undefined;
+    if (nextUserMsg) {
+      // Partial redo: revert to the next user message forward
+      send({
+        type: 'session:revert',
+        sessionID: activeSessionID,
+        messageID: nextUserMsg.id,
+      } as never);
+    } else {
+      // Full redo: restore everything
+      send({ type: 'session:unrevert', sessionID: activeSessionID } as never);
+    }
+  };
+
   const currentStatus = activeSessionID ? sessionStatus[activeSessionID] : undefined;
   const activeQuestions = activeSessionID
     ? pendingQuestions.filter((q) => q.sessionID === activeSessionID)
@@ -229,6 +275,7 @@ export function App() {
             sessionID={activeSessionID}
             messages={messages[activeSessionID] || []}
             parts={parts}
+            onRevert={handleRevert}
           />
           {hasPendingQuestion ? (
             <QuestionBar
@@ -266,6 +313,9 @@ export function App() {
           onAgentChange={handleAgentChange}
           onVariantChange={handleVariantChange}
           disabled={!activeSessionID}
+          restoreParts={restoreParts}
+          onRedo={handleRedo}
+          onRestoreComplete={() => setRestoreParts([])}
         />
       )}
 

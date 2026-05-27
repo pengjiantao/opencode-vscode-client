@@ -116,6 +116,45 @@ describe('sessionStore', () => {
     });
   });
 
+  describe('removeMessagesFrom', () => {
+    it('removes messages at or after the given messageID and their parts', () => {
+      const msg1 = createMockUserMessage();
+      const msg2 = createMockUserMessage();
+      const msg3 = createMockUserMessage();
+      msg1.id = 'msg-001';
+      msg2.id = 'msg-002';
+      msg3.id = 'msg-003';
+
+      const part1 = createMockTextPart();
+      part1.messageID = msg1.id;
+      const part2 = createMockTextPart();
+      part2.messageID = msg2.id;
+
+      useSessionStore
+        .getState()
+        .setSessionMessagesAndParts('session-1', [msg1, msg2, msg3], [part1, part2]);
+
+      useSessionStore.getState().removeMessagesFrom('session-1', 'msg-002');
+
+      const remaining = useSessionStore.getState().messages['session-1'];
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].id).toBe('msg-001');
+      expect(useSessionStore.getState().parts['msg-001']).toBeDefined();
+      expect(useSessionStore.getState().parts['msg-002']).toBeUndefined();
+      expect(useSessionStore.getState().parts['msg-003']).toBeUndefined();
+    });
+
+    it('does nothing if no messages match', () => {
+      const msg1 = createMockUserMessage();
+      msg1.id = 'msg-001';
+      useSessionStore.getState().setSessionMessagesAndParts('session-1', [msg1], []);
+
+      useSessionStore.getState().removeMessagesFrom('session-1', 'msg-999');
+
+      expect(useSessionStore.getState().messages['session-1']).toHaveLength(1);
+    });
+  });
+
   describe('setSessionStatus', () => {
     it('sets session status', () => {
       const status = { type: 'busy' as const };

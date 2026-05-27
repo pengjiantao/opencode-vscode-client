@@ -68,6 +68,10 @@ export interface SDKClient {
     abort(id: string): Promise<void>;
     /** Sends a built-in command for execution. */
     command(options: CommandOptions): Promise<void>;
+    /** Reverts a message and all subsequent messages, undoing file changes. */
+    revert(sessionID: string, messageID: string, partID?: string): Promise<Session>;
+    /** Restores previously reverted messages, redoing file changes. */
+    unrevert(sessionID: string): Promise<Session>;
   };
   lsp: {
     status(): Promise<LspStatus[]>;

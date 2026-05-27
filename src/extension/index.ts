@@ -345,6 +345,42 @@ export async function activate(context: ExtensionContext): Promise<void> {
       handlePromise(sessionManager.abort(sessionID), 'Abort failed');
     });
 
+    ipc.on('session:revert', async (msg) => {
+      const { sessionID, messageID } = msg as { sessionID: string; messageID: string };
+      try {
+        await sdk.session.revert(sessionID, messageID);
+        // Send back updated messages so the webview store reflects the revert state
+        const { messages, parts } = await getMessagesAndPartsRecursive(sessionManager, sessionID);
+        ipc.send({
+          type: 'messages:list',
+          sessionID,
+          messages,
+          parts,
+          status: sessionStatuses.get(sessionID),
+        });
+      } catch (err) {
+        ipc.send({ type: 'error', message: `Revert failed: ${(err as Error).message}` });
+      }
+    });
+
+    ipc.on('session:unrevert', async (msg) => {
+      const { sessionID } = msg as { sessionID: string };
+      try {
+        await sdk.session.unrevert(sessionID);
+        // Send back updated messages so the webview store has the restored messages
+        const { messages, parts } = await getMessagesAndPartsRecursive(sessionManager, sessionID);
+        ipc.send({
+          type: 'messages:list',
+          sessionID,
+          messages,
+          parts,
+          status: sessionStatuses.get(sessionID),
+        });
+      } catch (err) {
+        ipc.send({ type: 'error', message: `Unrevert failed: ${(err as Error).message}` });
+      }
+    });
+
     ipc.on('permission:reply', (msg) => {
       const { permissionID, allow, reply } = msg as {
         permissionID: string;

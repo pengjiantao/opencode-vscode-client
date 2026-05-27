@@ -24,13 +24,18 @@ interface ChatViewProps {
   sessionID: string;
   messages: Message[];
   parts: Record<string, Part[]>;
+  /** Callback when the user confirms reverting a message. Restores it to the input box. */
+  onRevert?: (messageID: string) => void;
 }
 
 /** Renders a list of user/assistant message turns with inline permission cards. */
-export function ChatView({ sessionID, messages, parts }: ChatViewProps) {
+export function ChatView({ sessionID, messages, parts, onRevert }: ChatViewProps) {
   const sessionStatus = useSessionStore((s) => s.sessionStatus);
+  const sessions = useSessionStore((s) => s.sessions);
 
   const activeSessionStatus = sessionID ? sessionStatus[sessionID] : undefined;
+  const activeSession = sessions.find((s) => s.id === sessionID);
+  const revertMessageID = activeSession?.revert?.messageID;
 
   /** Groups sequential messages into user→assistant turn pairs.
    *  Backend-generated synthetic user messages (all parts synthetic) are skipped
@@ -73,6 +78,13 @@ export function ChatView({ sessionID, messages, parts }: ChatViewProps) {
         const isGenerating =
           isLastTurn &&
           (activeSessionStatus?.type === 'busy' || activeSessionStatus?.type === 'retry');
+        const isSessionBusy =
+          activeSessionStatus?.type === 'busy' || activeSessionStatus?.type === 'retry';
+        // Use array index (not string comparison) to determine reverted turns
+        const revertIdx = revertMessageID
+          ? turns.findIndex((t) => t.user.id === revertMessageID)
+          : -1;
+        const isReverted = revertIdx >= 0 && index >= revertIdx;
         return (
           <MessageTurn
             key={turn.user.id}
@@ -81,6 +93,9 @@ export function ChatView({ sessionID, messages, parts }: ChatViewProps) {
             parts={parts}
             isGenerating={isGenerating}
             isLastTurn={isLastTurn}
+            isSessionBusy={isSessionBusy}
+            isReverted={isReverted}
+            onRevert={onRevert}
           />
         );
       })}

@@ -7,6 +7,7 @@ import type { Message, Part } from '@opencode-ai/sdk/v2/client';
 import { useEffect, useState } from 'react';
 import { Codicon } from './Codicon';
 import { PartRenderer } from './PartRenderer';
+import { RevertConfirmDialog } from './RevertConfirmDialog';
 import { ThinkingDots } from './ThinkingDots';
 
 const ATTACHMENT_PLACEHOLDER_PATTERN =
@@ -21,10 +22,16 @@ interface MessageTurnProps {
   assistantMessages?: Message[];
   /** Map of all parts keyed by message ID. */
   parts: Record<string, Part[]>;
-  /** Whether the assistant is currently generating output. */
+  /** Whether the assistant is currently generating output (last turn only). */
   isGenerating?: boolean;
   /** Whether this is the last turn in the conversation. */
   isLastTurn?: boolean;
+  /** Whether the session is currently busy (any turn). Used to disable revert. */
+  isSessionBusy?: boolean;
+  /** Whether this turn is hidden due to an active revert. */
+  isReverted?: boolean;
+  /** Callback when the user confirms reverting this turn's user message. */
+  onRevert?: (messageID: string) => void;
 }
 
 /**
@@ -209,8 +216,12 @@ export function MessageTurn({
   parts,
   isGenerating = false,
   isLastTurn = false,
+  isSessionBusy = false,
+  isReverted = false,
+  onRevert,
 }: MessageTurnProps) {
   const [copied, setCopied] = useState(false);
+  const [showRevertConfirm, setShowRevertConfirm] = useState(false);
 
   useEffect(() => {
     if (copied) {
@@ -312,11 +323,34 @@ export function MessageTurn({
 
   const userContent = renderUserParts();
 
+  // Hide this turn entirely if it's been reverted
+  if (isReverted) {
+    return null;
+  }
+
+  const showRevert = !hasSubtask && !!onRevert;
+
   return (
     <div className="message-turn">
       {userContent && (
         <div className="user-message">
           <div className="message-content">{userContent}</div>
+          {showRevert && (
+            <div className="user-message-actions">
+              <button
+                className={`action-btn revert-btn${isSessionBusy ? ' disabled' : ''}`}
+                onClick={() => !isSessionBusy && setShowRevertConfirm(true)}
+                disabled={isSessionBusy}
+                data-custom-title={
+                  isSessionBusy ? 'Cannot revert while running' : 'Revert this message'
+                }
+                data-testid="revert-btn"
+              >
+                <Codicon name="discard" />
+                <span>Revert</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -368,6 +402,15 @@ export function MessageTurn({
           </button>
         </div>
       )}
+
+      <RevertConfirmDialog
+        visible={showRevertConfirm}
+        onConfirm={() => {
+          onRevert?.(userMessage.id);
+          setShowRevertConfirm(false);
+        }}
+        onCancel={() => setShowRevertConfirm(false)}
+      />
     </div>
   );
 }

@@ -257,4 +257,6 @@ export type WebviewToExt =
   | { type: 'clipboard:paste-plain-text' }
   | { type: 'init' }
   | { type: 'sync-pending-requests' }
-  | { type: 'pong' };
+  | { type: 'pong' }
+  | { type: 'session:revert'; sessionID: string; messageID: string }
+  | { type: 'session:unrevert'; sessionID: string };
