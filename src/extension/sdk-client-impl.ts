@@ -14,6 +14,7 @@ import type {
   Message,
   Part,
   Session,
+  SnapshotFileDiff,
   SubtaskPartInput,
   TextPartInput,
 } from '@opencode-ai/sdk/v2/client';
@@ -132,6 +133,13 @@ export function createSDKClient(directory?: string): SDKClient {
         });
         if (!result.data) throw new Error('Failed to fork session');
         return result.data;
+      },
+      diff: async (sessionID: string, messageID?: string): Promise<SnapshotFileDiff[]> => {
+        const result = await client.session.diff({
+          sessionID,
+          ...(messageID && { messageID }),
+        });
+        return result.data ?? [];
       },
       command: async (options: CommandOptions): Promise<void> => {
         const { id, cmd, args, model, agent, variant } = options;

@@ -63,6 +63,7 @@ const defaultMockState = {
   extensionVersion: '0.1.2',
   activeSessionID: 'session-123',
   fileInfos: {},
+  sessionDiffs: {},
   messages: {
     'session-123': [
       {
@@ -380,6 +381,7 @@ describe('PromptInput', () => {
         extensionVersion: '0.1.2',
         activeSessionID: 'session-123',
         fileInfos: {},
+        sessionDiffs: {},
         messages: {
           'session-123': [],
         },
@@ -413,6 +415,7 @@ describe('PromptInput', () => {
         extensionVersion: '0.1.2',
         activeSessionID: 'session-123',
         fileInfos: {},
+        sessionDiffs: {},
         messages: {
           'session-123': [
             {

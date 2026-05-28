@@ -119,6 +119,26 @@
   background-color: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05));
 }
 
+/* Diff button in header — styled as a metadata item rather than an action button */
+.prompt-input-header .diff-btn {
+  background: none;
+  border: none;
+  color: var(--vscode-descriptionForeground, #888888);
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition:
+    color 0.12s ease,
+    background-color 0.12s ease;
+}
+
+.prompt-input-header .diff-btn:hover {
+  color: var(--vscode-textLink-foreground, #007fd4);
+  background-color: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05));
+}
+
 /* Responsive adjustment for narrow screens */
 @media (max-width: 500px) {
   .prompt-input-header,

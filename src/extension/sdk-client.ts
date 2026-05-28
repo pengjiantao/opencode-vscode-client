@@ -10,6 +10,7 @@ import type {
   Message,
   Part,
   Session,
+  SnapshotFileDiff,
 } from '@opencode-ai/sdk/v2/client';
 import type { AgentInfo, CommandInfo, ModelInfo, SkillInfo } from './types';
 
@@ -74,6 +75,8 @@ export interface SDKClient {
     unrevert(sessionID: string): Promise<Session>;
     /** Forks a session, optionally at a specific message. Returns the new session. */
     fork(sessionID: string, messageID?: string): Promise<Session>;
+    /** Retrieves file diffs for a session, optionally filtered by message ID. */
+    diff(sessionID: string, messageID?: string): Promise<SnapshotFileDiff[]>;
   };
   lsp: {
     status(): Promise<LspStatus[]>;

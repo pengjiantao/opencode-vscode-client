@@ -11,6 +11,7 @@ import type {
   QuestionRequest,
   Session,
   SessionStatus,
+  SnapshotFileDiff,
 } from '@opencode-ai/sdk/v2/client';
 import { useCallback } from 'react';
 import { useSessionStore } from '../store/sessionStore';
@@ -41,6 +42,7 @@ export function useSession() {
   const removePendingPermission = useSessionStore((s) => s.removePendingPermission);
   const addPendingQuestion = useSessionStore((s) => s.addPendingQuestion);
   const removePendingQuestion = useSessionStore((s) => s.removePendingQuestion);
+  const setSessionDiffs = useSessionStore((s) => s.setSessionDiffs);
 
   const createSession = useCallback(() => {
     send({ type: 'session:create' });
@@ -224,6 +226,14 @@ export function useSession() {
           }
           break;
         }
+        case 'session.diff': {
+          if (isSessionDiffEvent(event)) {
+            setSessionDiffs(event.properties.sessionID, event.properties.diff);
+          } else {
+            console.error('Received invalid session.diff event:', event);
+          }
+          break;
+        }
         default:
           break;
       }
@@ -243,6 +253,7 @@ export function useSession() {
       removePendingPermission,
       addPendingQuestion,
       removePendingQuestion,
+      setSessionDiffs,
     ],
   );
 
@@ -269,4 +280,39 @@ export function useSession() {
     addPendingQuestion,
     removePendingQuestion,
   };
+}
+
+/**
+ * Type guard to check if an event is a valid session diff event.
+ * Validates the presence of sessionID and structure of the diff property array.
+ *
+ * @param event The event object received from the stream.
+ * @returns True if the event matches the Session Diff Event structure.
+ */
+function isSessionDiffEvent(event: Event): event is Event & {
+  properties: { sessionID: string; diff: SnapshotFileDiff[] };
+} {
+  const props = event.properties as Record<string, unknown> | undefined;
+  if (!props || typeof props !== 'object') {
+    return false;
+  }
+  if (typeof props.sessionID !== 'string') {
+    return false;
+  }
+  if (!Array.isArray(props.diff)) {
+    return false;
+  }
+  return props.diff.every((item: unknown) => {
+    if (!item || typeof item !== 'object') {
+      return false;
+    }
+    const diffItem = item as Record<string, unknown>;
+    return (
+      typeof diffItem.additions === 'number' &&
+      typeof diffItem.deletions === 'number' &&
+      (diffItem.file === undefined || typeof diffItem.file === 'string') &&
+      (diffItem.status === undefined || typeof diffItem.status === 'string') &&
+      (diffItem.patch === undefined || typeof diffItem.patch === 'string')
+    );
+  });
 }

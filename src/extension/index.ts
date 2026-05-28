@@ -5,8 +5,9 @@
  */
 
 import type { Part, Session, SessionStatus } from '@opencode-ai/sdk/v2/client';
-import { window, workspace, type ExtensionContext } from 'vscode';
+import { commands, window, workspace, type ExtensionContext } from 'vscode';
 import { pasteClipboardTextAsPlainText, registerExtensionCommands } from './commands';
+import { createDiffProvider, createDiffUri, DIFF_SCHEME } from './diff-provider';
 import { registerEventHandlers } from './event-handlers';
 import { handleSelectHistory } from './history-handlers';
 import { IPCBridge } from './ipc';
@@ -149,6 +150,12 @@ export async function activate(context: ExtensionContext): Promise<void> {
       window.registerWebviewViewProvider('opencode-sidebar.main', provider),
     );
 
+    // Register diff content provider for the opencode-diff URI scheme
+    const diffProvider = createDiffProvider(sdk, workspaceRoot ?? '');
+    context.subscriptions.push(
+      workspace.registerTextDocumentContentProvider(DIFF_SCHEME, diffProvider.provider),
+    );
+
     /** Handles webview initialization: loads sessions, messages, models, and agents. */
     ipc.on('init', async () => {
       try {
@@ -242,6 +249,31 @@ export async function activate(context: ExtensionContext): Promise<void> {
             agent: state.agent,
             modelVariants: state.modelVariants,
           });
+
+          // Fetch diffs for all open sessions so the webview can display change stats
+          const diffsMap: Record<
+            string,
+            Array<{
+              file?: string;
+              additions: number;
+              deletions: number;
+              status?: string;
+              patch?: string;
+            }>
+          > = {};
+          await Promise.all(
+            openIDs.map(async (id) => {
+              try {
+                const diffs = await sdk.session.diff(id);
+                if (diffs.length > 0) diffsMap[id] = diffs;
+              } catch {
+                /* ignore individual failures */
+              }
+            }),
+          );
+          if (Object.keys(diffsMap).length > 0) {
+            ipc.send({ type: 'session:diffs', diffs: diffsMap });
+          }
 
           const { messages, parts } = await getMessagesAndPartsRecursive(sessionManager, activeID);
           ipc.send({
@@ -413,6 +445,35 @@ export async function activate(context: ExtensionContext): Promise<void> {
         sessionID,
         messageID,
       );
+    });
+
+    ipc.on('diff:open', (msg) => {
+      const { sessionID, messageID } = msg as { sessionID: string; messageID?: string };
+      void (async () => {
+        try {
+          const diffs = await sdk.session.diff(sessionID, messageID);
+          if (diffs.length === 0) {
+            void window.showInformationMessage('No file changes to diff.');
+            return;
+          }
+
+          // Clear the diff provider cache so fresh content is fetched
+          diffProvider.clearCache();
+
+          // Open one vscode.diff editor per changed file.
+          // "before" uses the custom opencode-diff scheme (served by TextDocumentContentProvider).
+          // "after" uses the real file on disk (reflects current state).
+          for (const d of diffs) {
+            if (!d.file) continue;
+            const beforeUri = createDiffUri(sessionID, d.file, 'before');
+            const afterUri = createDiffUri(sessionID, d.file, 'after');
+            const title = `${d.file} (OpenCode Diff)`;
+            await commands.executeCommand('vscode.diff', beforeUri, afterUri, title);
+          }
+        } catch (err) {
+          ipc.send({ type: 'error', message: `Failed to open diff: ${(err as Error).message}` });
+        }
+      })();
     });
 
     ipc.on('permission:reply', (msg) => {

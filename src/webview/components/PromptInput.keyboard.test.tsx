@@ -37,6 +37,7 @@ vi.mock('../store/sessionStore', () => ({
       messages: {},
       mcpServers: [],
       plugins: [],
+      sessionDiffs: {},
       skills: [],
       workspaceName: 'TestWorkspace',
     };

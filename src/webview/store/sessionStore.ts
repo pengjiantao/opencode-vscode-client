@@ -10,6 +10,7 @@ import type {
   QuestionRequest,
   Session,
   SessionStatus,
+  SnapshotFileDiff,
 } from '@opencode-ai/sdk/v2/client';
 import { create } from 'zustand';
 import type { CommandInfo, LspServerInfo, McpServerInfo, SkillInfo } from '../../shared/types';
@@ -30,6 +31,9 @@ export interface SessionStore {
   pendingPermissions: PermissionRequest[];
   /** Active session's pending question requests. */
   pendingQuestions: QuestionRequest[];
+
+  /** Per-session file diffs keyed by session ID. Populated from Session.summary.diffs and session.diff SSE events. */
+  sessionDiffs: Record<string, SnapshotFileDiff[]>;
 
   workspaceName: string | null;
   lspServers: LspServerInfo[];
@@ -74,6 +78,9 @@ export interface SessionStore {
     questions: QuestionRequest[],
   ) => void;
 
+  /** Replaces the file diffs for a specific session. */
+  setSessionDiffs: (sessionID: string, diffs: SnapshotFileDiff[]) => void;
+
   setWorkspaceName: (name: string | null) => void;
   setLspServers: (lsp: LspServerInfo[]) => void;
   setMcpServers: (mcp: McpServerInfo[]) => void;
@@ -99,6 +106,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   messages: {},
   parts: {},
   sessionStatus: {},
+  sessionDiffs: {},
   pendingPermissions: [],
   pendingQuestions: [],
 
@@ -131,12 +139,18 @@ export const useSessionStore = create<SessionStore>((set) => ({
 
   /** Removes a session and clears activeSessionID if it was the active one. */
   removeSession: (id) =>
-    set((state) => ({
-      sessions: state.sessions.filter((s) => s.id !== id),
-      activeSessionID: state.activeSessionID === id ? null : state.activeSessionID,
-      pendingPermissions: state.pendingPermissions.filter((p) => p.sessionID !== id),
-      pendingQuestions: state.pendingQuestions.filter((q) => q.sessionID !== id),
-    })),
+    set((state) => {
+      const nextDiffs = Object.fromEntries(
+        Object.entries(state.sessionDiffs).filter(([key]) => key !== id),
+      );
+      return {
+        sessions: state.sessions.filter((s) => s.id !== id),
+        activeSessionID: state.activeSessionID === id ? null : state.activeSessionID,
+        pendingPermissions: state.pendingPermissions.filter((p) => p.sessionID !== id),
+        pendingQuestions: state.pendingQuestions.filter((q) => q.sessionID !== id),
+        sessionDiffs: nextDiffs,
+      };
+    }),
 
   updateSession: (session) =>
     set((state) => ({
@@ -365,6 +379,10 @@ export const useSessionStore = create<SessionStore>((set) => ({
   extensionVersion: 'unknown',
 
   setWorkspaceName: (workspaceName) => set({ workspaceName }),
+  setSessionDiffs: (sessionID, diffs) =>
+    set((state) => ({
+      sessionDiffs: { ...state.sessionDiffs, [sessionID]: diffs },
+    })),
   setLspServers: (lspServers) => set({ lspServers }),
   setMcpServers: (mcpServers) => set({ mcpServers }),
   setSkills: (skills) => set({ skills }),

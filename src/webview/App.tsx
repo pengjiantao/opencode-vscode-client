@@ -3,7 +3,7 @@
  * Manages IPC message routing, session state, and renders the complete UI.
  */
 
-import type { Part } from '@opencode-ai/sdk/v2/client';
+import type { Part, SnapshotFileDiff } from '@opencode-ai/sdk/v2/client';
 import { useEffect, useState } from 'react';
 import type { AgentInfo, ExtToWebview, ModelInfo } from '../shared/types';
 import { ChatView } from './components/ChatView';
@@ -55,6 +55,7 @@ export function App() {
   const updateSession = useSessionStore((s) => s.updateSession);
   const setSessionMessagesAndParts = useSessionStore((s) => s.setSessionMessagesAndParts);
   const setPendingRequests = useSessionStore((s) => s.setPendingRequests);
+  const setSessionDiffs = useSessionStore((s) => s.setSessionDiffs);
 
   const setWorkspaceName = useSessionStore((s) => s.setWorkspaceName);
   const setLspServers = useSessionStore((s) => s.setLspServers);
@@ -76,6 +77,9 @@ export function App() {
       switch (message.type) {
         case 'session:created':
           addSession(message.session);
+          if (message.session.summary?.diffs) {
+            setSessionDiffs(message.session.id, message.session.summary.diffs);
+          }
           break;
         case 'session:switched':
           setActiveSession(message.sessionID);
@@ -88,9 +92,23 @@ export function App() {
           break;
         case 'session:updated':
           updateSession(message.session);
+          if (message.session.summary?.diffs) {
+            setSessionDiffs(message.session.id, message.session.summary.diffs);
+          }
           break;
         case 'session:deleted':
           removeSession(message.sessionID);
+          break;
+        case 'session:diffs':
+          if (message.diffs && typeof message.diffs === 'object') {
+            for (const [sessionID, diffs] of Object.entries(message.diffs)) {
+              if (Array.isArray(diffs) && diffs.every(isValidSnapshotFileDiff)) {
+                setSessionDiffs(sessionID, diffs);
+              } else {
+                console.error(`Invalid diffs data received for session ${sessionID}`, diffs);
+              }
+            }
+          }
           break;
         case 'models:list':
           setModels(message.models);
@@ -133,6 +151,11 @@ export function App() {
           break;
         case 'init':
           setSessions(message.sessions);
+          for (const session of message.sessions) {
+            if (session.summary?.diffs) {
+              setSessionDiffs(session.id, session.summary.diffs);
+            }
+          }
           break;
         case 'pending-requests':
           setPendingRequests(message.sessionID, message.permissions, message.questions);
@@ -158,6 +181,7 @@ export function App() {
     setExtensionVersion,
     setFileInfo,
     setPendingRequests,
+    setSessionDiffs,
   ]);
 
   const handleSwitchSession = (sessionID: string) => {
@@ -373,5 +397,26 @@ export function App() {
 
       <Tooltip />
     </div>
+  );
+}
+
+/**
+ * Type guard to validate that a value conforms to the SnapshotFileDiff structure.
+ * Checks for required numeric properties and optional string properties.
+ *
+ * @param item The value to validate.
+ * @returns True if the value is a valid SnapshotFileDiff.
+ */
+function isValidSnapshotFileDiff(item: unknown): item is SnapshotFileDiff {
+  if (!item || typeof item !== 'object') {
+    return false;
+  }
+  const diffItem = item as Record<string, unknown>;
+  return (
+    typeof diffItem.additions === 'number' &&
+    typeof diffItem.deletions === 'number' &&
+    (diffItem.file === undefined || typeof diffItem.file === 'string') &&
+    (diffItem.status === undefined || typeof diffItem.status === 'string') &&
+    (diffItem.patch === undefined || typeof diffItem.patch === 'string')
   );
 }

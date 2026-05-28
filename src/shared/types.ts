@@ -156,6 +156,19 @@ export type ExtToWebview =
   | { type: 'session:archived'; sessionID: string }
   | { type: 'session:updated'; session: Session }
   | { type: 'session:deleted'; sessionID: string }
+  | {
+      type: 'session:diffs';
+      diffs: Record<
+        string,
+        Array<{
+          file?: string;
+          additions: number;
+          deletions: number;
+          status?: string;
+          patch?: string;
+        }>
+      >;
+    }
   | { type: 'event:received'; event: Event }
   | { type: 'fork:confirm'; sessionID: string }
   | { type: 'error'; message: string }
@@ -256,6 +269,7 @@ export type WebviewToExt =
   | { type: 'workspace:search-files'; query: string }
   | { type: 'file:select' }
   | { type: 'clipboard:paste-plain-text' }
+  | { type: 'diff:open'; sessionID: string; messageID?: string }
   | { type: 'init' }
   | { type: 'sync-pending-requests' }
   | { type: 'pong' }

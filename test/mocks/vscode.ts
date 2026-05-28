@@ -41,6 +41,17 @@ export const mockVscode = {
     Separator: 1,
     Default: 0,
   },
+  EventEmitter: class EventEmitter {
+    _listeners: Array<(e: unknown) => unknown> = [];
+    event = (listener: (e: unknown) => unknown) => {
+      this._listeners.push(listener);
+      return { dispose: vi.fn() };
+    };
+    fire = (data: unknown) => {
+      for (const l of this._listeners) l(data);
+    };
+    dispose = vi.fn();
+  },
   commands: {
     executeCommand: vi.fn(),
     registerCommand: vi.fn(() => ({ dispose: vi.fn() })),
@@ -100,12 +111,66 @@ export const mockVscode = {
     })),
   },
   Uri: {
-    file: vi.fn((path: string) => ({ fsPath: path, path, scheme: 'file' })),
-    parse: vi.fn((str: string) => ({
-      fsPath: str.replace('file://', ''),
-      path: str,
+    file: vi.fn((path: string) => ({
       scheme: 'file',
+      authority: '',
+      path,
+      query: '',
+      fragment: '',
+      fsPath: path,
+      toString: () => `file://${path}`,
     })),
+    parse: vi.fn((str: string) => {
+      try {
+        const url = new URL(str);
+        return {
+          scheme: url.protocol.replace(':', ''),
+          authority: url.host,
+          path: url.pathname,
+          query: url.search.replace(/^\?/, ''),
+          fragment: url.hash.replace(/^#/, ''),
+          fsPath: url.pathname,
+          toString: () => str,
+        };
+      } catch {
+        return {
+          scheme: 'file',
+          authority: '',
+          path: str,
+          query: '',
+          fragment: '',
+          fsPath: str,
+          toString: () => str,
+        };
+      }
+    }),
+    from: vi.fn(
+      (components: {
+        scheme: string;
+        authority?: string;
+        path?: string;
+        query?: string;
+        fragment?: string;
+      }) => {
+        const rawPath = components.path || '';
+        // Real VS Code Uri decodes path components
+        const path = rawPath.includes('%') ? decodeURIComponent(rawPath) : rawPath;
+        return {
+          scheme: components.scheme,
+          authority: components.authority || '',
+          path,
+          query: components.query || '',
+          fragment: components.fragment || '',
+          fsPath: path,
+          toString: () => {
+            const auth = components.authority ? `//${components.authority}` : '';
+            const q = components.query ? `?${components.query}` : '';
+            const f = components.fragment ? `#${components.fragment}` : '';
+            return `${components.scheme}:${auth}${rawPath}${q}${f}`;
+          },
+        };
+      },
+    ),
   },
   RelativePattern: class {
     constructor(
@@ -122,6 +187,7 @@ export const mockVscode = {
     getWorkspaceFolder: vi.fn(() => undefined),
     workspaceFolders: [],
     findFiles: vi.fn().mockResolvedValue([]),
+    registerTextDocumentContentProvider: vi.fn(() => ({ dispose: vi.fn() })),
   },
   env: {
     clipboard: {

@@ -6,9 +6,11 @@
 
 import React from 'react';
 import type { LspServerInfo, McpServerInfo, SkillInfo } from '../../shared/types';
+import { useIPC } from '../hooks/useIPC';
 import { useSessionStore } from '../store/sessionStore';
 import { escapeHtml } from '../utils/chipUtils';
 import { Codicon } from './Codicon';
+import { DiffButton } from './DiffButton';
 
 /** Props interface for PromptInputHeader component to allow independent rendering/testing. */
 export interface PromptInputHeaderProps {
@@ -43,6 +45,8 @@ export function PromptInputHeader({
   const storeExtensionVersion = useSessionStore((s) => s.extensionVersion);
   const activeSessionID = useSessionStore((s) => s.activeSessionID);
   const sessions = useSessionStore((s) => s.sessions);
+  const sessionDiffs = useSessionStore((s) => s.sessionDiffs);
+  const { send } = useIPC(() => {});
 
   const lspServers = customLspServers ?? storeLspServers;
   const mcpServers = customMcpServers ?? storeMcpServers;
@@ -53,6 +57,7 @@ export function PromptInputHeader({
     ? (sessions ?? []).find((s) => s.id === activeSessionID)
     : undefined;
   const hasRevert = !!activeSession?.revert?.messageID;
+  const activeDiffs = activeSessionID ? (sessionDiffs[activeSessionID] ?? []) : [];
 
   // Compile rich HTML tooltips for hover displays.
   // Memoization ensures we don't rebuild HTML strings unnecessarily on every render.
@@ -185,6 +190,14 @@ export function PromptInputHeader({
           {extensionVersion}
         </span>
       </div>
+
+      {activeDiffs.length > 0 && activeSessionID && (
+        <DiffButton
+          diffs={activeDiffs}
+          className="metadata-item"
+          onClick={() => send({ type: 'diff:open', sessionID: activeSessionID })}
+        />
+      )}
 
       {hasRevert && onRedo && (
         <div

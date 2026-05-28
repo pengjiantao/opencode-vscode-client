@@ -66,9 +66,15 @@
 .message-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 8px;
   margin-top: 8px;
   padding-right: 4px;
+}
+
+/* Diff button pushed to the left side of the actions row */
+.message-actions .diff-btn {
+  margin-right: auto;
 }
 
 .action-btn {
@@ -110,6 +116,23 @@
   opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
+}
+
+/* Diff button — compact change summary */
+.diff-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.diff-added {
+  color: var(--vscode-charts-green);
+  font-weight: 600;
+}
+
+.diff-removed {
+  color: var(--vscode-charts-red);
+  font-weight: 600;
 }
 
 /* Common confirmation dialog overlay */

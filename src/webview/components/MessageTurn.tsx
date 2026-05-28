@@ -3,9 +3,11 @@
  * Displays user message content and, if available, the assistant's response parts and action footer.
  */
 
-import type { Message, Part } from '@opencode-ai/sdk/v2/client';
+import type { Message, Part, SnapshotFileDiff } from '@opencode-ai/sdk/v2/client';
 import { useEffect, useState } from 'react';
+import { useIPC } from '../hooks/useIPC';
 import { Codicon } from './Codicon';
+import { DiffButton } from './DiffButton';
 import { ForkConfirmDialog } from './ForkConfirmDialog';
 import { PartRenderer } from './PartRenderer';
 import { RevertConfirmDialog } from './RevertConfirmDialog';
@@ -227,6 +229,11 @@ export function MessageTurn({
   const [copied, setCopied] = useState(false);
   const [showRevertConfirm, setShowRevertConfirm] = useState(false);
   const [showForkConfirm, setShowForkConfirm] = useState(false);
+  const { send } = useIPC(() => {});
+
+  // Extract per-message diffs from the user message's summary (populated by backend)
+  const messageDiffs: SnapshotFileDiff[] =
+    (userMessage as unknown as { summary?: { diffs?: SnapshotFileDiff[] } }).summary?.diffs ?? [];
 
   useEffect(() => {
     if (copied) {
@@ -403,6 +410,16 @@ export function MessageTurn({
 
       {showActionsFinal && (
         <div className="message-actions">
+          <DiffButton
+            diffs={messageDiffs}
+            onClick={() =>
+              send({
+                type: 'diff:open',
+                sessionID: userMessage.sessionID,
+                messageID: userMessage.id,
+              })
+            }
+          />
           <button
             className="action-btn"
             onClick={copyAnswer}
