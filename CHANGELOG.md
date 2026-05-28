@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.23](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.22...v0.1.23) (2026-05-28)
+
+### Features
+
+- add session fork feature (toolbar and per-message) ([35f6aee](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/35f6aee6300b508fef82d8e818ee6e6caea45e2e))
+
+### Bug Fixes
+
+- handle message.removed and message.part.removed SSE events in webview ([1402acb](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/1402acbe4b65d11d64385725f8e311009d7600b6))
+- **MessageTurn:** scroll to current turn's user message instead of last one ([c2a7c63](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c2a7c63baa138cae61ec152ad72aaad2d63a8b25))
+
 ### [0.1.22](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.21...v0.1.22) (2026-05-27)
 
 ### Features
