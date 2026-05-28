@@ -124,7 +124,7 @@ describe('ChatView', () => {
 
       expect(screen.queryByText('Copy Answer')).not.toBeInTheDocument();
       expect(screen.queryByText('To Top')).not.toBeInTheDocument();
-      expect(screen.queryByText('To Recent User')).not.toBeInTheDocument();
+      expect(screen.queryByText('To User Message')).not.toBeInTheDocument();
     });
 
     it('renders actions buttons in the message turn when sessionStatus is idle', () => {
@@ -142,7 +142,7 @@ describe('ChatView', () => {
 
       expect(screen.getByText('Copy Answer')).toBeInTheDocument();
       expect(screen.getByText('To Top')).toBeInTheDocument();
-      expect(screen.getByText('To Recent User')).toBeInTheDocument();
+      expect(screen.getByText('To User Message')).toBeInTheDocument();
     });
   });
 });

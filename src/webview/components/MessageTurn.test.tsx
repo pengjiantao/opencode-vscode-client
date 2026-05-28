@@ -127,9 +127,9 @@ describe('MessageTurn', () => {
         'data-custom-title',
         'Scroll to top',
       );
-      expect(screen.getByText('To Recent User').closest('button')).toHaveAttribute(
+      expect(screen.getByText('To User Message').closest('button')).toHaveAttribute(
         'data-custom-title',
-        'Scroll to recent user message',
+        'Scroll to user message',
       );
     });
 
@@ -148,7 +148,7 @@ describe('MessageTurn', () => {
 
       expect(screen.queryByText('Copy Answer')).not.toBeInTheDocument();
       expect(screen.queryByText('To Top')).not.toBeInTheDocument();
-      expect(screen.queryByText('To Recent User')).not.toBeInTheDocument();
+      expect(screen.queryByText('To User Message')).not.toBeInTheDocument();
     });
 
     it('copies only text/markdown content when copy answer is clicked', () => {
@@ -266,11 +266,6 @@ describe('MessageTurn', () => {
       const userMsg = createMockUserMessage();
       const assistantMsg = createMockAssistantMessage();
 
-      // Create a mocked user message DOM container so querySelector matches
-      const userMsgDiv = document.createElement('div');
-      userMsgDiv.className = 'user-message';
-      document.body.appendChild(userMsgDiv);
-
       render(
         <MessageTurn
           userMessage={userMsg}
@@ -281,14 +276,14 @@ describe('MessageTurn', () => {
         />,
       );
 
-      const toUserBtn = screen.getByText('To Recent User').closest('button')!;
+      const toUserBtn = screen.getByText('To User Message').closest('button')!;
       fireEvent.click(toUserBtn);
 
+      // 验证 scrollIntoView 被调用（用户消息元素由组件自身渲染）
       expect(scrollIntoViewSpy).toHaveBeenCalledWith({
         behavior: 'smooth',
         block: 'start',
       });
-      document.body.removeChild(userMsgDiv);
     });
 
     it('uses data-custom-title instead of native title on buttons to support custom tooltips', () => {

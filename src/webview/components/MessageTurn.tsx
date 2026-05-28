@@ -262,11 +262,11 @@ export function MessageTurn({
     }
   };
 
-  const scrollToRecentUser = () => {
-    const userMsgs = document.querySelectorAll('.user-message');
-    if (userMsgs.length > 0) {
-      const lastUserMsg = userMsgs[userMsgs.length - 1];
-      lastUserMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const scrollToUserMessage = () => {
+    // 查找当前 turn 的用户消息元素
+    const turnElement = document.querySelector(`[data-message-id="${userMessage.id}"]`);
+    if (turnElement) {
+      turnElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -333,7 +333,7 @@ export function MessageTurn({
   return (
     <div className="message-turn">
       {userContent && (
-        <div className="user-message">
+        <div className="user-message" data-message-id={userMessage.id}>
           <div className="message-content">{userContent}</div>
           {showRevert && (
             <div className="user-message-actions">
@@ -394,11 +394,11 @@ export function MessageTurn({
           </button>
           <button
             className="action-btn"
-            onClick={scrollToRecentUser}
-            data-custom-title="Scroll to recent user message"
+            onClick={scrollToUserMessage}
+            data-custom-title="Scroll to user message"
           >
-            <Codicon name="$(chevron-down)" />
-            <span>To Recent User</span>
+            <Codicon name="$(chevron-up)" />
+            <span>To User Message</span>
           </button>
         </div>
       )}
