@@ -17,6 +17,7 @@ import { createSDKClient } from './sdk-client-impl';
 import {
   getMessagesAndPartsRecursive,
   handleCreateSession,
+  handleForkSession,
   registerSessionLifecycleHandlers,
 } from './session-handlers';
 import { SessionManager } from './session-manager';
@@ -97,6 +98,21 @@ export async function activate(context: ExtensionContext): Promise<void> {
       pendingBuffer,
       relationTracker,
     });
+  };
+
+  /** Forks the active session after idle check. Sends fork:confirm IPC to webview for confirmation. */
+  const invokeForkSession = (): void => {
+    const activeID = sessionManager.activeSessionID;
+    if (!activeID) {
+      void window.showInformationMessage('No active session to fork.');
+      return;
+    }
+    const status = sessionStatuses.get(activeID);
+    if (status && (status.type === 'busy' || status.type === 'retry')) {
+      void window.showWarningMessage('Cannot fork while session is processing.');
+      return;
+    }
+    ipc.send({ type: 'fork:confirm', sessionID: activeID });
   };
 
   try {
@@ -381,6 +397,24 @@ export async function activate(context: ExtensionContext): Promise<void> {
       }
     });
 
+    ipc.on('session:fork', (msg) => {
+      const { sessionID, messageID } = msg as { sessionID: string; messageID?: string };
+      void handleForkSession(
+        {
+          sdk,
+          ipc,
+          sessionManager,
+          sessionStateStore,
+          getCachedModels: () => cachedModels,
+          getCachedAgents: () => cachedAgents,
+          syncPendingRequests,
+          sessionStatuses,
+        },
+        sessionID,
+        messageID,
+      );
+    });
+
     ipc.on('permission:reply', (msg) => {
       const { permissionID, allow, reply } = msg as {
         permissionID: string;
@@ -430,6 +464,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       () => void invokeCreateSession(),
       () => void invokeSelectHistory(),
       () => void invokeCloseAllSessions(),
+      () => invokeForkSession(),
       sdk,
     );
   } catch (err) {

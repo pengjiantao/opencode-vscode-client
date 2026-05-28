@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import type { AgentInfo, ExtToWebview, ModelInfo } from '../shared/types';
 import { ChatView } from './components/ChatView';
 import { Codicon } from './components/Codicon';
+import { ForkConfirmDialog } from './components/ForkConfirmDialog';
 import { PermissionBar } from './components/PermissionBar';
 import { PromptInput } from './components/PromptInput';
 import { QuestionBar } from './components/QuestionBar';
@@ -36,6 +37,9 @@ export function App() {
   const [activeAgent, setActiveAgent] = useState<string>('');
   const [modelVariants, setModelVariants] = useState<Record<string, string>>({});
   const [restoreParts, setRestoreParts] = useState<Part[]>([]);
+  const [showForkConfirm, setShowForkConfirm] = useState(false);
+  const [forkTargetSessionID, setForkTargetSessionID] = useState<string | null>(null);
+  const [forkTargetMessageID, setForkTargetMessageID] = useState<string | undefined>(undefined);
 
   const sessions = useSessionStore((s) => s.sessions);
   const activeSessionID = useSessionStore((s) => s.activeSessionID);
@@ -121,6 +125,11 @@ export function App() {
           break;
         case 'error':
           console.error('Server error:', message.message);
+          break;
+        case 'fork:confirm':
+          setForkTargetSessionID(message.sessionID);
+          setForkTargetMessageID(undefined);
+          setShowForkConfirm(true);
           break;
         case 'init':
           setSessions(message.sessions);
@@ -253,6 +262,41 @@ export function App() {
     }
   };
 
+  /** Opens fork confirmation dialog at a specific message, restoring its content to the input box.
+   *  The confirmation already happened in MessageTurn's ForkConfirmDialog, so directly send IPC. */
+  const handleForkAtMessage = (messageID: string) => {
+    if (!activeSessionID) return;
+    const userParts = (parts[messageID] || []).filter(
+      (p) => !(p as { synthetic?: boolean }).synthetic,
+    );
+    setRestoreParts([...userParts]);
+    send({
+      type: 'session:fork',
+      sessionID: activeSessionID,
+      messageID,
+    } as never);
+  };
+
+  /** Confirms the fork operation and sends IPC to the extension host. */
+  const handleForkConfirm = () => {
+    if (!forkTargetSessionID) return;
+    send({
+      type: 'session:fork',
+      sessionID: forkTargetSessionID,
+      messageID: forkTargetMessageID,
+    } as never);
+    setShowForkConfirm(false);
+    setForkTargetSessionID(null);
+    setForkTargetMessageID(undefined);
+  };
+
+  /** Cancels the fork dialog and resets fork state. */
+  const handleForkCancel = () => {
+    setShowForkConfirm(false);
+    setForkTargetSessionID(null);
+    setForkTargetMessageID(undefined);
+  };
+
   const currentStatus = activeSessionID ? sessionStatus[activeSessionID] : undefined;
   const activeQuestions = activeSessionID
     ? pendingQuestions.filter((q) => q.sessionID === activeSessionID)
@@ -276,6 +320,7 @@ export function App() {
             messages={messages[activeSessionID] || []}
             parts={parts}
             onRevert={handleRevert}
+            onFork={handleForkAtMessage}
           />
           {hasPendingQuestion ? (
             <QuestionBar
@@ -318,6 +363,13 @@ export function App() {
           onRestoreComplete={() => setRestoreParts([])}
         />
       )}
+
+      <ForkConfirmDialog
+        visible={showForkConfirm}
+        mode={forkTargetMessageID ? 'message' : 'session'}
+        onConfirm={handleForkConfirm}
+        onCancel={handleForkCancel}
+      />
 
       <Tooltip />
     </div>

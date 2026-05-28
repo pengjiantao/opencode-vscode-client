@@ -72,6 +72,8 @@ export interface SDKClient {
     revert(sessionID: string, messageID: string, partID?: string): Promise<Session>;
     /** Restores previously reverted messages, redoing file changes. */
     unrevert(sessionID: string): Promise<Session>;
+    /** Forks a session, optionally at a specific message. Returns the new session. */
+    fork(sessionID: string, messageID?: string): Promise<Session>;
   };
   lsp: {
     status(): Promise<LspStatus[]>;

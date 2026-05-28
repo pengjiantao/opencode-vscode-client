@@ -157,6 +157,7 @@ export type ExtToWebview =
   | { type: 'session:updated'; session: Session }
   | { type: 'session:deleted'; sessionID: string }
   | { type: 'event:received'; event: Event }
+  | { type: 'fork:confirm'; sessionID: string }
   | { type: 'error'; message: string }
   | {
       type: 'init';
@@ -259,4 +260,5 @@ export type WebviewToExt =
   | { type: 'sync-pending-requests' }
   | { type: 'pong' }
   | { type: 'session:revert'; sessionID: string; messageID: string }
-  | { type: 'session:unrevert'; sessionID: string };
+  | { type: 'session:unrevert'; sessionID: string }
+  | { type: 'session:fork'; sessionID: string; messageID?: string };

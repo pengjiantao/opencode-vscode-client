@@ -586,4 +586,145 @@ describe('MessageTurn', () => {
       expect(container.querySelector('.thinking-dots')).not.toBeInTheDocument();
     });
   });
+
+  describe('Fork button', () => {
+    it('renders fork button when onFork callback is provided', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+
+      render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessage={assistantMsg}
+          parts={{}}
+          onFork={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByTestId('fork-btn')).toBeInTheDocument();
+      expect(screen.getByText('Fork')).toBeInTheDocument();
+    });
+
+    it('does not render fork button when onFork is not provided', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+
+      render(<MessageTurn userMessage={userMsg} assistantMessage={assistantMsg} parts={{}} />);
+
+      expect(screen.queryByTestId('fork-btn')).not.toBeInTheDocument();
+    });
+
+    it('disables fork button when session is busy', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+
+      render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessage={assistantMsg}
+          parts={{}}
+          isSessionBusy={true}
+          onFork={vi.fn()}
+        />,
+      );
+
+      const forkBtn = screen.getByTestId('fork-btn');
+      expect(forkBtn).toBeDisabled();
+    });
+
+    it('enables fork button when session is idle', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+
+      render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessage={assistantMsg}
+          parts={{}}
+          isSessionBusy={false}
+          onFork={vi.fn()}
+        />,
+      );
+
+      const forkBtn = screen.getByTestId('fork-btn');
+      expect(forkBtn).not.toBeDisabled();
+    });
+
+    it('opens fork confirmation dialog when fork button is clicked', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+
+      render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessage={assistantMsg}
+          parts={{}}
+          onFork={vi.fn()}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('fork-btn'));
+
+      expect(screen.getByText('Fork from Message')).toBeInTheDocument();
+    });
+
+    it('calls onFork with message ID when fork is confirmed', () => {
+      const onFork = vi.fn();
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+
+      render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessage={assistantMsg}
+          parts={{}}
+          onFork={onFork}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('fork-btn'));
+      const confirmBtn = document.querySelector('.confirm-btn.confirm')!;
+      fireEvent.click(confirmBtn);
+
+      expect(onFork).toHaveBeenCalledWith(userMsg.id);
+    });
+
+    it('does not call onFork when fork is cancelled', () => {
+      const onFork = vi.fn();
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+
+      render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessage={assistantMsg}
+          parts={{}}
+          onFork={onFork}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('fork-btn'));
+      const cancelBtn = document.querySelector('.confirm-btn.cancel')!;
+      fireEvent.click(cancelBtn);
+
+      expect(onFork).not.toHaveBeenCalled();
+    });
+
+    it('does not render fork button for subtask turns', () => {
+      const userMsg = createMockUserMessage();
+      const subtaskPart = createMockTextPart('subtask content');
+      subtaskPart.messageID = userMsg.id;
+      subtaskPart.type = 'subtask' as never;
+
+      render(
+        <MessageTurn
+          userMessage={userMsg}
+          parts={{ [userMsg.id]: [subtaskPart] }}
+          onFork={vi.fn()}
+        />,
+      );
+
+      expect(screen.queryByTestId('fork-btn')).not.toBeInTheDocument();
+    });
+  });
 });

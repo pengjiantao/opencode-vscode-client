@@ -6,6 +6,7 @@
 import type { Message, Part } from '@opencode-ai/sdk/v2/client';
 import { useEffect, useState } from 'react';
 import { Codicon } from './Codicon';
+import { ForkConfirmDialog } from './ForkConfirmDialog';
 import { PartRenderer } from './PartRenderer';
 import { RevertConfirmDialog } from './RevertConfirmDialog';
 import { ThinkingDots } from './ThinkingDots';
@@ -32,6 +33,8 @@ interface MessageTurnProps {
   isReverted?: boolean;
   /** Callback when the user confirms reverting this turn's user message. */
   onRevert?: (messageID: string) => void;
+  /** Callback when the user confirms forking at this turn's user message. */
+  onFork?: (messageID: string) => void;
 }
 
 /**
@@ -219,9 +222,11 @@ export function MessageTurn({
   isSessionBusy = false,
   isReverted = false,
   onRevert,
+  onFork,
 }: MessageTurnProps) {
   const [copied, setCopied] = useState(false);
   const [showRevertConfirm, setShowRevertConfirm] = useState(false);
+  const [showForkConfirm, setShowForkConfirm] = useState(false);
 
   useEffect(() => {
     if (copied) {
@@ -329,26 +334,44 @@ export function MessageTurn({
   }
 
   const showRevert = !hasSubtask && !!onRevert;
+  const showFork = !hasSubtask && !!onFork;
+  const showUserActions = showRevert || showFork;
 
   return (
     <div className="message-turn">
       {userContent && (
         <div className="user-message" data-message-id={userMessage.id}>
           <div className="message-content">{userContent}</div>
-          {showRevert && (
+          {showUserActions && (
             <div className="user-message-actions">
-              <button
-                className={`action-btn revert-btn${isSessionBusy ? ' disabled' : ''}`}
-                onClick={() => !isSessionBusy && setShowRevertConfirm(true)}
-                disabled={isSessionBusy}
-                data-custom-title={
-                  isSessionBusy ? 'Cannot revert while running' : 'Revert this message'
-                }
-                data-testid="revert-btn"
-              >
-                <Codicon name="discard" />
-                <span>Revert</span>
-              </button>
+              {showRevert && (
+                <button
+                  className={`action-btn revert-btn${isSessionBusy ? ' disabled' : ''}`}
+                  onClick={() => !isSessionBusy && setShowRevertConfirm(true)}
+                  disabled={isSessionBusy}
+                  data-custom-title={
+                    isSessionBusy ? 'Cannot revert while running' : 'Revert this message'
+                  }
+                  data-testid="revert-btn"
+                >
+                  <Codicon name="discard" />
+                  <span>Revert</span>
+                </button>
+              )}
+              {showFork && (
+                <button
+                  className={`action-btn fork-btn${isSessionBusy ? ' disabled' : ''}`}
+                  onClick={() => !isSessionBusy && setShowForkConfirm(true)}
+                  disabled={isSessionBusy}
+                  data-custom-title={
+                    isSessionBusy ? 'Cannot fork while running' : 'Fork from this message'
+                  }
+                  data-testid="fork-btn"
+                >
+                  <Codicon name="repo-forked" />
+                  <span>Fork</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -410,6 +433,16 @@ export function MessageTurn({
           setShowRevertConfirm(false);
         }}
         onCancel={() => setShowRevertConfirm(false)}
+      />
+
+      <ForkConfirmDialog
+        visible={showForkConfirm}
+        mode="message"
+        onConfirm={() => {
+          onFork?.(userMessage.id);
+          setShowForkConfirm(false);
+        }}
+        onCancel={() => setShowForkConfirm(false)}
       />
     </div>
   );

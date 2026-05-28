@@ -26,10 +26,12 @@ interface ChatViewProps {
   parts: Record<string, Part[]>;
   /** Callback when the user confirms reverting a message. Restores it to the input box. */
   onRevert?: (messageID: string) => void;
+  /** Callback when the user confirms forking at a specific message. */
+  onFork?: (messageID: string) => void;
 }
 
 /** Renders a list of user/assistant message turns with inline permission cards. */
-export function ChatView({ sessionID, messages, parts, onRevert }: ChatViewProps) {
+export function ChatView({ sessionID, messages, parts, onRevert, onFork }: ChatViewProps) {
   const sessionStatus = useSessionStore((s) => s.sessionStatus);
   const sessions = useSessionStore((s) => s.sessions);
 
@@ -96,6 +98,7 @@ export function ChatView({ sessionID, messages, parts, onRevert }: ChatViewProps
             isSessionBusy={isSessionBusy}
             isReverted={isReverted}
             onRevert={onRevert}
+            onFork={onFork}
           />
         );
       })}

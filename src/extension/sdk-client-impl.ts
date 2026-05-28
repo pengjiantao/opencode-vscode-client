@@ -125,6 +125,14 @@ export function createSDKClient(directory?: string): SDKClient {
         if (!result.data) throw new Error('Failed to unrevert session');
         return result.data;
       },
+      fork: async (sessionID: string, messageID?: string): Promise<Session> => {
+        const result = await client.session.fork({
+          sessionID,
+          ...(messageID && { messageID }),
+        });
+        if (!result.data) throw new Error('Failed to fork session');
+        return result.data;
+      },
       command: async (options: CommandOptions): Promise<void> => {
         const { id, cmd, args, model, agent, variant } = options;
         const result = await client.session.command({

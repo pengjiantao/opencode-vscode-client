@@ -142,6 +142,88 @@ export interface RegisterLifecycleHandlersOptions {
   invokeCloseAllSessions: () => Promise<void>;
 }
 
+/** Options for the handleForkSession function. */
+export interface ForkSessionOptions {
+  /** The SDK client. */
+  sdk: SDKClient;
+  /** IPC bridge to communicate with the webview. */
+  ipc: IPCBridge;
+  /** Session lifecycle manager. */
+  sessionManager: SessionManager;
+  /** State store for per-session configuration parameters. */
+  sessionStateStore: SessionStateStore;
+  /** Supplier function for cached language models. */
+  getCachedModels: () => ModelInfo[];
+  /** Supplier function for cached agents. */
+  getCachedAgents: () => AgentInfo[];
+  /** Callback to sync pending permission/question requests for a session. */
+  syncPendingRequests: (sessionID: string) => void;
+  /** Map of session IDs to their active processing statuses. */
+  sessionStatuses: Map<string, SessionStatus>;
+}
+
+/**
+ * Forks a session (optionally at a specific message), registers the new session as open,
+ * switches to it, and sends IPC notifications so the webview updates.
+ *
+ * @param options Dependencies for the fork operation.
+ * @param sessionID The source session to fork.
+ * @param messageID Optional message ID to fork at (exclusive boundary).
+ */
+export async function handleForkSession(
+  options: ForkSessionOptions,
+  sessionID: string,
+  messageID?: string,
+): Promise<void> {
+  const {
+    sdk,
+    ipc,
+    sessionManager,
+    sessionStateStore,
+    getCachedModels,
+    getCachedAgents,
+    syncPendingRequests,
+    sessionStatuses,
+  } = options;
+  try {
+    const newSession = await sdk.session.fork(sessionID, messageID);
+
+    const openIDs = sessionManager.getOpenSessionIDs();
+    if (!openIDs.includes(newSession.id)) {
+      openIDs.push(newSession.id);
+      await sessionManager.setOpenSessionIDs(openIDs);
+    }
+
+    await sessionManager.switch(newSession.id);
+
+    ipc.send({ type: 'session:created', session: newSession });
+    const state = sessionStateStore.getOrInitialize(
+      newSession.id,
+      getCachedModels(),
+      getCachedAgents(),
+    );
+    ipc.send({
+      type: 'session:switched',
+      sessionID: newSession.id,
+      model: state.model,
+      agent: state.agent,
+      modelVariants: state.modelVariants,
+    });
+
+    const { messages, parts } = await getMessagesAndPartsRecursive(sessionManager, newSession.id);
+    ipc.send({
+      type: 'messages:list',
+      sessionID: newSession.id,
+      messages,
+      parts,
+      status: sessionStatuses.get(newSession.id),
+    });
+    syncPendingRequests(newSession.id);
+  } catch (err) {
+    ipc.send({ type: 'error', message: `Fork failed: ${(err as Error).message}` });
+  }
+}
+
 /**
  * Registers IPC handlers for session:switch, session:archive, session:close, and session:close-all.
  * Handles the visual UI state shifts and state updates between active tabs.

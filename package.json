@@ -153,6 +153,12 @@
         "command": "opencode-sidebar.closeAllSessions",
         "title": "Close All Sessions",
         "category": "OpenCode"
+      },
+      {
+        "command": "opencode-sidebar.forkSession",
+        "title": "Fork Session",
+        "category": "OpenCode",
+        "icon": "$(repo-forked)"
       }
     ],
     "menus": {
@@ -178,6 +184,11 @@
           "command": "opencode-sidebar.openSettings",
           "when": "view == opencode-sidebar.main",
           "group": "navigation@3"
+        },
+        {
+          "command": "opencode-sidebar.forkSession",
+          "when": "view == opencode-sidebar.main",
+          "group": "navigation@4"
         }
       ],
       "editor/context": [
