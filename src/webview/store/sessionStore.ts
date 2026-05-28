@@ -47,6 +47,7 @@ export interface SessionStore {
   addMessage: (sessionID: string, message: Message) => void;
   updateMessage: (message: Message) => void;
   removeMessagesFrom: (sessionID: string, fromMessageID: string) => void;
+  removePart: (messageID: string, partID: string) => void;
   addPart: (messageID: string, part: Part) => void;
   updatePart: (part: Part) => void;
   updatePartDelta: (messageID: string, partID: string, field: string, delta: string) => void;
@@ -224,6 +225,20 @@ export const useSessionStore = create<SessionStore>((set) => ({
         messages: groupedMessages,
         parts: partsMap,
         sessionStatus: newSessionStatus,
+      };
+    }),
+
+  /** Removes a single part by ID from a message's part list. */
+  removePart: (messageID, partID) =>
+    set((state) => {
+      const currentParts = state.parts[messageID];
+      if (!currentParts) return {};
+      const newParts = currentParts.filter((p) => p.id !== partID);
+      return {
+        parts: {
+          ...state.parts,
+          [messageID]: newParts,
+        },
       };
     }),
 

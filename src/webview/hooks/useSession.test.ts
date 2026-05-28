@@ -295,6 +295,66 @@ describe('useSession', () => {
       expect(useSessionStore.getState().parts['msg-1']).toContainEqual(part);
     });
 
+    it('handles message.removed event — removes message and subsequent messages from store', () => {
+      const { result } = renderHook(() => useSession());
+
+      act(() => {
+        useSessionStore.setState({
+          messages: {
+            'session-1': [
+              { id: 'msg-001', sessionID: 'session-1', role: 'user' },
+              { id: 'msg-002', sessionID: 'session-1', role: 'assistant' },
+              { id: 'msg-003', sessionID: 'session-1', role: 'user' },
+            ] as unknown as Message[],
+          },
+          parts: {
+            'msg-001': [{ id: 'part-1', messageID: 'msg-001' }] as unknown as Part[],
+            'msg-002': [{ id: 'part-2', messageID: 'msg-002' }] as unknown as Part[],
+            'msg-003': [{ id: 'part-3', messageID: 'msg-003' }] as unknown as Part[],
+          },
+        });
+      });
+
+      act(() => {
+        result.current.handleEvent({
+          type: 'message.removed',
+          properties: { sessionID: 'session-1', messageID: 'msg-002' },
+        } as unknown as Event);
+      });
+
+      const remaining = useSessionStore.getState().messages['session-1'];
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].id).toBe('msg-001');
+      expect(useSessionStore.getState().parts['msg-001']).toBeDefined();
+      expect(useSessionStore.getState().parts['msg-002']).toBeUndefined();
+      expect(useSessionStore.getState().parts['msg-003']).toBeUndefined();
+    });
+
+    it('handles message.part.removed event — removes a specific part from a message', () => {
+      const { result } = renderHook(() => useSession());
+
+      act(() => {
+        useSessionStore.setState({
+          parts: {
+            'msg-1': [
+              { id: 'part-keep', messageID: 'msg-1', text: 'Keep' },
+              { id: 'part-remove', messageID: 'msg-1', text: 'Remove' },
+            ] as unknown as Part[],
+          },
+        });
+      });
+
+      act(() => {
+        result.current.handleEvent({
+          type: 'message.part.removed',
+          properties: { sessionID: 'session-1', messageID: 'msg-1', partID: 'part-remove' },
+        } as unknown as Event);
+      });
+
+      expect(useSessionStore.getState().parts['msg-1']).toHaveLength(1);
+      expect(useSessionStore.getState().parts['msg-1'][0].id).toBe('part-keep');
+    });
+
     it('handles session.status event', () => {
       const { result } = renderHook(() => useSession());
 

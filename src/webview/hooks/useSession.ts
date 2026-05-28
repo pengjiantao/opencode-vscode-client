@@ -34,6 +34,8 @@ export function useSession() {
   const updateMessage = useSessionStore((s) => s.updateMessage);
   const updatePart = useSessionStore((s) => s.updatePart);
   const updatePartDelta = useSessionStore((s) => s.updatePartDelta);
+  const removeMessagesFrom = useSessionStore((s) => s.removeMessagesFrom);
+  const removePart = useSessionStore((s) => s.removePart);
   const setSessionStatus = useSessionStore((s) => s.setSessionStatus);
   const addPendingPermission = useSessionStore((s) => s.addPendingPermission);
   const removePendingPermission = useSessionStore((s) => s.removePendingPermission);
@@ -154,6 +156,22 @@ export function useSession() {
           );
           break;
         }
+        /** Removes a message and all subsequent messages from a session's store. */
+        case 'message.removed': {
+          const removedProps = (
+            event as unknown as { properties: { sessionID: string; messageID: string } }
+          ).properties;
+          removeMessagesFrom(removedProps.sessionID, removedProps.messageID);
+          break;
+        }
+        /** Removes a single part from a message's part list. */
+        case 'message.part.removed': {
+          const partRemovedProps = (
+            event as unknown as { properties: { messageID: string; partID: string } }
+          ).properties;
+          removePart(partRemovedProps.messageID, partRemovedProps.partID);
+          break;
+        }
         case 'session.status':
           setSessionStatus(
             (props as { sessionID: string }).sessionID,
@@ -218,6 +236,8 @@ export function useSession() {
       updateMessage,
       updatePart,
       updatePartDelta,
+      removeMessagesFrom,
+      removePart,
       setSessionStatus,
       addPendingPermission,
       removePendingPermission,

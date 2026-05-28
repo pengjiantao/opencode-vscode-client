@@ -155,6 +155,34 @@ describe('sessionStore', () => {
     });
   });
 
+  describe('removePart', () => {
+    it('removes a specific part from a message', () => {
+      const part1 = createMockTextPart('Part 1');
+      part1.id = 'part-001';
+      part1.messageID = 'msg-1';
+      const part2 = createMockTextPart('Part 2');
+      part2.id = 'part-002';
+      part2.messageID = 'msg-1';
+
+      useSessionStore.setState({
+        parts: { 'msg-1': [part1, part2] },
+      });
+
+      useSessionStore.getState().removePart('msg-1', 'part-001');
+
+      expect(useSessionStore.getState().parts['msg-1']).toHaveLength(1);
+      expect(useSessionStore.getState().parts['msg-1'][0].id).toBe('part-002');
+    });
+
+    it('does nothing if messageID has no parts', () => {
+      useSessionStore.setState({ parts: {} });
+
+      useSessionStore.getState().removePart('msg-nonexistent', 'part-1');
+
+      expect(useSessionStore.getState().parts['msg-nonexistent']).toBeUndefined();
+    });
+  });
+
   describe('setSessionStatus', () => {
     it('sets session status', () => {
       const status = { type: 'busy' as const };
