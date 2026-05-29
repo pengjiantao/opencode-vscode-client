@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.24](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.23...v0.1.24) (2026-05-29)
+
+### Features
+
+- add diff viewing via virtual document provider and DiffButton ([5af3ce2](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/5af3ce2aa601f15098f572f0a9a52a2c5ec75b85))
+- replace native vscode.diff with custom Review Panel ([250ab92](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/250ab921796774c0eb1aee372e779efd5f1ae070))
+
+### Bug Fixes
+
+- **review:** register file:open handler on review panel IPC bridge ([d2d44f4](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/d2d44f46a6c14725414d2afbddfb0df2db0ba3ce))
+
 ### [0.1.23](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.22...v0.1.23) (2026-05-28)
 
 ### Features
