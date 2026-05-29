@@ -11,6 +11,15 @@ import { Uri, window, workspace } from 'vscode';
 import { activate } from './index';
 
 vi.mock('fs', () => ({
+  default: {
+    existsSync: vi.fn(),
+    statSync: vi.fn(),
+    readFileSync: vi.fn(),
+    promises: {
+      stat: vi.fn(),
+      readFile: vi.fn(),
+    },
+  },
   existsSync: vi.fn(),
   statSync: vi.fn(),
   readFileSync: vi.fn(),

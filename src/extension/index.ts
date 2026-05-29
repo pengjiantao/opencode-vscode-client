@@ -5,14 +5,14 @@
  */
 
 import type { Part, Session, SessionStatus } from '@opencode-ai/sdk/v2/client';
-import { commands, window, workspace, type ExtensionContext } from 'vscode';
+import { window, workspace, type ExtensionContext } from 'vscode';
 import { pasteClipboardTextAsPlainText, registerExtensionCommands } from './commands';
-import { createDiffProvider, createDiffUri, DIFF_SCHEME } from './diff-provider';
 import { registerEventHandlers } from './event-handlers';
 import { handleSelectHistory } from './history-handlers';
 import { IPCBridge } from './ipc';
 import { syncMetadata as importSyncMetadata } from './metadata';
 import { PendingRequestBuffer } from './pending-request-buffer';
+import { ReviewPanelManager } from './review-panel-manager';
 import type { SDKClient } from './sdk-client';
 import { createSDKClient } from './sdk-client-impl';
 import {
@@ -123,6 +123,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
     ipc = new IPCBridge();
     provider = new OpencodeSidebarViewProvider(context, ipc);
 
+    const reviewManager = new ReviewPanelManager(context, sdk);
+    reviewManager.setMainIpc(ipc);
+    context.subscriptions.push({ dispose: () => reviewManager.disposeAll() });
+
     /**
      * Gathers all LSP servers, MCP servers, workspace plugins, discovered skills,
      * workspace root name, and extension version, and pushes them to the webview.
@@ -148,12 +152,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     context.subscriptions.push(
       window.registerWebviewViewProvider('opencode-sidebar.main', provider),
-    );
-
-    // Register diff content provider for the opencode-diff URI scheme
-    const diffProvider = createDiffProvider(sdk, workspaceRoot ?? '');
-    context.subscriptions.push(
-      workspace.registerTextDocumentContentProvider(DIFF_SCHEME, diffProvider.provider),
     );
 
     /** Handles webview initialization: loads sessions, messages, models, and agents. */
@@ -447,33 +445,15 @@ export async function activate(context: ExtensionContext): Promise<void> {
       );
     });
 
-    ipc.on('diff:open', (msg) => {
-      const { sessionID, messageID } = msg as { sessionID: string; messageID?: string };
-      void (async () => {
-        try {
-          const diffs = await sdk.session.diff(sessionID, messageID);
-          if (diffs.length === 0) {
-            void window.showInformationMessage('No file changes to diff.');
-            return;
-          }
-
-          // Clear the diff provider cache so fresh content is fetched
-          diffProvider.clearCache();
-
-          // Open one vscode.diff editor per changed file.
-          // "before" uses the custom opencode-diff scheme (served by TextDocumentContentProvider).
-          // "after" uses the real file on disk (reflects current state).
-          for (const d of diffs) {
-            if (!d.file) continue;
-            const beforeUri = createDiffUri(sessionID, d.file, 'before');
-            const afterUri = createDiffUri(sessionID, d.file, 'after');
-            const title = `${d.file} (OpenCode Diff)`;
-            await commands.executeCommand('vscode.diff', beforeUri, afterUri, title);
-          }
-        } catch (err) {
-          ipc.send({ type: 'error', message: `Failed to open diff: ${(err as Error).message}` });
-        }
-      })();
+    ipc.on('review:request', (msg) => {
+      const { sessionID, messageID, reviewID, diffs, scope } = msg as {
+        sessionID: string;
+        messageID?: string;
+        reviewID: string;
+        diffs?: import('@opencode-ai/sdk/v2/client').SnapshotFileDiff[];
+        scope?: 'turn' | 'session';
+      };
+      void reviewManager.open(reviewID, sessionID, messageID, 'Review Changes', diffs, scope);
     });
 
     ipc.on('permission:reply', (msg) => {

@@ -11,7 +11,10 @@ import type {
   QuestionRequest,
   Session,
   SessionStatus,
+  SnapshotFileDiff,
 } from '@opencode-ai/sdk/v2/client';
+
+export type { SnapshotFileDiff };
 
 export type { Event };
 
@@ -231,7 +234,16 @@ export type ExtToWebview =
   | {
       type: 'editor:paste-plain-text';
       text: string;
-    };
+    }
+  | {
+      type: 'review:data';
+      reviewID: string;
+      diffs: SnapshotFileDiff[];
+      title: string;
+      scope?: 'turn' | 'session';
+    }
+  | { type: 'review:error'; reviewID: string; message: string }
+  | { type: 'review:closed'; reviewID: string };
 
 /**
  * Protocol messages sent from the webview to the extension host.
@@ -269,7 +281,15 @@ export type WebviewToExt =
   | { type: 'workspace:search-files'; query: string }
   | { type: 'file:select' }
   | { type: 'clipboard:paste-plain-text' }
-  | { type: 'diff:open'; sessionID: string; messageID?: string }
+  | {
+      type: 'review:request';
+      sessionID: string;
+      messageID?: string;
+      reviewID: string;
+      diffs?: SnapshotFileDiff[];
+      scope?: 'turn' | 'session';
+    }
+  | { type: 'review:close'; reviewID: string }
   | { type: 'init' }
   | { type: 'sync-pending-requests' }
   | { type: 'pong' }

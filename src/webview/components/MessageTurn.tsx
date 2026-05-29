@@ -6,6 +6,7 @@
 import type { Message, Part, SnapshotFileDiff } from '@opencode-ai/sdk/v2/client';
 import { useEffect, useState } from 'react';
 import { useIPC } from '../hooks/useIPC';
+import { createReviewID } from '../utils/review-utils';
 import { Codicon } from './Codicon';
 import { DiffButton } from './DiffButton';
 import { ForkConfirmDialog } from './ForkConfirmDialog';
@@ -414,9 +415,12 @@ export function MessageTurn({
             diffs={messageDiffs}
             onClick={() =>
               send({
-                type: 'diff:open',
+                type: 'review:request',
                 sessionID: userMessage.sessionID,
                 messageID: userMessage.id,
+                reviewID: createReviewID(userMessage.sessionID, 'turn', userMessage.id),
+                diffs: messageDiffs.length > 0 ? messageDiffs : undefined,
+                scope: 'turn',
               })
             }
           />

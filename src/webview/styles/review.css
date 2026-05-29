@@ -1,0 +1,229 @@
+/* Review page layout */
+.review-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-editor-font-size);
+}
+
+/* Sticky header */
+.review-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: var(--vscode-editor-widget-background);
+  border-bottom: 1px solid var(--vscode-border-color);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.review-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.review-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.review-chip {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background-color: color-mix(in srgb, var(--vscode-textLink-foreground) 15%, transparent);
+  color: var(--vscode-textLink-foreground);
+}
+
+.review-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-icon-foreground);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+}
+
+.review-close-btn:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+/* File list */
+.review-file-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.review-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 8px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+}
+
+.review-summary-count {
+  font-weight: 600;
+}
+
+.review-summary-stats {
+  display: flex;
+  gap: 6px;
+}
+
+/* Individual file item */
+.review-file-item {
+  border: 1px solid var(--vscode-border-color);
+  border-radius: 6px;
+  margin-bottom: 4px;
+  overflow: hidden;
+  background-color: var(--vscode-editor-background);
+  transition: background-color 0.15s ease;
+}
+
+.review-file-item:hover {
+  border-color: color-mix(
+    in srgb,
+    var(--vscode-border-color) 80%,
+    var(--vscode-textLink-foreground) 20%
+  );
+}
+
+.review-file-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.review-file-header:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.review-file-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--vscode-icon-foreground);
+  transition: transform 0.15s ease;
+}
+
+.review-file-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.review-file-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.review-file-name {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vscode-editor-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.review-file-dir {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.review-file-stats {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.review-stat-added {
+  color: var(--vscode-charts-green);
+}
+
+.review-stat-removed {
+  color: var(--vscode-charts-red);
+}
+
+/* Diff content area */
+.review-file-diff {
+  border-top: 1px solid var(--vscode-border-color);
+  overflow: hidden;
+}
+
+.review-file-diff .diff-part-container {
+  margin: 0;
+  border-radius: 0;
+  background-color: transparent;
+}
+
+.review-file-diff .diff-table-wrapper {
+  max-height: none;
+}
+
+/* Loading and empty states */
+.review-loading,
+.review-empty,
+.review-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 8px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 13px;
+}
+
+.review-error {
+  color: var(--vscode-error-foreground);
+}
+
+/* Patch unavailable fallback */
+.review-patch-unavailable {
+  padding: 12px 16px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--vscode-descriptionForeground);
+}

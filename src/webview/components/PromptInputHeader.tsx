@@ -9,6 +9,7 @@ import type { LspServerInfo, McpServerInfo, SkillInfo } from '../../shared/types
 import { useIPC } from '../hooks/useIPC';
 import { useSessionStore } from '../store/sessionStore';
 import { escapeHtml } from '../utils/chipUtils';
+import { createReviewID } from '../utils/review-utils';
 import { Codicon } from './Codicon';
 import { DiffButton } from './DiffButton';
 
@@ -195,7 +196,15 @@ export function PromptInputHeader({
         <DiffButton
           diffs={activeDiffs}
           className="metadata-item"
-          onClick={() => send({ type: 'diff:open', sessionID: activeSessionID })}
+          onClick={() =>
+            send({
+              type: 'review:request',
+              sessionID: activeSessionID,
+              reviewID: createReviewID(activeSessionID, 'session'),
+              diffs: activeDiffs,
+              scope: 'session',
+            })
+          }
         />
       )}
 
