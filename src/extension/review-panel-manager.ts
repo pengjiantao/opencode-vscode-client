@@ -8,6 +8,7 @@ import type { SnapshotFileDiff } from '@opencode-ai/sdk/v2/client';
 import { type ExtensionContext, Uri, ViewColumn, type WebviewPanel, window } from 'vscode';
 import { IPCBridge } from './ipc';
 import type { SDKClient } from './sdk-client';
+import { registerFileHandlers } from './utils/fileHandlers';
 import { getWebviewHtml } from './webview-html';
 
 /** Metadata associated with a review panel. */
@@ -69,6 +70,7 @@ export class ReviewPanelManager {
 
     const ipc = new IPCBridge();
     ipc.setPanel(panel);
+    registerFileHandlers(ipc);
 
     panel.webview.html = getWebviewHtml(
       panel.webview,
