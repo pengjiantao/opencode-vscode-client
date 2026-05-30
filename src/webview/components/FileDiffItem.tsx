@@ -5,7 +5,6 @@
 
 import type { SnapshotFileDiff } from '@opencode-ai/sdk/v2/client';
 import { useState } from 'react';
-import { useIPC } from '../hooks/useIPC';
 import { getDirectory, getFileIcon, getFilename } from '../utils/file-icons';
 import { Codicon } from './Codicon';
 import { DiffPart } from './parts/DiffPart';
@@ -14,6 +13,8 @@ import { DiffPart } from './parts/DiffPart';
 export interface FileDiffItemProps {
   /** The diff data for this file. */
   diff: SnapshotFileDiff;
+  /** Whether the item starts expanded. Defaults to false. */
+  defaultExpanded?: boolean;
 }
 
 /**
@@ -21,9 +22,8 @@ export interface FileDiffItemProps {
  * Header shows icon, filename, directory, and +/- stats.
  * Expanded state renders the unified diff via DiffPart.
  */
-export function FileDiffItem({ diff }: FileDiffItemProps) {
-  const [expanded, setExpanded] = useState(false);
-  const { send } = useIPC(() => {});
+export function FileDiffItem({ diff, defaultExpanded = false }: FileDiffItemProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
 
   const filePath = diff.file ?? '(unknown)';
   const filename = getFilename(filePath);
@@ -33,13 +33,6 @@ export function FileDiffItem({ diff }: FileDiffItemProps) {
 
   const handleToggle = () => {
     setExpanded((prev) => !prev);
-  };
-
-  const handleFileClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (diff.file) {
-      send({ type: 'file:open', path: diff.file });
-    }
   };
 
   return (
@@ -62,13 +55,7 @@ export function FileDiffItem({ diff }: FileDiffItemProps) {
         <span className="review-file-icon">
           <Codicon name={icon} />
         </span>
-        <span
-          className="review-file-name"
-          role="button"
-          tabIndex={-1}
-          onClick={handleFileClick}
-          data-custom-title={filePath}
-        >
+        <span className="review-file-name" data-custom-title={filePath}>
           {filename}
         </span>
         {directory && (

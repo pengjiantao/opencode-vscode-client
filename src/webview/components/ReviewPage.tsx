@@ -143,7 +143,7 @@ export function ReviewPage({ reviewID }: ReviewPageProps) {
               </span>
             </div>
             {diffs.map((diff, idx) => (
-              <FileDiffItem key={diff.file ?? idx} diff={diff} />
+              <FileDiffItem key={diff.file ?? idx} diff={diff} defaultExpanded />
             ))}
           </>
         )}

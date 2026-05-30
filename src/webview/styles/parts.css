@@ -773,6 +773,91 @@ pre.code-block code {
   );
 }
 
+/* Collapsed block between hunks */
+.diff-collapsed-row {
+  pointer-events: none;
+}
+
+.diff-collapsed-cell {
+  padding: 0;
+  border: none;
+}
+
+.diff-collapsed-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 2px 0 2px 40px;
+  pointer-events: auto;
+  background-color: color-mix(
+    in srgb,
+    var(--webview-foreground) 5%,
+    var(--vscode-editor-background)
+  );
+  border-top: 1px dashed color-mix(in srgb, var(--vscode-border-color, #454545) 40%, transparent);
+  border-bottom: 1px dashed color-mix(in srgb, var(--vscode-border-color, #454545) 40%, transparent);
+}
+
+.diff-collapsed-count-btn {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.diff-collapsed-count-btn:hover {
+  color: var(--vscode-editor-foreground);
+  text-decoration: underline;
+}
+
+.diff-collapsed-actions-stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.diff-expand-btn {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 0 4px;
+  min-width: 26px;
+  border: none;
+  border-radius: 3px;
+  background-color: color-mix(
+    in srgb,
+    var(--webview-foreground) 8%,
+    var(--vscode-editor-background)
+  );
+  color: var(--vscode-editor-foreground);
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+
+.diff-expand-btn:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--webview-foreground) 15%,
+    var(--vscode-editor-background)
+  );
+}
+
+.diff-expand-btn:active {
+  background-color: color-mix(
+    in srgb,
+    var(--webview-foreground) 20%,
+    var(--vscode-editor-background)
+  );
+}
+
 /* Patch file details styling in multi-file patch output */
 .patch-file-block {
   margin-top: 12px;

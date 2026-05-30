@@ -7,11 +7,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileDiffItem } from './FileDiffItem';
 
-const mockSend = vi.fn();
-vi.mock('../hooks/useIPC', () => ({
-  useIPC: () => ({ send: mockSend }),
-}));
-
 describe('FileDiffItem', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -64,16 +59,6 @@ describe('FileDiffItem', () => {
     fireEvent.click(headers[0]); // expand
     fireEvent.click(headers[0]); // collapse
     expect(screen.queryByText('import { bar } from')).toBeNull();
-  });
-
-  it('sends file:open when filename is clicked', () => {
-    render(<FileDiffItem diff={baseDiff} />);
-    const filename = screen.getByText('helper.ts');
-    fireEvent.click(filename);
-    expect(mockSend).toHaveBeenCalledWith({
-      type: 'file:open',
-      path: 'src/utils/helper.ts',
-    });
   });
 
   it('shows patch unavailable when patch is empty', () => {
