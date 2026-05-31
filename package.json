@@ -41,7 +41,7 @@
     ]
   },
   "dependencies": {
-    "@opencode-ai/sdk": "^1.15.3",
+    "@opencode-ai/sdk": "latest",
     "@vscode/codicons": "^0.0.45",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "prismjs": "^1.30.0",
