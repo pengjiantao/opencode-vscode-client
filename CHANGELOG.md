@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.25](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.24...v0.1.25) (2026-05-31)
+
+### Features
+
+- fold context lines in diff view with directional expand ([9a7cde2](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/9a7cde24889a30b736de5b01ab6629fec450a749))
+
 ### [0.1.24](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.23...v0.1.24) (2026-05-29)
 
 ### Features
