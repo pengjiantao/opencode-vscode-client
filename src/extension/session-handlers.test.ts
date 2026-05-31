@@ -161,6 +161,7 @@ describe('session handlers', () => {
         pendingBuffer: mockPendingBuffer,
         relationTracker: mockRelationTracker,
         invokeCloseAllSessions: mockInvokeCloseAllSessions,
+        fetchedDiffSessions: new Set(),
       });
     });
 
@@ -357,6 +358,7 @@ describe('session handlers', () => {
         pendingBuffer: mockPendingBuffer,
         relationTracker: mockRelationTracker,
         invokeCloseAllSessions: mockInvokeCloseAllSessions,
+        fetchedDiffSessions: new Set(),
       });
     });
 

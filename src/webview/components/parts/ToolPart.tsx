@@ -178,7 +178,9 @@ export function getToolDescription(
   return title || tool;
 }
 
-/** Displays a tool execution in a collapsible borderless box, default collapsed. */
+/** Displays a tool execution in a collapsible borderless box, default collapsed.
+ *  File-modifying, question, and bash tools default to expanded; other tools
+ *  default to collapsed with lazy content mounting for performance. */
 export function ToolPart({
   tool,
   state,
@@ -188,7 +190,8 @@ export function ToolPart({
   const toolName = tool.toLowerCase();
   const isBash = isBashTool(tool);
 
-  // File modifying, question, and bash tools should be default expanded (collapsed = false)
+  // File modifying, question, and bash tools should be default expanded (collapsed = false).
+  // Other tools (e.g., grep_search, glob) default to collapsed with lazy content mounting.
   const isDefaultExpanded =
     toolName === 'edit' ||
     toolName === 'write' ||
@@ -198,6 +201,17 @@ export function ToolPart({
     isBash;
 
   const [collapsed, setCollapsed] = useState(!isDefaultExpanded);
+
+  // Track whether content has ever been expanded to avoid mounting expensive
+  // content (e.g., DiffPart with large diffs) until the user actually opens it.
+  const [hasBeenExpanded, setHasBeenExpanded] = useState(isDefaultExpanded);
+
+  const handleToggle = () => {
+    if (collapsed) {
+      setHasBeenExpanded(true);
+    }
+    setCollapsed(!collapsed);
+  };
 
   const isEditOrWrite = toolName === 'edit' || toolName === 'write' || toolName === 'write_to_file';
 
@@ -349,56 +363,58 @@ export function ToolPart({
           className={`timeline-line${hasPredecessor ? ' has-predecessor' : ''}${hasSuccessor ? ' has-successor' : ''}`}
         />
       )}
-      <div className="tool-header" onClick={() => setCollapsed(!collapsed)}>
+      <div className="tool-header" onClick={handleToggle}>
         <Codicon name={getToolIcon(tool)} className="tool-header-icon" />
         <span className="tool-name" data-custom-title={getSummaryText()}>
           {getSummaryText()}
         </span>
       </div>
 
-      <div
-        className="collapsible-wrapper"
-        style={{
-          maxHeight: collapsed ? 0 : '2000px',
-          opacity: collapsed ? 0 : 1,
-          overflow: 'hidden',
-        }}
-      >
-        <div className="tool-content">
-          {/* Hide tool input if a diff is being rendered, it is a question tool, or a bash tool to keep layout clean */}
-          {!hasDiff &&
-            toolName !== 'question' &&
-            !isBash &&
-            state.input &&
-            Object.keys(state.input).length > 0 && (
-              <div className="tool-input">
-                <pre>
-                  {Object.entries(state.input)
-                    .map(([key, value]) => {
-                      const upperKey = key.toUpperCase();
-                      const displayVal =
-                        typeof value === 'object' && value !== null
-                          ? JSON.stringify(value)
-                          : String(value);
-                      return `${upperKey} ${displayVal}`;
-                    })
-                    .join('\n')}
-                </pre>
+      {hasBeenExpanded && (
+        <div
+          className="collapsible-wrapper"
+          style={{
+            maxHeight: collapsed ? 0 : '2000px',
+            opacity: collapsed ? 0 : 1,
+            overflow: 'hidden',
+          }}
+        >
+          <div className="tool-content">
+            {/* Hide tool input if a diff is being rendered, it is a question tool, or a bash tool to keep layout clean */}
+            {!hasDiff &&
+              toolName !== 'question' &&
+              !isBash &&
+              state.input &&
+              Object.keys(state.input).length > 0 && (
+                <div className="tool-input">
+                  <pre>
+                    {Object.entries(state.input)
+                      .map(([key, value]) => {
+                        const upperKey = key.toUpperCase();
+                        const displayVal =
+                          typeof value === 'object' && value !== null
+                            ? JSON.stringify(value)
+                            : String(value);
+                        return `${upperKey} ${displayVal}`;
+                      })
+                      .join('\n')}
+                  </pre>
+                </div>
+              )}
+
+            {renderOutput()}
+
+            {state.error && (
+              <div className="tool-error">
+                <span className="error-title">
+                  <Codicon name="$(error)" /> Error
+                </span>
+                <pre>{state.error}</pre>
               </div>
             )}
-
-          {renderOutput()}
-
-          {state.error && (
-            <div className="tool-error">
-              <span className="error-title">
-                <Codicon name="$(error)" /> Error
-              </span>
-              <pre>{state.error}</pre>
-            </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

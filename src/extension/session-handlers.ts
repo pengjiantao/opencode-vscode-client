@@ -87,6 +87,8 @@ export interface RegisterLifecycleHandlersOptions {
   relationTracker: SessionRelationTracker;
   /** Helper command to close all sessions. */
   invokeCloseAllSessions: () => Promise<void>;
+  /** Set of session IDs whose diffs have already been fetched (to avoid re-fetching). */
+  fetchedDiffSessions: Set<string>;
 }
 
 /** Options for the handleForkSession function. */
@@ -190,6 +192,7 @@ export function registerSessionLifecycleHandlers({
   pendingBuffer,
   relationTracker,
   invokeCloseAllSessions,
+  fetchedDiffSessions,
 }: RegisterLifecycleHandlersOptions): void {
   /** Tracks child session IDs that were loaded on demand (separate from open sessions). */
   const childSessions = new Set<string>();
@@ -256,6 +259,22 @@ export function registerSessionLifecycleHandlers({
       });
       void syncMetadata();
       syncPendingRequests(sessionID);
+
+      // Lazily fetch session-level diffs if not already cached.
+      // This allows the webview to display the DiffButton with change stats.
+      if (!fetchedDiffSessions.has(sessionID)) {
+        fetchedDiffSessions.add(sessionID);
+        sdk.session
+          .diff(sessionID)
+          .then((diffs) => {
+            if (diffs.length > 0) {
+              ipc.send({ type: 'session:diffs', diffs: { [sessionID]: diffs } });
+            }
+          })
+          .catch(() => {
+            /* ignore diff fetch failures */
+          });
+      }
     } catch (err) {
       ipc.send({ type: 'error', message: (err as Error).message });
     }
@@ -268,6 +287,7 @@ export function registerSessionLifecycleHandlers({
     pendingBuffer.removeBySession(sessionID);
     relationTracker.clean(sessionID);
     removeChildSessionsFor(sessionID);
+    fetchedDiffSessions.delete(sessionID);
     const previousActiveID = sessionManager.activeSessionID;
     try {
       await sessionManager.archive(sessionID);
@@ -295,6 +315,7 @@ export function registerSessionLifecycleHandlers({
     pendingBuffer.removeBySession(sessionID);
     relationTracker.clean(sessionID);
     removeChildSessionsFor(sessionID);
+    fetchedDiffSessions.delete(sessionID);
     const previousActiveID = sessionManager.activeSessionID;
 
     await sessionManager.close(sessionID);

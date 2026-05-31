@@ -239,4 +239,18 @@ ${contextLines}
     // Should still be collapsed (gap is large enough)
     expect(container.querySelector('.diff-collapsed-row')).toBeInTheDocument();
   });
+
+  it('updates rendered content when diff prop changes', () => {
+    const diff1 = `--- a/file.ts\n+++ b/file.ts\n@@ -1 +1 @@\n-old\n+new`;
+    const diff2 = `--- a/file.ts\n+++ b/file.ts\n@@ -1 +1 @@\n-previous\n-updated`;
+
+    const { rerender } = render(<DiffPart diff={diff1} filePath="file.ts" />);
+    expect(screen.getByText('old')).toBeInTheDocument();
+    expect(screen.getByText('new')).toBeInTheDocument();
+
+    rerender(<DiffPart diff={diff2} filePath="file.ts" />);
+    expect(screen.queryByText('old')).not.toBeInTheDocument();
+    expect(screen.getByText('previous')).toBeInTheDocument();
+    expect(screen.getByText('updated')).toBeInTheDocument();
+  });
 });

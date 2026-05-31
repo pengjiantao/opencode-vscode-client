@@ -3,6 +3,7 @@
  */
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
+import React from 'react';
 import { Markdown } from '../Markdown';
 
 interface TextPartProps {
@@ -13,7 +14,7 @@ interface TextPartProps {
 }
 
 /** Displays static or streamed Markdown text content. */
-export function TextPart({ text, allParts }: TextPartProps) {
+export const TextPart = React.memo(function TextPart({ text, allParts }: TextPartProps) {
   return (
     <div className="part text-part">
       <div className="markdown-content">
@@ -21,4 +22,4 @@ export function TextPart({ text, allParts }: TextPartProps) {
       </div>
     </div>
   );
-}
+});

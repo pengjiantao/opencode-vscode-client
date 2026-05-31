@@ -2,7 +2,7 @@
  * @file Unit tests for PartRenderer — dispatches to correct sub-renderer per part type.
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import fs from 'fs';
 import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -359,6 +359,9 @@ describe('PartRenderer', () => {
       };
 
       const { container } = render(<PartRenderer part={part} />);
+
+      // grep_search defaults to collapsed — expand it first
+      fireEvent.click(container.querySelector('.tool-header')!);
 
       // INPUT header should be removed
       expect(screen.queryByText('Input')).not.toBeInTheDocument();

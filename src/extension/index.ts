@@ -51,6 +51,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
   // Track parent-child session relationships and titles for sub-agents
   const relationTracker = new SessionRelationTracker();
 
+  // Track which sessions have had their diffs fetched to avoid redundant requests
+  const fetchedDiffSessions = new Set<string>();
+
   /** Sends the current session's pending requests to the webview. */
   const syncPendingRequests = (sessionID: string): void => {
     const { permissions, questions } = pendingBuffer.getBySession(sessionID);
@@ -247,7 +250,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
             modelVariants: state.modelVariants,
           });
 
-          // Fetch diffs for all open sessions so the webview can display change stats
+          // Fetch diff only for the active session to reduce init latency.
+          // Other sessions' diffs are fetched lazily on switch (see session:switch handler).
           const diffsMap: Record<
             string,
             Array<{
@@ -258,16 +262,13 @@ export async function activate(context: ExtensionContext): Promise<void> {
               patch?: string;
             }>
           > = {};
-          await Promise.all(
-            openIDs.map(async (id) => {
-              try {
-                const diffs = await sdk.session.diff(id);
-                if (diffs.length > 0) diffsMap[id] = diffs;
-              } catch {
-                /* ignore individual failures */
-              }
-            }),
-          );
+          try {
+            const diffs = await sdk.session.diff(activeID);
+            if (diffs.length > 0) diffsMap[activeID] = diffs;
+          } catch {
+            /* ignore */
+          }
+          fetchedDiffSessions.add(activeID);
           if (Object.keys(diffsMap).length > 0) {
             ipc.send({ type: 'session:diffs', diffs: diffsMap });
           }
@@ -306,6 +307,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       pendingBuffer,
       relationTracker,
       invokeCloseAllSessions,
+      fetchedDiffSessions,
     });
 
     ipc.on('sessions:select-history', () => {

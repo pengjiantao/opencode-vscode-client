@@ -132,7 +132,7 @@ function DiffLineRow({
  */
 export function DiffPart({ diff, filePath, status }: DiffPartProps) {
   const { send } = useIPC(() => {});
-  const parsed = parseDiff(diff);
+  const parsed = useMemo(() => parseDiff(diff), [diff]);
 
   const resolvedPath = filePath || parsed.newFile;
   const hasValidPath =
