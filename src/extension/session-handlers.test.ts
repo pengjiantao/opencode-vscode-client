@@ -9,11 +9,7 @@ import { createMockSession } from '../test/mocks/sdk';
 import type { IPCBridge } from './ipc';
 import type { PendingRequestBuffer } from './pending-request-buffer';
 import type { SDKClient } from './sdk-client';
-import {
-  getMessagesAndPartsRecursive,
-  handleCreateSession,
-  registerSessionLifecycleHandlers,
-} from './session-handlers';
+import { handleCreateSession, registerSessionLifecycleHandlers } from './session-handlers';
 import type { SessionManager } from './session-manager';
 import type { SessionRelationTracker } from './session-relation-tracker';
 import type { SessionStateStore } from './session-state-store';
@@ -146,6 +142,7 @@ describe('session handlers', () => {
       mockRelationTracker = {
         clean: vi.fn(),
         clear: vi.fn(),
+        parentMap: new Map(),
       } as unknown as SessionRelationTracker;
 
       mockInvokeCloseAllSessions = vi.fn();
@@ -315,46 +312,94 @@ describe('session handlers', () => {
     });
   });
 
-  describe('getMessagesAndPartsRecursive', () => {
-    it('fetches parent and child session messages and parts recursively', async () => {
-      const mockSessionManagerForRec = {
-        getMessagesAndParts: vi.fn().mockImplementation((sessionID: string) => {
-          if (sessionID === 'parent-session') {
-            return Promise.resolve({
-              messages: [{ id: 'msg-parent', role: 'assistant', sessionID: 'parent-session' }],
-              parts: [
-                {
-                  id: 'part-parent-1',
-                  messageID: 'msg-parent',
-                  type: 'tool',
-                  tool: 'task',
-                  state: {
-                    status: 'completed',
-                    metadata: { sessionId: 'child-session-1' },
-                  },
-                },
-              ],
-            });
-          } else if (sessionID === 'child-session-1') {
-            return Promise.resolve({
-              messages: [{ id: 'msg-child', role: 'assistant', sessionID: 'child-session-1' }],
-              parts: [
-                {
-                  id: 'part-child-1',
-                  messageID: 'msg-child',
-                  type: 'text',
-                  text: 'child output',
-                },
-              ],
-            });
-          }
-          return Promise.resolve({ messages: [], parts: [] });
-        }),
-      } as unknown as SessionManager;
+  describe('session:load-child-messages', () => {
+    let handlers: Map<string, (msg?: unknown) => void | Promise<void>>;
+    let mockSessionStatuses: Map<string, SessionStatus>;
+    let mockPendingBuffer: PendingRequestBuffer;
+    let mockRelationTracker: SessionRelationTracker;
+    let mockInvokeCloseAllSessions: ReturnType<typeof vi.fn>;
+    let mockSyncMetadata: ReturnType<typeof vi.fn>;
 
-      const result = await getMessagesAndPartsRecursive(mockSessionManagerForRec, 'parent-session');
-      expect(result.messages.map((m) => m.id)).toEqual(['msg-parent', 'msg-child']);
-      expect(result.parts.map((p) => p.id)).toEqual(['part-parent-1', 'part-child-1']);
+    beforeEach(() => {
+      handlers = new Map();
+      mockIpc = {
+        on: vi.fn((event: string, handler: (msg?: unknown) => void) => {
+          handlers.set(event, handler);
+        }),
+        send: vi.fn(),
+      } as unknown as IPCBridge;
+
+      mockSessionStatuses = new Map();
+      mockPendingBuffer = {
+        removeBySession: vi.fn(),
+        clear: vi.fn(),
+      } as unknown as PendingRequestBuffer;
+
+      mockRelationTracker = {
+        clean: vi.fn(),
+        clear: vi.fn(),
+        parentMap: new Map(),
+      } as unknown as SessionRelationTracker;
+
+      mockInvokeCloseAllSessions = vi.fn();
+      mockSyncMetadata = vi.fn();
+
+      registerSessionLifecycleHandlers({
+        sdk: mockSdk,
+        ipc: mockIpc,
+        sessionManager: mockSessionManager,
+        sessionStateStore: mockSessionStateStore,
+        getCachedModels: () => cachedModels,
+        getCachedAgents: () => cachedAgents,
+        syncMetadata: mockSyncMetadata,
+        syncPendingRequests,
+        sessionStatuses: mockSessionStatuses,
+        pendingBuffer: mockPendingBuffer,
+        relationTracker: mockRelationTracker,
+        invokeCloseAllSessions: mockInvokeCloseAllSessions,
+      });
+    });
+
+    it('loads child session messages without recursion', async () => {
+      const handler = handlers.get('session:load-child-messages');
+      expect(handler).toBeDefined();
+
+      vi.mocked(mockSessionManager.getMessagesAndParts).mockResolvedValue({
+        messages: [
+          { id: 'msg-child', role: 'assistant', sessionID: 'child-1' },
+        ] as unknown as import('@opencode-ai/sdk/v2/client').Message[],
+        parts: [
+          { id: 'part-1', messageID: 'msg-child', type: 'text', text: 'output' },
+        ] as unknown as import('@opencode-ai/sdk/v2/client').Part[],
+      });
+      vi.mocked(mockSdk.session.get).mockResolvedValue(createMockSession({ id: 'child-1' }));
+
+      if (handler) {
+        await handler({ sessionID: 'child-1' });
+      }
+
+      expect(mockSdk.session.get).toHaveBeenCalledWith('child-1');
+      expect(mockSessionManager.getMessagesAndParts).toHaveBeenCalledWith('child-1');
+      expect(mockIpc.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'messages:child-loaded',
+          sessionID: 'child-1',
+        }),
+      );
+    });
+
+    it('silently ignores non-existent child session', async () => {
+      const handler = handlers.get('session:load-child-messages');
+      expect(handler).toBeDefined();
+
+      vi.mocked(mockSdk.session.get).mockRejectedValue(new Error('Not found'));
+
+      if (handler) {
+        await handler({ sessionID: 'non-existent' });
+      }
+
+      expect(mockSessionManager.getMessagesAndParts).not.toHaveBeenCalled();
+      expect(mockIpc.send).not.toHaveBeenCalled();
     });
   });
 });

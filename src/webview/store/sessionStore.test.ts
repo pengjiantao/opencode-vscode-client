@@ -3,9 +3,15 @@
  */
 
 import type { UserMessage } from '@opencode-ai/sdk/v2/client';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockSession, createMockTextPart, createMockUserMessage } from '../../test/mocks/sdk';
 import { useSessionStore } from './sessionStore';
+
+// Mock window.vscode for fetchChildSession IPC calls
+Object.defineProperty(window, 'vscode', {
+  value: { postMessage: vi.fn(), getState: vi.fn(), setState: vi.fn() },
+  writable: true,
+});
 
 describe('sessionStore', () => {
   beforeEach(() => {
@@ -15,7 +21,9 @@ describe('sessionStore', () => {
       messages: {},
       parts: {},
       sessionStatus: {},
+      loadedChildSessions: new Set(),
     });
+    vi.mocked(window.vscode.postMessage).mockClear();
   });
 
   describe('setActiveSession', () => {
@@ -239,6 +247,77 @@ describe('sessionStore', () => {
 
       expect(useSessionStore.getState().pendingPermissions).toEqual([perm2, newPerm]);
       expect(useSessionStore.getState().pendingQuestions).toEqual([q2, newQ]);
+    });
+  });
+
+  describe('fetchChildSession', () => {
+    it('sends IPC request and marks session as loaded', () => {
+      useSessionStore.getState().fetchChildSession('child-1');
+
+      expect(useSessionStore.getState().loadedChildSessions.has('child-1')).toBe(true);
+      expect(window.vscode.postMessage).toHaveBeenCalledWith({
+        type: 'session:load-child-messages',
+        sessionID: 'child-1',
+      });
+    });
+
+    it('does not send duplicate IPC for already loaded session', () => {
+      useSessionStore.getState().fetchChildSession('child-1');
+      useSessionStore.getState().fetchChildSession('child-1');
+
+      expect(window.vscode.postMessage).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('mergeChildSessionData', () => {
+    it('merges child session messages and parts into the store', () => {
+      const msg = createMockUserMessage();
+      msg.id = 'child-msg-1';
+      const part = createMockTextPart('child output');
+      part.messageID = 'child-msg-1';
+
+      useSessionStore.getState().mergeChildSessionData('child-session', [msg], [part]);
+
+      expect(useSessionStore.getState().messages['child-session']).toHaveLength(1);
+      expect(useSessionStore.getState().messages['child-session'][0].id).toBe('child-msg-1');
+      expect(useSessionStore.getState().parts['child-msg-1']).toHaveLength(1);
+    });
+
+    it('does not affect parent session messages', () => {
+      const parentMsg = createMockUserMessage();
+      parentMsg.id = 'parent-msg-1';
+      useSessionStore.getState().addMessage('parent-session', parentMsg);
+
+      const childMsg = createMockUserMessage();
+      childMsg.id = 'child-msg-1';
+      useSessionStore.getState().mergeChildSessionData('child-session', [childMsg], []);
+
+      expect(useSessionStore.getState().messages['parent-session']).toHaveLength(1);
+      expect(useSessionStore.getState().messages['child-session']).toHaveLength(1);
+    });
+
+    it('drops orphan parts whose messageID is not in the messages array', () => {
+      const msg = createMockUserMessage();
+      msg.id = 'child-msg-1';
+
+      const orphanPart = createMockTextPart('orphan');
+      orphanPart.messageID = 'non-existent-msg';
+
+      useSessionStore.getState().mergeChildSessionData('child-session', [msg], [orphanPart]);
+
+      expect(useSessionStore.getState().parts['non-existent-msg']).toBeUndefined();
+      expect(useSessionStore.getState().parts['child-msg-1']).toHaveLength(0);
+    });
+  });
+
+  describe('clearChildSessions', () => {
+    it('resets loaded child sessions tracking', () => {
+      useSessionStore.getState().fetchChildSession('child-1');
+      useSessionStore.getState().fetchChildSession('child-2');
+      expect(useSessionStore.getState().loadedChildSessions.size).toBe(2);
+
+      useSessionStore.getState().clearChildSessions();
+      expect(useSessionStore.getState().loadedChildSessions.size).toBe(0);
     });
   });
 });

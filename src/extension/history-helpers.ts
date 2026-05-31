@@ -6,7 +6,7 @@
 import type { SessionStatus } from '@opencode-ai/sdk/v2/client';
 import { window } from 'vscode';
 import type { IPCBridge } from './ipc';
-import { getMessagesAndPartsRecursive, handleCreateSession } from './session-handlers';
+import { handleCreateSession } from './session-handlers';
 import type { SessionManager } from './session-manager';
 import type { SessionStateStore } from './session-state-store';
 import type { AgentInfo, ModelInfo } from './types';
@@ -73,7 +73,7 @@ export async function ensureActiveSessionFallback({
         agent: nextState.agent,
         modelVariants: nextState.modelVariants,
       });
-      const { messages, parts } = await getMessagesAndPartsRecursive(sessionManager, nextActiveID);
+      const { messages, parts } = await sessionManager.getMessagesAndParts(nextActiveID);
       ipc.send({
         type: 'messages:list',
         sessionID: nextActiveID,

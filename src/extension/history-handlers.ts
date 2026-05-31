@@ -9,7 +9,6 @@ import { confirmAction, ensureActiveSessionFallback } from './history-helpers';
 import type { IPCBridge } from './ipc';
 import type { PendingRequestBuffer } from './pending-request-buffer';
 import type { SDKClient } from './sdk-client';
-import { getMessagesAndPartsRecursive } from './session-handlers';
 import type { SessionManager } from './session-manager';
 import type { SessionRelationTracker } from './session-relation-tracker';
 import type { SessionStateStore } from './session-state-store';
@@ -186,7 +185,7 @@ export async function handleSelectHistory({
         modelVariants: state.modelVariants,
       });
 
-      const { messages, parts } = await getMessagesAndPartsRecursive(sessionManager, sessionID);
+      const { messages, parts } = await sessionManager.getMessagesAndParts(sessionID);
       ipc.send({
         type: 'messages:list',
         sessionID,

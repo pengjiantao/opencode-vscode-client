@@ -35,6 +35,9 @@ export interface SessionStore {
   /** Per-session file diffs keyed by session ID. Populated from Session.summary.diffs and session.diff SSE events. */
   sessionDiffs: Record<string, SnapshotFileDiff[]>;
 
+  /** Set of child session IDs that have been loaded on demand. */
+  loadedChildSessions: Set<string>;
+
   workspaceName: string | null;
   lspServers: LspServerInfo[];
   mcpServers: McpServerInfo[];
@@ -81,6 +84,21 @@ export interface SessionStore {
   /** Replaces the file diffs for a specific session. */
   setSessionDiffs: (sessionID: string, diffs: SnapshotFileDiff[]) => void;
 
+  /**
+   * Sends an IPC request to load a child session's messages if not already loaded.
+   * Marks the session as loading to prevent duplicate requests.
+   */
+  fetchChildSession: (sessionID: string) => void;
+
+  /**
+   * Merges child session messages and parts into the store without affecting
+   * the parent session or other child sessions.
+   */
+  mergeChildSessionData: (sessionID: string, messages: Message[], parts: Part[]) => void;
+
+  /** Resets the loaded child sessions tracking set (called on session switch). */
+  clearChildSessions: () => void;
+
   setWorkspaceName: (name: string | null) => void;
   setLspServers: (lsp: LspServerInfo[]) => void;
   setMcpServers: (mcp: McpServerInfo[]) => void;
@@ -107,6 +125,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   parts: {},
   sessionStatus: {},
   sessionDiffs: {},
+  loadedChildSessions: new Set(),
   pendingPermissions: [],
   pendingQuestions: [],
 
@@ -383,6 +402,34 @@ export const useSessionStore = create<SessionStore>((set) => ({
     set((state) => ({
       sessionDiffs: { ...state.sessionDiffs, [sessionID]: diffs },
     })),
+
+  fetchChildSession: (sessionID) => {
+    const state = useSessionStore.getState();
+    if (state.loadedChildSessions.has(sessionID)) return;
+    set(() => {
+      const newSet = new Set(state.loadedChildSessions);
+      newSet.add(sessionID);
+      return { loadedChildSessions: newSet };
+    });
+    window.vscode.postMessage({ type: 'session:load-child-messages', sessionID });
+  },
+
+  mergeChildSessionData: (sessionID, messages, parts) =>
+    set((state) => {
+      const groupedMessages = { ...state.messages, [sessionID]: messages };
+      const partsMap = { ...state.parts };
+      const validMessageIDs = new Set(messages.map((m) => m.id));
+      for (const m of messages) {
+        partsMap[m.id] = [];
+      }
+      for (const p of parts) {
+        if (!validMessageIDs.has(p.messageID)) continue;
+        partsMap[p.messageID].push(p);
+      }
+      return { messages: groupedMessages, parts: partsMap };
+    }),
+
+  clearChildSessions: () => set({ loadedChildSessions: new Set() }),
   setLspServers: (lspServers) => set({ lspServers }),
   setMcpServers: (mcpServers) => set({ mcpServers }),
   setSkills: (skills) => set({ skills }),

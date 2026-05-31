@@ -16,7 +16,6 @@ import { ReviewPanelManager } from './review-panel-manager';
 import type { SDKClient } from './sdk-client';
 import { createSDKClient } from './sdk-client-impl';
 import {
-  getMessagesAndPartsRecursive,
   handleCreateSession,
   handleForkSession,
   registerSessionLifecycleHandlers,
@@ -273,7 +272,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
             ipc.send({ type: 'session:diffs', diffs: diffsMap });
           }
 
-          const { messages, parts } = await getMessagesAndPartsRecursive(sessionManager, activeID);
+          const { messages, parts } = await sessionManager.getMessagesAndParts(activeID);
           ipc.send({
             type: 'messages:list',
             sessionID: activeID,
@@ -396,7 +395,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       try {
         await sdk.session.revert(sessionID, messageID);
         // Send back updated messages so the webview store reflects the revert state
-        const { messages, parts } = await getMessagesAndPartsRecursive(sessionManager, sessionID);
+        const { messages, parts } = await sessionManager.getMessagesAndParts(sessionID);
         ipc.send({
           type: 'messages:list',
           sessionID,
@@ -414,7 +413,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       try {
         await sdk.session.unrevert(sessionID);
         // Send back updated messages so the webview store has the restored messages
-        const { messages, parts } = await getMessagesAndPartsRecursive(sessionManager, sessionID);
+        const { messages, parts } = await sessionManager.getMessagesAndParts(sessionID);
         ipc.send({
           type: 'messages:list',
           sessionID,

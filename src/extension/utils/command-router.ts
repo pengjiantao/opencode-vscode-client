@@ -4,7 +4,6 @@
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
 import type { IPCBridge } from '../ipc';
-import { getMessagesAndPartsRecursive } from '../session-handlers';
 import type { SessionManager } from '../session-manager';
 
 /**
@@ -96,10 +95,7 @@ export function handleCommandPart(params: HandleCommandPartOptions): boolean {
       console.error('[prompt:send] command endpoint error (messages may still exist):', err);
     }
     try {
-      const { messages, parts: fetchedParts } = await getMessagesAndPartsRecursive(
-        sessionManager,
-        activeID,
-      );
+      const { messages, parts: fetchedParts } = await sessionManager.getMessagesAndParts(activeID);
       ipc.send({ type: 'messages:list', sessionID: activeID, messages, parts: fetchedParts });
     } catch (fetchErr) {
       console.error('[prompt:send] failed to fetch messages after command:', fetchErr);

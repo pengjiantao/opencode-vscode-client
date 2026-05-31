@@ -56,6 +56,8 @@ export function App() {
   const setSessionMessagesAndParts = useSessionStore((s) => s.setSessionMessagesAndParts);
   const setPendingRequests = useSessionStore((s) => s.setPendingRequests);
   const setSessionDiffs = useSessionStore((s) => s.setSessionDiffs);
+  const clearChildSessions = useSessionStore((s) => s.clearChildSessions);
+  const mergeChildSessionData = useSessionStore((s) => s.mergeChildSessionData);
 
   const setWorkspaceName = useSessionStore((s) => s.setWorkspaceName);
   const setLspServers = useSessionStore((s) => s.setLspServers);
@@ -83,6 +85,7 @@ export function App() {
           break;
         case 'session:switched':
           setActiveSession(message.sessionID);
+          clearChildSessions();
           setActiveModel(message.model ?? '');
           setActiveAgent(message.agent ?? '');
           setModelVariants(message.modelVariants ?? {});
@@ -123,6 +126,9 @@ export function App() {
             message.parts,
             message.status,
           );
+          break;
+        case 'messages:child-loaded':
+          mergeChildSessionData(message.sessionID, message.messages, message.parts);
           break;
         case 'file:query-response':
           setFileInfo(message.path, {
@@ -182,6 +188,8 @@ export function App() {
     setFileInfo,
     setPendingRequests,
     setSessionDiffs,
+    clearChildSessions,
+    mergeChildSessionData,
   ]);
 
   const handleSwitchSession = (sessionID: string) => {

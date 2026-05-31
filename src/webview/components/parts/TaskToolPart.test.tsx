@@ -41,6 +41,8 @@ vi.mock('../../store/sessionStore', () => ({
           },
         ],
       },
+      loadedChildSessions: new Set(['child-session-123', 'child-session-456']),
+      fetchChildSession: vi.fn(),
     };
     return selector(state);
   }),

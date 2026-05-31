@@ -5,7 +5,7 @@
  */
 
 import type { Message, Part } from '@opencode-ai/sdk/v2/client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSessionStore } from '../../store/sessionStore';
 import { Codicon } from '../Codicon';
 import { Markdown } from '../Markdown';
@@ -119,6 +119,17 @@ export function TaskToolPart({
   // Memoize child messages to avoid recreating the array reference and triggering hook dependency warnings
   const childMessages = useMemo(() => rawChildMessages || EMPTY_MESSAGES, [rawChildMessages]);
   const allParts = useSessionStore((s) => s.parts);
+  const fetchChildSession = useSessionStore((s) => s.fetchChildSession);
+  const isChildLoaded = useSessionStore((s) =>
+    childSessionID ? s.loadedChildSessions.has(childSessionID) : true,
+  );
+
+  // Request child session data on first mount
+  useEffect(() => {
+    if (childSessionID) {
+      fetchChildSession(childSessionID);
+    }
+  }, [childSessionID, fetchChildSession]);
 
   // Compute the total tool calls executed by the sub-agent
   const toolCallCount = useMemo(() => {
@@ -186,7 +197,7 @@ export function TaskToolPart({
         <Codicon name="$(checklist)" className="tool-header-icon" />
         <span className="tool-name">
           {state.title || description || 'TASK'}
-          {isFinished && (
+          {isFinished && isChildLoaded && (
             <span className="task-header-stats">
               {' - '}
               <button className="subagent-interactive-link" onClick={handleOpenSubagent}>
@@ -194,6 +205,9 @@ export function TaskToolPart({
               </button>
               {` (took ${durationText})`}
             </span>
+          )}
+          {isFinished && !isChildLoaded && durationMs > 0 && (
+            <span className="task-header-stats">{` (took ${durationText})`}</span>
           )}
         </span>
       </div>
@@ -215,7 +229,7 @@ export function TaskToolPart({
                 </span>
                 <span className="status-label">Executing: </span>
                 <button className="subagent-interactive-link" onClick={handleOpenSubagent}>
-                  {currentStep}
+                  {isChildLoaded || childMessages.length > 0 ? currentStep : 'Loading...'}
                 </button>
               </div>
             </div>

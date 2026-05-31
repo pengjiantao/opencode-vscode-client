@@ -189,6 +189,12 @@ export type ExtToWebview =
       status?: SessionStatus;
     }
   | {
+      type: 'messages:child-loaded';
+      sessionID: string;
+      messages: Message[];
+      parts: Part[];
+    }
+  | {
       type: 'file:query-response';
       path: string;
       exists: boolean;
@@ -295,4 +301,5 @@ export type WebviewToExt =
   | { type: 'pong' }
   | { type: 'session:revert'; sessionID: string; messageID: string }
   | { type: 'session:unrevert'; sessionID: string }
-  | { type: 'session:fork'; sessionID: string; messageID?: string };
+  | { type: 'session:fork'; sessionID: string; messageID?: string }
+  | { type: 'session:load-child-messages'; sessionID: string };
