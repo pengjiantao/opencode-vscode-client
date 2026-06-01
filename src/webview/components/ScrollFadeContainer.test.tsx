@@ -87,4 +87,50 @@ describe('ScrollFadeContainer', () => {
     expect(outer).toHaveClass('has-top-shadow');
     expect(outer).not.toHaveClass('has-bottom-shadow');
   });
+
+  it('should not display shadow effects when there is no scrollable content', () => {
+    const { container } = render(
+      <ScrollFadeContainer>
+        <div>Short Content</div>
+      </ScrollFadeContainer>,
+    );
+
+    const outer = container.querySelector('.scroll-fade-container') as HTMLDivElement;
+    const inner = container.querySelector('.scroll-fade-content') as HTMLDivElement;
+
+    // Mock scroll height/client height properties to be equal
+    Object.defineProperty(inner, 'scrollHeight', { configurable: true, value: 150 });
+    Object.defineProperty(inner, 'clientHeight', { configurable: true, value: 150 });
+    Object.defineProperty(inner, 'scrollTop', { configurable: true, writable: true, value: 0 });
+
+    act(() => {
+      inner.dispatchEvent(new Event('scroll'));
+    });
+
+    expect(outer).not.toHaveClass('has-top-shadow');
+    expect(outer).not.toHaveClass('has-bottom-shadow');
+  });
+
+  it('should not display shadow effects when clientHeight is 0 (hidden or not fully laid out)', () => {
+    const { container } = render(
+      <ScrollFadeContainer>
+        <div>Content</div>
+      </ScrollFadeContainer>,
+    );
+
+    const outer = container.querySelector('.scroll-fade-container') as HTMLDivElement;
+    const inner = container.querySelector('.scroll-fade-content') as HTMLDivElement;
+
+    // Mock clientHeight to be 0 but scrollHeight to be non-zero (typical when hidden)
+    Object.defineProperty(inner, 'scrollHeight', { configurable: true, value: 150 });
+    Object.defineProperty(inner, 'clientHeight', { configurable: true, value: 0 });
+    Object.defineProperty(inner, 'scrollTop', { configurable: true, writable: true, value: 0 });
+
+    act(() => {
+      inner.dispatchEvent(new Event('scroll'));
+    });
+
+    expect(outer).not.toHaveClass('has-top-shadow');
+    expect(outer).not.toHaveClass('has-bottom-shadow');
+  });
 });

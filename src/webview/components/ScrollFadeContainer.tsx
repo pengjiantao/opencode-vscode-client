@@ -35,6 +35,7 @@ export function ScrollFadeContainer({
 }: ScrollFadeContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(autoScroll);
 
   /**
@@ -47,9 +48,13 @@ export function ScrollFadeContainer({
     const wrapper = containerRef.current;
     if (!container || !wrapper) return;
 
-    const showTop = container.scrollTop > 0;
+    // The container is only scrollable if it has visible height and scrollHeight is strictly greater than clientHeight
+    const isScrollable =
+      container.clientHeight > 0 && container.scrollHeight > container.clientHeight + 1;
+    const showTop = isScrollable && container.scrollTop > 0.5;
     // Add a 1px buffer to account for rounding errors on high-DPI zoom/subpixel values
-    const showBottom = container.scrollTop + container.clientHeight < container.scrollHeight - 1;
+    const showBottom =
+      isScrollable && container.scrollTop + container.clientHeight < container.scrollHeight - 1;
 
     if (showTop) {
       wrapper.classList.add('has-top-shadow');
@@ -98,15 +103,17 @@ export function ScrollFadeContainer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [children, autoScroll, isAutoScrollEnabled, ...dependencies]);
 
-  // Set up ResizeObserver to update shadow overlay visibility when container size changes
+  // Set up ResizeObserver to update shadow overlay visibility when container or content size changes
   useEffect(() => {
     const container = scrollRef.current;
-    if (!container || typeof ResizeObserver === 'undefined') return;
+    const content = contentRef.current;
+    if (!container || !content || typeof ResizeObserver === 'undefined') return;
 
     const observer = new ResizeObserver(() => {
       updateShadows();
     });
     observer.observe(container);
+    observer.observe(content);
 
     return () => {
       observer.disconnect();
@@ -125,7 +132,7 @@ export function ScrollFadeContainer({
         ref={scrollRef}
         onScroll={handleScroll}
       >
-        {children}
+        <div ref={contentRef}>{children}</div>
       </div>
       <div className="scroll-fade-layer scroll-fade-bottom" />
     </div>
