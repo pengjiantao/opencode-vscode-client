@@ -9,7 +9,6 @@ import { useIPC } from '../../hooks/useIPC';
 import { buildSegments } from '../../utils/diff-fold';
 import type { DiffLine } from '../../utils/diff-parser';
 import { parseDiff } from '../../utils/diff-parser';
-import { Codicon } from '../Codicon';
 import { CollapsedBlock } from './CollapsedBlock';
 
 /** Default number of context lines to show around each change. */
@@ -26,8 +25,6 @@ interface DiffPartProps {
   diff: string;
   /** Optional file path to show context. */
   filePath?: string;
-  /** Optional execution status to show a success/error icon in the header. */
-  status?: 'pending' | 'running' | 'completed' | 'error';
 }
 
 /**
@@ -167,7 +164,7 @@ const DiffLineRow = memo(function DiffLineRow({ line }: { line: DiffLine }) {
  * directional expansion. Contiguous modifications are grouped into interactive
  * tbody blocks.
  */
-export function DiffPart({ diff, filePath, status }: DiffPartProps) {
+export function DiffPart({ diff, filePath }: DiffPartProps) {
   const { send } = useIPC(() => {});
   const parsed = useMemo(() => parseDiff(diff), [diff]);
 
@@ -217,14 +214,6 @@ export function DiffPart({ diff, filePath, status }: DiffPartProps) {
       </div>
     );
   }
-
-  const statusIcon =
-    status === 'completed' ? (
-      <Codicon name="$(check)" className="diff-file-header-icon diff-file-header-icon-success" />
-    ) : status === 'error' ? (
-      <Codicon name="$(error)" className="diff-file-header-icon diff-file-header-icon-error" />
-    ) : null;
-
   return (
     <div className="diff-part-container">
       {resolvedPath && (
@@ -244,7 +233,6 @@ export function DiffPart({ diff, filePath, status }: DiffPartProps) {
               }
             : {})}
         >
-          {statusIcon}
           <span className="diff-file-name" data-custom-title={resolvedPath}>
             {resolvedPath}
           </span>

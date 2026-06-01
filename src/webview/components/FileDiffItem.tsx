@@ -5,7 +5,7 @@
 
 import type { SnapshotFileDiff } from '@opencode-ai/sdk/v2/client';
 import { useState } from 'react';
-import { getDirectory, getFileIcon, getFilename } from '../utils/file-icons';
+import { getDirectory, getFilename } from '../utils/file-icons';
 import { Codicon } from './Codicon';
 import { DiffPart } from './parts/DiffPart';
 
@@ -28,7 +28,6 @@ export function FileDiffItem({ diff, defaultExpanded = false }: FileDiffItemProp
   const filePath = diff.file ?? '(unknown)';
   const filename = getFilename(filePath);
   const directory = getDirectory(filePath);
-  const icon = getFileIcon(filePath);
   const hasPatch = typeof diff.patch === 'string' && diff.patch.length > 0;
 
   const handleToggle = () => {
@@ -51,9 +50,6 @@ export function FileDiffItem({ diff, defaultExpanded = false }: FileDiffItemProp
       >
         <span className={`review-file-chevron ${expanded ? 'expanded' : ''}`}>
           <Codicon name="chevron-right" />
-        </span>
-        <span className="review-file-icon">
-          <Codicon name={icon} />
         </span>
         <span className="review-file-name" data-custom-title={filePath}>
           {filename}
