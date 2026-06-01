@@ -97,6 +97,13 @@ function parseAnsi(text: string): ReactNode[] {
           newStyle.opacity = 0.7; // Dim state representation
         } else if (code === 4) {
           newStyle.textDecoration = 'underline';
+        } else if (code === 22) {
+          // Code 22 turns off bold and dim styles specifically.
+          delete newStyle.fontWeight;
+          delete newStyle.opacity;
+        } else if (code === 24) {
+          // Code 24 turns off underline styles specifically.
+          delete newStyle.textDecoration;
         } else if (code >= 30 && code <= 37) {
           newStyle.color = ANSI_COLOR_MAP[code];
         } else if (code === 39) {

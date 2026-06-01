@@ -90,6 +90,33 @@ describe('BashOutput', () => {
     expect(normalNode.style.color).toBe('');
   });
 
+  it('regression: resets underline and bold/dim styling when codes 22 and 24 are encountered', () => {
+    const esc = String.fromCharCode(27);
+    render(
+      <BashOutput
+        command="ls"
+        output={`first ${esc}[4munderlined${esc}[24m second ${esc}[1mbold${esc}[22m third`}
+        status="completed"
+      />,
+    );
+
+    const firstNode = screen.getByText('first');
+    expect(firstNode.style.textDecoration).toBe('');
+
+    const underlinedNode = screen.getByText('underlined');
+    expect(underlinedNode.style.textDecoration).toBe('underline');
+
+    const secondNode = screen.getByText('second');
+    expect(secondNode.style.textDecoration).toBe('');
+    expect(secondNode.style.fontWeight).toBe('');
+
+    const boldNode = screen.getByText('bold');
+    expect(boldNode.style.fontWeight).toBe('bold');
+
+    const thirdNode = screen.getByText('third');
+    expect(thirdNode.style.fontWeight).toBe('');
+  });
+
   it('returns null when output is empty', () => {
     const { container } = render(<BashOutput command="ls" output="" status="running" />);
 
