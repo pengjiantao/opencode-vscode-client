@@ -3,7 +3,7 @@
  */
 
 import type { CSSProperties, ReactNode } from 'react';
-import { useEffect, useRef } from 'react';
+import { ScrollFadeContainer } from '../ScrollFadeContainer';
 
 export interface BashOutputProps {
   /** The executed command string. */
@@ -138,29 +138,10 @@ function parseAnsi(text: string): ReactNode[] {
 
 /**
  * Renders the custom bash execution output with a terminal-like header and an auto-anchoring scroll container.
- * Auto-scroll is only triggered when the user is already near the bottom (within 40px margin of error)
- * so we don't disrupt the user if they've manually scrolled up to inspect previous output.
- * Shows standard $: prompt prefix. No longer shows conditional status icons.
+ * Uses ScrollFadeContainer to support auto-scrolling on new output and top/bottom fading shadow indicators.
+ * Shows standard $: prompt prefix.
  */
 export function BashOutput({ command, output }: BashOutputProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    // Use requestAnimationFrame to ensure DOM has updated with new content
-    // before checking scroll dimensions and scrolling
-    const frameId = requestAnimationFrame(() => {
-      const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= 40;
-      if (isAtBottom) {
-        el.scrollTop = el.scrollHeight;
-      }
-    });
-
-    return () => cancelAnimationFrame(frameId);
-  }, [output]);
-
   if (!output) {
     return null;
   }
@@ -173,9 +154,14 @@ export function BashOutput({ command, output }: BashOutputProps) {
           {command}
         </span>
       </div>
-      <div className="bash-output-scroll" ref={scrollRef}>
+      <ScrollFadeContainer
+        className="bash-output-scroll-container"
+        contentClassName="bash-output-scroll"
+        autoScroll={true}
+        dependencies={[output]}
+      >
         <pre>{parseAnsi(output)}</pre>
-      </div>
+      </ScrollFadeContainer>
     </div>
   );
 }

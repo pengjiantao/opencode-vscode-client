@@ -9,6 +9,7 @@ import { useIPC } from '../../hooks/useIPC';
 import { buildSegments } from '../../utils/diff-fold';
 import type { DiffLine } from '../../utils/diff-parser';
 import { parseDiff } from '../../utils/diff-parser';
+import { ScrollFadeContainer } from '../ScrollFadeContainer';
 import { CollapsedBlock } from './CollapsedBlock';
 
 /** Default number of context lines to show around each change. */
@@ -238,7 +239,7 @@ export function DiffPart({ diff, filePath }: DiffPartProps) {
           </span>
         </div>
       )}
-      <div className="diff-table-wrapper">
+      <ScrollFadeContainer className="diff-table-wrapper" contentClassName="diff-table-content">
         <table className="diff-table">
           {segments.map((segment, segIdx) => {
             if (segment.type === 'visible') {
@@ -392,7 +393,7 @@ export function DiffPart({ diff, filePath }: DiffPartProps) {
             return tbodies;
           })}
         </table>
-      </div>
+      </ScrollFadeContainer>
     </div>
   );
 }

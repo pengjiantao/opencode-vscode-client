@@ -139,6 +139,11 @@ describe('BashOutput', () => {
       });
       Object.defineProperty(scrollContainer, 'clientHeight', { value: 200, configurable: true });
 
+      // Dispatch scroll event so ScrollFadeContainer state updates
+      act(() => {
+        scrollContainer.dispatchEvent(new Event('scroll'));
+      });
+
       // Trigger re-render with new output
       act(() => {
         rerender(
@@ -166,6 +171,11 @@ describe('BashOutput', () => {
         writable: true,
       }); // Middle of content
       Object.defineProperty(scrollContainer, 'clientHeight', { value: 200, configurable: true });
+
+      // Dispatch scroll event so ScrollFadeContainer state updates
+      act(() => {
+        scrollContainer.dispatchEvent(new Event('scroll'));
+      });
 
       // Trigger re-render with new output
       act(() => {
@@ -199,5 +209,19 @@ describe('BashOutput', () => {
     expect(node).toBeInTheDocument();
     expect(node.style.color).toBe('var(--vscode-terminal-ansiRed, #cd3131)');
     expect(node.style.fontWeight).toBe('bold');
+  });
+
+  it('keeps long command on a single line and exposes full command via data-custom-title for tooltip', () => {
+    const longCommand = 'echo ' + 'a'.repeat(200);
+    const { container } = render(
+      <BashOutput command={longCommand} output="out" status="completed" />,
+    );
+
+    const commandEl = container.querySelector('.bash-output-command');
+    expect(commandEl).toBeInTheDocument();
+    // Full text is preserved in the DOM so a custom tooltip (driven by
+    // data-custom-title) can reveal the complete command when truncated.
+    expect(commandEl?.textContent).toBe(longCommand);
+    expect(commandEl?.getAttribute('data-custom-title')).toBe(longCommand);
   });
 });

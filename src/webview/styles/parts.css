@@ -622,8 +622,11 @@ pre.code-block code {
 }
 
 .diff-table-wrapper {
-  overflow-x: hidden;
   max-height: 500px;
+  --scroll-fade-color: var(
+    --vscode-textCodeBlock-background,
+    color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background))
+  );
 }
 
 .diff-table {
@@ -871,7 +874,7 @@ pre.code-block code {
 
 .bash-output-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   padding: 6px 12px;
   background-color: color-mix(in srgb, var(--vscode-terminal-background, #121212) 90%, black);
@@ -893,16 +896,22 @@ pre.code-block code {
   font-size: 11px;
   font-weight: 600;
   color: var(--vscode-descriptionForeground, var(--webview-foreground));
-  white-space: pre-wrap;
-  word-break: break-all;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   line-height: 1.2;
 }
 
-.bash-output-scroll {
-  max-height: 200px;
-  overflow-y: auto;
-  padding: 8px 12px;
+.bash-output-scroll-container {
+  --scroll-fade-color: color-mix(in srgb, var(--vscode-terminal-background, #121212) 95%, black);
   background-color: color-mix(in srgb, var(--vscode-terminal-background, #121212) 95%, black);
+  max-height: 200px;
+}
+
+.bash-output-scroll {
+  padding: 8px 12px;
 }
 
 .bash-output-scroll pre {

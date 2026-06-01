@@ -25,12 +25,20 @@
 
 .scroll-fade-top {
   top: 0;
-  background: linear-gradient(to bottom, var(--webview-background) 0%, transparent 100%);
+  background: linear-gradient(
+    to bottom,
+    var(--scroll-fade-color, var(--webview-background)) 0%,
+    transparent 100%
+  );
 }
 
 .scroll-fade-bottom {
   bottom: 0;
-  background: linear-gradient(to top, var(--webview-background) 0%, transparent 100%);
+  background: linear-gradient(
+    to top,
+    var(--scroll-fade-color, var(--webview-background)) 0%,
+    transparent 100%
+  );
 }
 
 .scroll-fade-container.has-top-shadow .scroll-fade-top {
