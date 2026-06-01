@@ -4,7 +4,7 @@
  */
 
 import type { Message, Part, SnapshotFileDiff } from '@opencode-ai/sdk/v2/client';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { useIPC } from '../hooks/useIPC';
 import { createReviewID } from '../utils/review-utils';
 import { Codicon } from './Codicon';
@@ -214,8 +214,12 @@ function restoreDisplayTextPart(part: Part, allParts: Part[]): Part {
   return { ...part, text: restoredText };
 }
 
-/** A paired user message and optional assistant response with part rendering. */
-export function MessageTurn({
+/** A paired user message and optional assistant response with part rendering.
+ *  Wrapped in React.memo so unrelated turn updates (e.g. streaming deltas in
+ *  a later turn) do not re-render earlier turns. The shallow comparison
+ *  works because the active session's parts record is sliced in App.tsx,
+ *  giving each MessageTurn a stable parts reference until its own parts change. */
+export const MessageTurn = memo(function MessageTurn({
   userMessage,
   assistantMessage,
   assistantMessages,
@@ -467,4 +471,4 @@ export function MessageTurn({
       />
     </div>
   );
-}
+});

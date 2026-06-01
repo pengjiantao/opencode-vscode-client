@@ -2,10 +2,16 @@
  * @file Unit tests for the unified diff parsing utility.
  */
 
-import { describe, expect, it } from 'vitest';
-import { parseDiff } from './diff-parser';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { _clearParseCacheForTests, parseDiff } from './diff-parser';
 
 describe('diff-parser', () => {
+  beforeEach(() => {
+    // Each test creates fresh string literals, so the cache is naturally
+    // per-test, but clearing it keeps memory bounded and matches
+    // what the LRU cache eviction does under load.
+    _clearParseCacheForTests();
+  });
   it('parses a simple single-file unified diff with additions and deletions', () => {
     const diffText = `
 --- a/src/index.ts
@@ -150,5 +156,14 @@ index 123456..789abc 100644
     expect(parsed.newFile).toBe('src/git.ts');
     expect(parsed.hunks).toHaveLength(1);
     expect(parsed.hunks[0].lines).toHaveLength(2);
+  });
+
+  it('returns the same object instance for repeated calls with the same string', () => {
+    const diffText = `--- a/x\n+++ b/x\n@@ -1 +1 @@\n-a\n+b`;
+    const first = parseDiff(diffText);
+    const second = parseDiff(diffText);
+    // Caching returns the exact same reference, so React's useMemo
+    // dependency comparison short-circuits the downstream buildSegments call.
+    expect(second).toBe(first);
   });
 });

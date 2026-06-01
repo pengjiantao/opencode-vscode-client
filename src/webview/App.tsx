@@ -4,7 +4,7 @@
  */
 
 import type { Part, SnapshotFileDiff } from '@opencode-ai/sdk/v2/client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AgentInfo, ExtToWebview, ModelInfo } from '../shared/types';
 import { ChatView } from './components/ChatView';
 import { Codicon } from './components/Codicon';
@@ -28,6 +28,13 @@ declare global {
     };
   }
 }
+
+/** Stable empty parts record. Reused across renders so the parts prop
+ *  reference stays the same when the active session has no messages. */
+const EMPTY_PARTS: Record<string, Part[]> = {};
+
+/** Stable empty parts list for a single message. Reused across messages. */
+const EMPTY_PARTS_FOR_MESSAGE: Part[] = [];
 
 /** Main application component — orchestrates IPC, session state, and child components. */
 export function App() {
@@ -250,22 +257,25 @@ export function App() {
   };
 
   /** Handles revert: sends IPC and restores user message parts to the input box. */
-  const handleRevert = (messageID: string) => {
-    if (!activeSessionID) return;
-    // Collect user message parts for restoring to input box
-    const sessionMessages = messages[activeSessionID] || [];
-    const userMsg = sessionMessages.find((m) => m.id === messageID);
-    if (userMsg) {
-      const userParts = (parts[messageID] || []).filter(
-        (p) => !(p as { synthetic?: boolean }).synthetic,
-      );
-      // Set restore parts (triggers useEffect in PromptInput to populate editor)
-      setRestoreParts([...userParts]);
-    }
-    // Send revert IPC to extension host.
-    // The host will send back the updated messages:list after the operation.
-    send({ type: 'session:revert', sessionID: activeSessionID, messageID } as never);
-  };
+  const handleRevert = useCallback(
+    (messageID: string) => {
+      if (!activeSessionID) return;
+      // Collect user message parts for restoring to input box
+      const sessionMessages = messages[activeSessionID] || [];
+      const userMsg = sessionMessages.find((m) => m.id === messageID);
+      if (userMsg) {
+        const userParts = (parts[messageID] || []).filter(
+          (p) => !(p as { synthetic?: boolean }).synthetic,
+        );
+        // Set restore parts (triggers useEffect in PromptInput to populate editor)
+        setRestoreParts([...userParts]);
+      }
+      // Send revert IPC to extension host.
+      // The host will send back the updated messages:list after the operation.
+      send({ type: 'session:revert', sessionID: activeSessionID, messageID } as never);
+    },
+    [activeSessionID, messages, parts, send],
+  );
 
   /** Handles redo: finds next user message forward or fully restores. */
   const handleRedo = () => {
@@ -296,18 +306,21 @@ export function App() {
 
   /** Opens fork confirmation dialog at a specific message, restoring its content to the input box.
    *  The confirmation already happened in MessageTurn's ForkConfirmDialog, so directly send IPC. */
-  const handleForkAtMessage = (messageID: string) => {
-    if (!activeSessionID) return;
-    const userParts = (parts[messageID] || []).filter(
-      (p) => !(p as { synthetic?: boolean }).synthetic,
-    );
-    setRestoreParts([...userParts]);
-    send({
-      type: 'session:fork',
-      sessionID: activeSessionID,
-      messageID,
-    } as never);
-  };
+  const handleForkAtMessage = useCallback(
+    (messageID: string) => {
+      if (!activeSessionID) return;
+      const userParts = (parts[messageID] || []).filter(
+        (p) => !(p as { synthetic?: boolean }).synthetic,
+      );
+      setRestoreParts([...userParts]);
+      send({
+        type: 'session:fork',
+        sessionID: activeSessionID,
+        messageID,
+      } as never);
+    },
+    [activeSessionID, parts, send],
+  );
 
   /** Confirms the fork operation and sends IPC to the extension host. */
   const handleForkConfirm = () => {
@@ -336,6 +349,20 @@ export function App() {
   const hasPendingQuestion = activeQuestions.length > 0;
   const activeQuestionRequestID = activeQuestions[0]?.id;
 
+  // Slice the parts record down to just the active session's messages. This
+  // gives the memoized ChatView a stable parts reference as long as the
+  // relevant parts haven't changed, even when other sessions' parts update.
+  const activeSessionParts = useMemo(() => {
+    if (!activeSessionID) return EMPTY_PARTS;
+    const sessionMessages = messages[activeSessionID];
+    if (!sessionMessages) return EMPTY_PARTS;
+    const sliced: Record<string, Part[]> = {};
+    for (const msg of sessionMessages) {
+      sliced[msg.id] = parts[msg.id] || EMPTY_PARTS_FOR_MESSAGE;
+    }
+    return sliced;
+  }, [activeSessionID, messages, parts]);
+
   return (
     <div className="app">
       <SessionTabs
@@ -350,7 +377,7 @@ export function App() {
           <ChatView
             sessionID={activeSessionID}
             messages={messages[activeSessionID] || []}
-            parts={parts}
+            parts={activeSessionParts}
             onRevert={handleRevert}
             onFork={handleForkAtMessage}
           />

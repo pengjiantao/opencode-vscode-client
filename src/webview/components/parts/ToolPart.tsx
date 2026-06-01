@@ -2,7 +2,7 @@
  * @file Renders a tool call part with its status, input, output, and error states in a borderless collapsible block.
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Codicon } from '../Codicon';
 import { BashOutput } from './BashOutput';
 import { DiffPart } from './DiffPart';
@@ -215,10 +215,32 @@ export function ToolPart({
 
   const isEditOrWrite = toolName === 'edit' || toolName === 'write' || toolName === 'write_to_file';
 
-  const hasDiffText =
-    isEditOrWrite &&
-    ((state.metadata?.diff && typeof state.metadata.diff === 'string') ||
-      (state.input && typeof state.input.content === 'string'));
+  // Extract the write content into a stable primitive so the diff memo
+  // dependency array can be statically verified by eslint.
+  const writeContent =
+    state.input && typeof state.input.content === 'string' ? state.input.content : null;
+
+  // Memoize the diff text extraction. For write tools without a server-supplied
+  // diff, getSyntheticWriteDiff splits the content and joins it back; on a large
+  // file that work is wasted if it happens during render. Caching by the
+  // primitive content string keeps the value stable as long as the underlying
+  // input doesn't change.
+  const diffText = useMemo(() => {
+    if (!isEditOrWrite) return undefined;
+    if (state.metadata?.diff && typeof state.metadata.diff === 'string') {
+      return state.metadata.diff;
+    }
+    if (writeContent !== null && state.input) {
+      return getSyntheticWriteDiff(state.input);
+    }
+    return undefined;
+    // state.input may have other fields that change identity; keying on the
+    // primitive content string is sufficient because getSyntheticWriteDiff
+    // only reads .content from the input.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditOrWrite, state.metadata?.diff, writeContent]);
+
+  const hasDiffText = isEditOrWrite && !!diffText;
 
   const hasApplyPatchFiles =
     toolName === 'apply_patch' &&
@@ -228,14 +250,14 @@ export function ToolPart({
   const hasDiff = hasDiffText || hasApplyPatchFiles;
 
   // Omit "Tool:" prefix to keep the sidebar presentation compact and developer-centric
-  const getSummaryText = () => {
+  const summaryText = useMemo(() => {
     const desc = getToolDescription(tool, state.input, state.title);
     const prefix = isBash ? 'BASH' : tool.toUpperCase();
     if (desc === prefix || desc === tool) {
       return prefix;
     }
     return `${prefix} - ${desc}`;
-  };
+  }, [tool, state.input, state.title, isBash]);
 
   const dotClassName = `timeline-dot tool-dot status-${state.status}`;
   const showLine = hasPredecessor || hasSuccessor;
@@ -252,23 +274,14 @@ export function ToolPart({
     }
 
     // Check if the tool modifies files and has a diff (either real or synthetic)
-    if (isEditOrWrite) {
-      let diffText: string | undefined;
-      if (state.metadata?.diff && typeof state.metadata.diff === 'string') {
-        diffText = state.metadata.diff;
-      } else if (state.input && typeof state.input.content === 'string') {
-        diffText = getSyntheticWriteDiff(state.input);
-      }
-
-      if (diffText) {
-        const filePath = (state.input?.filePath ||
-          state.input?.TargetFile ||
-          state.input?.targetFile ||
-          state.input?.path ||
-          '') as string;
-        // Return only the diff element, omitting label and wrapping div as per instructions
-        return <DiffPart diff={diffText} filePath={filePath} status={state.status} />;
-      }
+    if (isEditOrWrite && diffText) {
+      const filePath = (state.input?.filePath ||
+        state.input?.TargetFile ||
+        state.input?.targetFile ||
+        state.input?.path ||
+        '') as string;
+      // Return only the diff element, omitting label and wrapping div as per instructions
+      return <DiffPart diff={diffText} filePath={filePath} status={state.status} />;
     }
 
     // Check if it is a multi-file patch application tool call
@@ -365,8 +378,8 @@ export function ToolPart({
       )}
       <div className="tool-header" onClick={handleToggle}>
         <Codicon name={getToolIcon(tool)} className="tool-header-icon" />
-        <span className="tool-name" data-custom-title={getSummaryText()}>
-          {getSummaryText()}
+        <span className="tool-name" data-custom-title={summaryText}>
+          {summaryText}
         </span>
       </div>
 

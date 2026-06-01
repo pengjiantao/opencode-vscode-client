@@ -10,6 +10,12 @@ import type { DiffHunk, DiffLine } from './diff-parser';
 const DEFAULT_CONTEXT_LINES = 3;
 
 /**
+ * Maximum number of segment computations cached in memory.
+ * Matches the parseCache size so the two caches evict in step.
+ */
+const SEGMENT_CACHE_SIZE = 200;
+
+/**
  * A visible segment of diff lines (changes + surrounding context).
  */
 export interface VisibleSegment {
@@ -33,6 +39,19 @@ export interface CollapsedSegment {
 export type DiffSegment = VisibleSegment | CollapsedSegment;
 
 /**
+ * Identity-keyed cache of buildSegments results. Hunks arrays produced by
+ * parseDiff are stable references, so repeated renders of the same diff
+ * hit the cache and skip the O(n) segment-computation walk.
+ *
+ * Keyed by hunks reference alone: every caller in the codebase uses
+ * DEFAULT_CONTEXT_LINES, so collapsing the key to a single reference
+ * matches the actual call pattern. If a future caller passes a different
+ * contextLines value, the buildSegments function recomputes inline
+ * (no cache lookup).
+ */
+let segmentCache: Map<DiffHunk[], DiffSegment[]> = new Map();
+
+/**
  * Builds display segments from parsed diff hunks.
  *
  * For each hunk, context lines that are far from any added/removed line
@@ -51,6 +70,41 @@ export function buildSegments(
     return [];
   }
 
+  // The current production call site always uses DEFAULT_CONTEXT_LINES. If a
+  // future caller diverges, skip the cache and recompute.
+  if (contextLines !== DEFAULT_CONTEXT_LINES) {
+    return buildSegmentsUncached(hunks, contextLines);
+  }
+
+  const cached = segmentCache.get(hunks);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const segments = buildSegmentsUncached(hunks, contextLines);
+
+  // Evict if the cache has grown past the soft cap. LRU eviction is not
+  // possible with a Map keyed by reference, but a hard cap on size is
+  // good enough for typical sessions.
+  if (segmentCache.size >= SEGMENT_CACHE_SIZE) {
+    segmentCache = new Map();
+  }
+  segmentCache.set(hunks, segments);
+  return segments;
+}
+
+/**
+ * Clears the buildSegments cache. Exposed for tests; not part of the public API.
+ */
+export function _clearSegmentCacheForTests(): void {
+  segmentCache.clear();
+}
+
+/**
+ * Implementation of buildSegments without caching. Kept as a separate function
+ * so the cached path stays simple and easy to verify.
+ */
+function buildSegmentsUncached(hunks: DiffHunk[], contextLines: number): DiffSegment[] {
   const segments: DiffSegment[] = [];
 
   for (let hunkIdx = 0; hunkIdx < hunks.length; hunkIdx++) {

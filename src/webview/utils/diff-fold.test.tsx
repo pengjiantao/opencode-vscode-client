@@ -2,8 +2,8 @@
  * @file Unit tests for the diff-fold utility.
  */
 
-import { describe, expect, it } from 'vitest';
-import { buildSegments } from './diff-fold';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { _clearSegmentCacheForTests, buildSegments } from './diff-fold';
 import type { DiffHunk } from './diff-parser';
 
 /**
@@ -55,6 +55,12 @@ const A = (content: string) => ({ type: 'added' as const, content });
 const R = (content: string) => ({ type: 'removed' as const, content });
 
 describe('buildSegments', () => {
+  beforeEach(() => {
+    // Each test creates fresh hunks arrays, but clearing the cache keeps
+    // memory bounded and matches the LRU eviction behavior under load.
+    _clearSegmentCacheForTests();
+  });
+
   it('returns empty array for no hunks', () => {
     expect(buildSegments([])).toEqual([]);
   });
@@ -176,5 +182,14 @@ describe('buildSegments', () => {
     // Each hunk should have collapsed blocks
     const collapsed = segments.filter((s) => s.type === 'collapsed');
     expect(collapsed.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('returns the same array instance for repeated calls with the same hunks reference', () => {
+    const hunks = [makeHunk('@@ -1,2 +1,2 @@', [R('old'), A('new')])];
+    const first = buildSegments(hunks);
+    const second = buildSegments(hunks);
+    // Caching returns the exact same reference, allowing React's useMemo
+    // downstream to skip re-rendering the diff entirely.
+    expect(second).toBe(first);
   });
 });

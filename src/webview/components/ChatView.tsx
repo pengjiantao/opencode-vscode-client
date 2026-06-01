@@ -4,7 +4,7 @@
  */
 
 import type { Message, Part } from '@opencode-ai/sdk/v2/client';
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { useSessionStore } from '../store/sessionStore';
 import { Codicon } from './Codicon';
 import { MessageTurn } from './MessageTurn';
@@ -30,8 +30,18 @@ interface ChatViewProps {
   onFork?: (messageID: string) => void;
 }
 
-/** Renders a list of user/assistant message turns with inline permission cards. */
-export function ChatView({ sessionID, messages, parts, onRevert, onFork }: ChatViewProps) {
+/** Renders a list of user/assistant message turns with inline permission cards.
+ *  Wrapped in React.memo so App-level state changes (model selector, agent
+ *  selector, etc.) do not re-trigger the message grouping walk. The shallow
+ *  comparison relies on the caller passing stable references for `messages`,
+ *  `parts`, and the revert/fork callbacks. */
+export const ChatView = memo(function ChatView({
+  sessionID,
+  messages,
+  parts,
+  onRevert,
+  onFork,
+}: ChatViewProps) {
   const sessionStatus = useSessionStore((s) => s.sessionStatus);
   const sessions = useSessionStore((s) => s.sessions);
 
@@ -111,4 +121,4 @@ export function ChatView({ sessionID, messages, parts, onRevert, onFork }: ChatV
       )}
     </ScrollFadeContainer>
   );
-}
+});

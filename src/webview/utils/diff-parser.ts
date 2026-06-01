@@ -2,6 +2,23 @@
  * @file Parsers unified diff strings into a structured format for rendering.
  */
 
+import { LRUCache } from './lru';
+
+/**
+ * Maximum number of parsed diffs cached in memory. Most sessions have
+ * dozens of file-modifying tools; 200 strikes a balance between
+ * avoiding re-parse cost and limiting memory growth.
+ */
+const PARSE_CACHE_SIZE = 200;
+
+/**
+ * Identity-keyed cache of parsed diffs. Keyed by string reference, so the
+ * cache is a hit whenever the same `diff` prop is reused across renders
+ * (common for stable tool parts). It is intentionally not value-keyed to
+ * avoid hashing multi-MB diff strings.
+ */
+const parseCache = new LRUCache<string, ParsedDiff>(PARSE_CACHE_SIZE);
+
 /**
  * Represents a single line of a parsed diff.
  */
@@ -40,11 +57,34 @@ export interface ParsedDiff {
 
 /**
  * Parses a unified diff string into a structured ParsedDiff representation.
+ * Cached per string reference, so repeated renders with the same diff prop
+ * skip the parse pass entirely.
  *
  * @param diffText The raw unified diff string to parse.
  * @returns The structured ParsedDiff object.
  */
 export function parseDiff(diffText: string): ParsedDiff {
+  const cached = parseCache.get(diffText);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const parsed = parseDiffUncached(diffText);
+  parseCache.set(diffText, parsed);
+  return parsed;
+}
+
+/**
+ * Clears the parseDiff cache. Exposed for tests; not part of the public API.
+ */
+export function _clearParseCacheForTests(): void {
+  parseCache.clear();
+}
+
+/**
+ * Implementation of parseDiff without caching. Kept as a separate function
+ * so the cached path stays simple and easy to verify.
+ */
+function parseDiffUncached(diffText: string): ParsedDiff {
   // Normalize newlines and split by line
   const lines = diffText.split(/\r?\n/);
   const hunks: DiffHunk[] = [];
