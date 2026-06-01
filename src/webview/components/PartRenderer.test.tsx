@@ -519,8 +519,8 @@ describe('PartRenderer', () => {
       expect(cmdSpan?.textContent).toBe('ls -la');
       expect(cmdSpan?.getAttribute('data-custom-title')).toBe('ls -la');
 
-      // Verify thinking/executing spinner icon is displayed in the running state
-      expect(container.querySelector('.codicon-sync.codicon-modifier-spin')).toBeInTheDocument();
+      // Verify standard $: prompt prefix is displayed
+      expect(screen.getByText('$:')).toBeInTheDocument();
 
       // 4. Output contains output text from metadata.output
       expect(screen.getByText(/total 0/)).toBeInTheDocument();
@@ -543,14 +543,14 @@ describe('PartRenderer', () => {
         metadata: {},
       };
 
-      const { container } = render(<PartRenderer part={part} />);
+      render(<PartRenderer part={part} />);
 
       expect(screen.getByText('BASH - echo hello')).toBeInTheDocument();
       expect(screen.getByText('hello')).toBeInTheDocument();
       expect(screen.queryByText('Output')).not.toBeInTheDocument();
 
-      // Verify thinking spinner icon is NOT displayed in completed state
-      expect(container.querySelector('.codicon-sync')).not.toBeInTheDocument();
+      // Verify standard $: prompt prefix is still displayed
+      expect(screen.getByText('$:')).toBeInTheDocument();
     });
 
     it('regression: returns null from BashOutput when output is empty/undefined', () => {

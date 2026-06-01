@@ -23,34 +23,71 @@ describe('BashOutput', () => {
     expect(screen.getByText(/total 0/)).toBeInTheDocument();
   });
 
-  it('shows spinner icon when status is running', () => {
-    const { container } = render(<BashOutput command="ls" output="output" status="running" />);
+  it('always displays standard $: prompt prefix regardless of status', () => {
+    const { rerender, container } = render(
+      <BashOutput command="ls" output="output" status="running" />,
+    );
+    expect(screen.getByText('$:')).toBeInTheDocument();
+    expect(container.querySelector('.codicon')).not.toBeInTheDocument();
 
-    expect(container.querySelector('.codicon-sync.codicon-modifier-spin')).toBeInTheDocument();
+    rerender(<BashOutput command="ls" output="output" status="completed" />);
+    expect(screen.getByText('$:')).toBeInTheDocument();
+    expect(container.querySelector('.codicon')).not.toBeInTheDocument();
+
+    rerender(<BashOutput command="ls" output="output" status="error" />);
+    expect(screen.getByText('$:')).toBeInTheDocument();
+    expect(container.querySelector('.codicon')).not.toBeInTheDocument();
+
+    rerender(<BashOutput command="ls" output="output" status="pending" />);
+    expect(screen.getByText('$:')).toBeInTheDocument();
+    expect(container.querySelector('.codicon')).not.toBeInTheDocument();
   });
 
-  it('hides spinner icon when status is completed', () => {
-    const { container } = render(<BashOutput command="ls" output="output" status="completed" />);
-
-    expect(container.querySelector('.codicon-sync')).not.toBeInTheDocument();
+  it('parses and renders plain output correctly', () => {
+    render(<BashOutput command="ls" output="hello world" status="completed" />);
+    const textNode = screen.getByText('hello world');
+    expect(textNode).toBeInTheDocument();
+    expect(textNode.style.color).toBe('');
+    expect(textNode.style.fontWeight).toBe('');
   });
 
-  it('shows checkmark icon when status is completed', () => {
-    const { container } = render(<BashOutput command="ls" output="output" status="completed" />);
+  it('parses and renders ANSI foreground colors', () => {
+    // String.fromCharCode(27) is the ESC character
+    const esc = String.fromCharCode(27);
+    render(
+      <BashOutput command="ls" output={`hello ${esc}[31mred${esc}[0m text`} status="completed" />,
+    );
+    const helloNode = screen.getByText(/hello/);
+    expect(helloNode).toBeInTheDocument();
+    expect(helloNode.textContent).toBe('hello ');
 
-    expect(container.querySelector('.codicon-check')).toBeInTheDocument();
+    const redNode = screen.getByText('red');
+    expect(redNode).toBeInTheDocument();
+    expect(redNode.style.color).toBe('var(--vscode-terminal-ansiRed, #cd3131)');
+
+    const textNode = screen.getByText(/text/);
+    expect(textNode).toBeInTheDocument();
+    expect(textNode.textContent).toBe(' text');
   });
 
-  it('shows error icon when status is error', () => {
-    const { container } = render(<BashOutput command="ls" output="output" status="error" />);
-
-    expect(container.querySelector('.codicon-error')).toBeInTheDocument();
+  it('parses and renders compound ANSI styles (bold + color)', () => {
+    const esc = String.fromCharCode(27);
+    render(
+      <BashOutput command="ls" output={`${esc}[1;32mboldgreen${esc}[0m`} status="completed" />,
+    );
+    const node = screen.getByText('boldgreen');
+    expect(node).toBeInTheDocument();
+    expect(node.style.fontWeight).toBe('bold');
+    expect(node.style.color).toBe('var(--vscode-terminal-ansiGreen, #0dbc79)');
   });
 
-  it('shows no icon when status is pending', () => {
-    const { container } = render(<BashOutput command="ls" output="output" status="pending" />);
-
-    expect(container.querySelector('.bash-output-icon')).not.toBeInTheDocument();
+  it('resets styling when reset code is encountered', () => {
+    const esc = String.fromCharCode(27);
+    render(<BashOutput command="ls" output={`${esc}[31mred${esc}[0mnormal`} status="completed" />);
+    const redNode = screen.getByText('red');
+    expect(redNode.style.color).toBe('var(--vscode-terminal-ansiRed, #cd3131)');
+    const normalNode = screen.getByText('normal');
+    expect(normalNode.style.color).toBe('');
   });
 
   it('returns null when output is empty', () => {
@@ -60,12 +97,12 @@ describe('BashOutput', () => {
   });
 
   it('regression: auto-scrolls to bottom when new output arrives and user is at bottom', () => {
-    const { rerender } = render(
+    const { rerender, container } = render(
       <BashOutput command="ls" output="initial output" status="running" />,
     );
 
     // Simulate the scroll element being set
-    const scrollContainer = screen.getByText('initial output').parentElement;
+    const scrollContainer = container.querySelector('.bash-output-scroll');
     if (scrollContainer) {
       Object.defineProperty(scrollContainer, 'scrollHeight', { value: 1000, configurable: true });
       Object.defineProperty(scrollContainer, 'scrollTop', {
@@ -88,11 +125,11 @@ describe('BashOutput', () => {
   });
 
   it('regression: does not auto-scroll when user has scrolled up to inspect output', () => {
-    const { rerender } = render(
+    const { rerender, container } = render(
       <BashOutput command="ls" output="initial output" status="running" />,
     );
 
-    const scrollContainer = screen.getByText('initial output').parentElement;
+    const scrollContainer = container.querySelector('.bash-output-scroll');
     if (scrollContainer) {
       // User has scrolled up (not at bottom)
       Object.defineProperty(scrollContainer, 'scrollHeight', { value: 1000, configurable: true });
@@ -113,5 +150,27 @@ describe('BashOutput', () => {
       // scrollTop should remain at 500 (user's position)
       expect(scrollContainer.scrollTop).toBe(500);
     }
+  });
+
+  it('parses and renders multiline output correctly', () => {
+    const nl = String.fromCharCode(10);
+    const { container } = render(
+      <BashOutput command="ls" output={`line1${nl}line2${nl}line3`} status="completed" />,
+    );
+    const preEl = container.querySelector('pre');
+    expect(preEl).toBeInTheDocument();
+    expect(preEl?.textContent).toBe(`line1${nl}line2${nl}line3`);
+  });
+
+  it('handles empty string segments within multiple adjacent ANSI escape codes correctly', () => {
+    const esc = String.fromCharCode(27);
+    // Adjacent styles: red (31) then bold (1)
+    render(
+      <BashOutput command="ls" output={`${esc}[31m${esc}[1mboldred${esc}[0m`} status="completed" />,
+    );
+    const node = screen.getByText('boldred');
+    expect(node).toBeInTheDocument();
+    expect(node.style.color).toBe('var(--vscode-terminal-ansiRed, #cd3131)');
+    expect(node.style.fontWeight).toBe('bold');
   });
 });
