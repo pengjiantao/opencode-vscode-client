@@ -93,17 +93,14 @@ describe('DiffPart', () => {
       path: 'file.ts',
     });
 
-    // Context line click
+    // Context line click should not trigger file:open (non-interactive)
     vi.mocked(window.vscode.postMessage).mockClear();
     const contextRow = screen.getByText('const x = 10;').closest('tr');
+    expect(contextRow).not.toHaveAttribute('role', 'button');
     fireEvent.click(contextRow!);
-    expect(window.vscode.postMessage).toHaveBeenCalledWith({
-      type: 'file:open',
-      path: 'file.ts',
-      startLine: 1,
-    });
+    expect(window.vscode.postMessage).not.toHaveBeenCalled();
 
-    // Removed line click
+    // Removed line click (part of change block, triggers on parent tbody)
     vi.mocked(window.vscode.postMessage).mockClear();
     const removedRow = screen.getByText('const y = 20;').closest('tr');
     fireEvent.click(removedRow!);
@@ -111,9 +108,10 @@ describe('DiffPart', () => {
       type: 'file:open',
       path: 'file.ts',
       startLine: 2,
+      endLine: 2,
     });
 
-    // Added line click
+    // Added line click (part of change block, triggers on parent tbody)
     vi.mocked(window.vscode.postMessage).mockClear();
     const addedRow = screen.getByText('const y = 30;').closest('tr');
     fireEvent.click(addedRow!);
@@ -130,18 +128,20 @@ describe('DiffPart', () => {
 --- a/file.ts
 +++ b/file.ts
 @@ -1,1 +1,1 @@
- const x = 10;
+-old_x
++new_x
 `;
 
     render(<DiffPart diff={diff.trim()} />);
 
     vi.mocked(window.vscode.postMessage).mockClear();
-    const contextRow = screen.getByText('const x = 10;').closest('tr');
-    fireEvent.click(contextRow!);
+    const addedRow = screen.getByText('new_x').closest('tr');
+    fireEvent.click(addedRow!);
     expect(window.vscode.postMessage).toHaveBeenCalledWith({
       type: 'file:open',
       path: 'file.ts',
       startLine: 1,
+      endLine: 1,
     });
   });
 
@@ -157,9 +157,105 @@ describe('DiffPart', () => {
 
     vi.mocked(window.vscode.postMessage).mockClear();
     const removedRow = screen.getByText('const x = 10;').closest('tr');
-    expect(removedRow).not.toHaveAttribute('role', 'button');
+    const tbody = removedRow?.closest('tbody');
+    expect(tbody).not.toHaveAttribute('role', 'button');
     fireEvent.click(removedRow!);
     expect(window.vscode.postMessage).not.toHaveBeenCalled();
+  });
+
+  it('regression: clicks on contiguous replacement block selects range', () => {
+    const diff = `
+--- a/file.ts
++++ b/file.ts
+@@ -3,3 +3,3 @@
+-old3
+-old4
+-old5
++new3
++new4
++new5
+`;
+
+    render(<DiffPart diff={diff.trim()} filePath="file.ts" />);
+
+    vi.mocked(window.vscode.postMessage).mockClear();
+    const addedRow = screen.getByText('new4').closest('tr');
+    fireEvent.click(addedRow!);
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: 'file.ts',
+      startLine: 3,
+      endLine: 5,
+    });
+  });
+
+  it('regression: clicks on pure additions block selects range', () => {
+    const diff = `
+--- a/file.ts
++++ b/file.ts
+@@ -3,0 +3,3 @@
++new3
++new4
++new5
+`;
+
+    render(<DiffPart diff={diff.trim()} filePath="file.ts" />);
+
+    vi.mocked(window.vscode.postMessage).mockClear();
+    const addedRow = screen.getByText('new4').closest('tr');
+    fireEvent.click(addedRow!);
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: 'file.ts',
+      startLine: 3,
+      endLine: 5,
+    });
+  });
+
+  it('regression: clicks on pure deletions block jumps to the nearest line following deletions', () => {
+    const diff = `
+--- a/file.ts
++++ b/file.ts
+@@ -3,3 +3,1 @@
+-old3
+-old4
+-old5
+  context6
+`;
+
+    render(<DiffPart diff={diff.trim()} filePath="file.ts" />);
+
+    vi.mocked(window.vscode.postMessage).mockClear();
+    const removedRow = screen.getByText('old4').closest('tr');
+    fireEvent.click(removedRow!);
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: 'file.ts',
+      startLine: 3, // context6 newLineNumber is 3
+    });
+  });
+
+  it('regression: clicks on pure deletions block at end of file jumps to nearest line preceding deletions', () => {
+    const diff = `
+--- a/file.ts
++++ b/file.ts
+@@ -2,3 +2,1 @@
+  context2
+-old3
+-old4
+-old5
+`;
+
+    render(<DiffPart diff={diff.trim()} filePath="file.ts" />);
+
+    vi.mocked(window.vscode.postMessage).mockClear();
+    const removedRow = screen.getByText('old4').closest('tr');
+    fireEvent.click(removedRow!);
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: 'file.ts',
+      startLine: 2, // context2 newLineNumber is 2
+    });
   });
 
   it('folds long context blocks within a hunk', () => {

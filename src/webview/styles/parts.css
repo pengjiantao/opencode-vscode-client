@@ -721,9 +721,7 @@ pre.code-block code {
 /* Interactive diff elements pointer and hover effects */
 .diff-file-header[role='button'],
 .diff-hunk-header-row[role='button'] .diff-hunk-header,
-.diff-row-added[role='button'],
-.diff-row-removed[role='button'],
-.diff-row-context[role='button'] {
+.diff-change-block[role='button'] {
   cursor: pointer;
 }
 
@@ -743,7 +741,7 @@ pre.code-block code {
   );
 }
 
-.diff-row-added[role='button']:hover {
+.diff-change-block[role='button']:hover .diff-row-added {
   background-color: color-mix(
     in srgb,
     var(--vscode-diffEditor-insertedLineBackground, rgba(46, 160, 67, 0.15)),
@@ -751,7 +749,7 @@ pre.code-block code {
   );
 }
 
-.diff-row-removed[role='button']:hover {
+.diff-change-block[role='button']:hover .diff-row-removed {
   background-color: color-mix(
     in srgb,
     var(--vscode-diffEditor-removedLineBackground, rgba(248, 81, 112, 0.15)),
@@ -759,8 +757,9 @@ pre.code-block code {
   );
 }
 
-.diff-row-context[role='button']:hover {
-  background-color: color-mix(in srgb, var(--webview-foreground) 5%, transparent);
+.diff-change-block:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: -1px;
 }
 
 .diff-empty-fallback {

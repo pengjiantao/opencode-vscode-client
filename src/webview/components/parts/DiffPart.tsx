@@ -5,7 +5,6 @@
  */
 
 import { memo, useCallback, useMemo, useState } from 'react';
-import type { WebviewToExt } from '../../../shared/types';
 import { useIPC } from '../../hooks/useIPC';
 import { buildSegments } from '../../utils/diff-fold';
 import type { DiffLine } from '../../utils/diff-parser';
@@ -55,21 +54,81 @@ function lineKey(segIdx: number, lineIdx: number): string {
 }
 
 /**
+ * Represents a partitioned block of diff lines of the same structural type.
+ */
+interface LineBlock {
+  /** The type of block: a hunk header, context lines, or change lines (additions/deletions). */
+  type: 'hunk-header' | 'context' | 'change';
+  /** The list of diff lines in this block. */
+  lines: DiffLine[];
+}
+
+/**
+ * Partitions a list of diff lines into contiguous blocks of:
+ * - Hunk headers
+ * - Unmodified context lines
+ * - Contiguous changes (added/removed lines)
+ * This allows us to group modifications into single interactive components.
+ */
+function partitionLines(lines: DiffLine[]): LineBlock[] {
+  const blocks: LineBlock[] = [];
+  let currentBlock: LineBlock | null = null;
+
+  for (const line of lines) {
+    let lineType: 'hunk-header' | 'context' | 'change';
+    if (isHunkHeaderLine(line)) {
+      lineType = 'hunk-header';
+    } else if (line.type === 'context') {
+      lineType = 'context';
+    } else {
+      lineType = 'change';
+    }
+
+    if (currentBlock && currentBlock.type === lineType) {
+      currentBlock.lines.push(line);
+    } else {
+      currentBlock = {
+        type: lineType,
+        lines: [line],
+      };
+      blocks.push(currentBlock);
+    }
+  }
+
+  return blocks;
+}
+
+/**
+ * Searches the surrounding visible segment lines to find the nearest valid line number
+ * in the modified (new) file. This is used when a pure deletion block is clicked,
+ * providing a logical target line number near the deletion location in the new file.
+ */
+function findNearestNewLineNumber(
+  segmentLines: DiffLine[],
+  blockStartIdx: number,
+  blockEndIdx: number,
+): number {
+  // Search forward in the segment lines
+  for (let i = blockEndIdx + 1; i < segmentLines.length; i++) {
+    if (segmentLines[i].newLineNumber !== null) {
+      return segmentLines[i].newLineNumber!;
+    }
+  }
+  // Search backward in the segment lines
+  for (let i = blockStartIdx - 1; i >= 0; i--) {
+    if (segmentLines[i].newLineNumber !== null) {
+      return segmentLines[i].newLineNumber!;
+    }
+  }
+  return 1;
+}
+
+/**
  * Renders a single diff line as a table row.
  *
- * Memoized: re-renders are skipped when line reference and click handler
- * stay the same. Line references are stable thanks to the parseDiff cache,
- * and the click handler is memoized below.
+ * Memoized: re-renders are skipped when the line reference stays the same.
  */
-const DiffLineRow = memo(function DiffLineRow({
-  line,
-  hasValidPath,
-  handleClick,
-}: {
-  line: DiffLine;
-  hasValidPath: boolean;
-  handleClick: (() => void) | null;
-}) {
+const DiffLineRow = memo(function DiffLineRow({ line }: { line: DiffLine }) {
   if (isHunkHeaderLine(line)) {
     return (
       <tr className="diff-hunk-header-row">
@@ -91,27 +150,8 @@ const DiffLineRow = memo(function DiffLineRow({
   const displayNew = line.newLineNumber !== null ? String(line.newLineNumber) : '';
   const sign = line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' ';
 
-  const handleKeyDown = handleClick
-    ? (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleClick();
-        }
-      }
-    : undefined;
-
   return (
-    <tr
-      className={rowClass}
-      {...(hasValidPath
-        ? {
-            role: 'button',
-            tabIndex: 0,
-            onClick: handleClick ?? undefined,
-            onKeyDown: handleKeyDown,
-          }
-        : {})}
-    >
+    <tr className={rowClass}>
       <td className="diff-line-num old-num">{displayOld}</td>
       <td className="diff-line-num new-num">{displayNew}</td>
       <td className="diff-sign">{sign}</td>
@@ -121,49 +161,11 @@ const DiffLineRow = memo(function DiffLineRow({
 });
 
 /**
- * Builds a memoized click handler for a single line. The handler is stable
- * across renders whenever the line and resolvedPath are stable, so the
- * memoized DiffLineRow can skip re-rendering unchanged rows.
- */
-function useLineClickHandler(
-  line: DiffLine,
-  hasValidPath: boolean,
-  resolvedPath: string,
-  send: (msg: WebviewToExt) => void,
-): (() => void) | null {
-  return useMemo(() => {
-    if (!hasValidPath) return null;
-
-    if (line.type === 'added' && line.newLineNumber !== null) {
-      return () => {
-        send({
-          type: 'file:open',
-          path: resolvedPath,
-          startLine: line.newLineNumber!,
-          endLine: line.newLineNumber!,
-        });
-      };
-    }
-    if (line.type === 'removed' && line.oldLineNumber !== null) {
-      return () => {
-        send({ type: 'file:open', path: resolvedPath, startLine: line.oldLineNumber! });
-      };
-    }
-    if (line.type === 'context' && line.newLineNumber !== null) {
-      return () => {
-        send({ type: 'file:open', path: resolvedPath, startLine: line.newLineNumber! });
-      };
-    }
-    return null;
-    // send reference is stable from useIPC.
-  }, [line, hasValidPath, resolvedPath, send]);
-}
-
-/**
  * Renders a unified diff in a tabular structure with separate line numbers
  * and change symbols. Context lines far from changes are folded by default,
  * showing 3 lines of context around each change. Supports per-segment
- * directional expansion.
+ * directional expansion. Contiguous modifications are grouped into interactive
+ * tbody blocks.
  */
 export function DiffPart({ diff, filePath, status }: DiffPartProps) {
   const { send } = useIPC(() => {});
@@ -250,105 +252,159 @@ export function DiffPart({ diff, filePath, status }: DiffPartProps) {
       )}
       <div className="diff-table-wrapper">
         <table className="diff-table">
-          <tbody>
-            {segments.map((segment, segIdx) => {
-              if (segment.type === 'visible') {
-                return segment.lines.map((line, lineIdx) => (
-                  <DiffLineWithHandler
-                    key={lineKey(segIdx, lineIdx)}
-                    line={line}
-                    hasValidPath={hasValidPath}
-                    resolvedPath={resolvedPath}
-                    send={send}
-                  />
-                ));
-              }
+          {segments.map((segment, segIdx) => {
+            if (segment.type === 'visible') {
+              const blocks = partitionLines(segment.lines);
+              let lineCounter = 0;
 
-              // Collapsed segment — check expansion state
-              const expansion = expansionMap[segIdx] ?? { startExpanded: 0, endExpanded: 0 };
-              const totalExpanded = expansion.startExpanded + expansion.endExpanded;
+              return blocks.map((block, blockIdx) => {
+                const blockStartIdx = lineCounter;
+                lineCounter += block.lines.length;
+                const blockEndIdx = lineCounter - 1;
 
-              if (totalExpanded >= segment.count) {
-                // Fully expanded — render all lines
-                return segment.lines.map((line, lineIdx) => (
-                  <DiffLineWithHandler
-                    key={lineKey(segIdx, lineIdx)}
-                    line={line}
-                    hasValidPath={hasValidPath}
-                    resolvedPath={resolvedPath}
-                    send={send}
-                  />
-                ));
-              }
+                if (block.type === 'change') {
+                  const addedNewNumbers = block.lines
+                    .filter((l) => l.type === 'added' && l.newLineNumber !== null)
+                    .map((l) => l.newLineNumber as number);
 
-              // Partially expanded — render start lines, collapsed block, end lines.
-              // Stable per-line keys keep DOM identity across expansion changes.
-              const rows: React.ReactNode[] = [];
+                  const handleClick: (() => void) | null = hasValidPath
+                    ? addedNewNumbers.length > 0
+                      ? () => {
+                          const minLine = Math.min(...addedNewNumbers);
+                          const maxLine = Math.max(...addedNewNumbers);
+                          send({
+                            type: 'file:open',
+                            path: resolvedPath,
+                            startLine: minLine,
+                            endLine: maxLine,
+                          });
+                        }
+                      : () => {
+                          const nearestLine = findNearestNewLineNumber(
+                            segment.lines,
+                            blockStartIdx,
+                            blockEndIdx,
+                          );
+                          send({
+                            type: 'file:open',
+                            path: resolvedPath,
+                            startLine: nearestLine,
+                          });
+                        }
+                    : null;
 
-              for (let lineIdx = 0; lineIdx < expansion.startExpanded; lineIdx++) {
-                const line = segment.lines[lineIdx];
-                rows.push(
-                  <DiffLineWithHandler
-                    key={lineKey(segIdx, lineIdx)}
-                    line={line}
-                    hasValidPath={hasValidPath}
-                    resolvedPath={resolvedPath}
-                    send={send}
-                  />,
-                );
-              }
+                  const handleKeyDown = handleClick
+                    ? (e: React.KeyboardEvent) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleClick();
+                        }
+                      }
+                    : undefined;
 
-              const remainingCount = segment.count - totalExpanded;
-              if (remainingCount > 0) {
-                rows.push(
-                  <CollapsedBlock
-                    key={`collapsed-${segIdx}`}
-                    count={remainingCount}
-                    onExpandStart={(n) => handleExpandStart(segIdx, n)}
-                    onExpandEnd={(n) => handleExpandEnd(segIdx, n)}
-                    onExpandAll={() => handleExpandAll(segIdx)}
-                  />,
-                );
-              }
+                  return (
+                    <tbody
+                      key={`seg-${segIdx}-block-${blockIdx}`}
+                      className="diff-change-block"
+                      {...(handleClick
+                        ? {
+                            role: 'button',
+                            tabIndex: 0,
+                            onClick: handleClick,
+                            onKeyDown: handleKeyDown,
+                          }
+                        : {})}
+                    >
+                      {block.lines.map((line, lineIdx) => (
+                        <DiffLineRow key={lineKey(segIdx, blockStartIdx + lineIdx)} line={line} />
+                      ))}
+                    </tbody>
+                  );
+                } else {
+                  return (
+                    <tbody
+                      key={`seg-${segIdx}-block-${blockIdx}`}
+                      className={`diff-${block.type}-block`}
+                    >
+                      {block.lines.map((line, lineIdx) => (
+                        <DiffLineRow key={lineKey(segIdx, blockStartIdx + lineIdx)} line={line} />
+                      ))}
+                    </tbody>
+                  );
+                }
+              });
+            }
 
-              const endStart = segment.count - expansion.endExpanded;
-              for (let lineIdx = endStart; lineIdx < segment.count; lineIdx++) {
-                const line = segment.lines[lineIdx];
-                rows.push(
-                  <DiffLineWithHandler
-                    key={lineKey(segIdx, lineIdx)}
-                    line={line}
-                    hasValidPath={hasValidPath}
-                    resolvedPath={resolvedPath}
-                    send={send}
-                  />,
-                );
-              }
+            // Collapsed segment — check expansion state
+            const expansion = expansionMap[segIdx] ?? { startExpanded: 0, endExpanded: 0 };
+            const totalExpanded = expansion.startExpanded + expansion.endExpanded;
 
-              return rows;
-            })}
-          </tbody>
+            if (totalExpanded >= segment.count) {
+              // Fully expanded — render all lines
+              return (
+                <tbody key={`seg-${segIdx}-full-expanded`} className="diff-context-block">
+                  {segment.lines.map((line, lineIdx) => (
+                    <DiffLineRow key={lineKey(segIdx, lineIdx)} line={line} />
+                  ))}
+                </tbody>
+              );
+            }
+
+            // Partially expanded — render start lines, collapsed block, end lines.
+            // Stable per-line keys keep DOM identity across expansion changes.
+            const startRows: React.ReactNode[] = [];
+            const endRows: React.ReactNode[] = [];
+
+            for (let lineIdx = 0; lineIdx < expansion.startExpanded; lineIdx++) {
+              const line = segment.lines[lineIdx];
+              startRows.push(<DiffLineRow key={lineKey(segIdx, lineIdx)} line={line} />);
+            }
+
+            const remainingCount = segment.count - totalExpanded;
+            const collapsedBlockNode =
+              remainingCount > 0 ? (
+                <CollapsedBlock
+                  key={`collapsed-${segIdx}`}
+                  count={remainingCount}
+                  onExpandStart={(n) => handleExpandStart(segIdx, n)}
+                  onExpandEnd={(n) => handleExpandEnd(segIdx, n)}
+                  onExpandAll={() => handleExpandAll(segIdx)}
+                />
+              ) : null;
+
+            const endStart = segment.count - expansion.endExpanded;
+            for (let lineIdx = endStart; lineIdx < segment.count; lineIdx++) {
+              const line = segment.lines[lineIdx];
+              endRows.push(<DiffLineRow key={lineKey(segIdx, lineIdx)} line={line} />);
+            }
+
+            const tbodies: React.ReactNode[] = [];
+            if (startRows.length > 0) {
+              tbodies.push(
+                <tbody key={`seg-${segIdx}-start-expanded`} className="diff-context-block">
+                  {startRows}
+                </tbody>,
+              );
+            }
+            if (collapsedBlockNode) {
+              tbodies.push(
+                <tbody key={`seg-${segIdx}-collapsed`} className="diff-collapsed-block">
+                  {collapsedBlockNode}
+                </tbody>,
+              );
+            }
+            if (endRows.length > 0) {
+              tbodies.push(
+                <tbody key={`seg-${segIdx}-end-expanded`} className="diff-context-block">
+                  {endRows}
+                </tbody>,
+              );
+            }
+
+            return tbodies;
+          })}
         </table>
       </div>
     </div>
   );
-}
-
-/**
- * Thin wrapper that pairs a line with its memoized click handler. Defined
- * outside the main component so the hook order is consistent across renders.
- */
-function DiffLineWithHandler({
-  line,
-  hasValidPath,
-  resolvedPath,
-  send,
-}: {
-  line: DiffLine;
-  hasValidPath: boolean;
-  resolvedPath: string;
-  send: (msg: WebviewToExt) => void;
-}) {
-  const handleClick = useLineClickHandler(line, hasValidPath, resolvedPath, send);
-  return <DiffLineRow line={line} hasValidPath={hasValidPath} handleClick={handleClick} />;
 }
