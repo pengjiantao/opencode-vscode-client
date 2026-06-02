@@ -9,6 +9,7 @@ import { useIPC } from '../../hooks/useIPC';
 import { buildSegments } from '../../utils/diff-fold';
 import type { DiffLine } from '../../utils/diff-parser';
 import { parseDiff } from '../../utils/diff-parser';
+import { FileIcon } from '../FileIcon';
 import { ScrollFadeContainer } from '../ScrollFadeContainer';
 import { CollapsedBlock } from './CollapsedBlock';
 
@@ -234,6 +235,7 @@ export function DiffPart({ diff, filePath }: DiffPartProps) {
               }
             : {})}
         >
+          <FileIcon path={resolvedPath} size={14} />
           <span className="diff-file-name" data-custom-title={resolvedPath}>
             {resolvedPath}
           </span>

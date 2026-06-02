@@ -68,7 +68,28 @@ describe('DiffPart', () => {
     expect(rows[7].textContent).toContain('new20');
   });
 
-  it('renders fallback when no hunks are parsed', () => {
+  it('renders file type icon in header when filePath is provided', () => {
+    const diff = `
+--- a/file.ts
++++ b/file.ts
+@@ -1,3 +1,3 @@
+ const x = 10;
+-const y = 20;
++const y = 30;
+`;
+
+    const { container } = render(<DiffPart diff={diff.trim()} filePath="file.ts" />);
+
+    const header = container.querySelector('.diff-file-header');
+    expect(header).not.toBeNull();
+
+    const icon = header!.querySelector('img');
+    expect(icon).not.toBeNull();
+    expect(icon!.getAttribute('src')).toBeTruthy();
+    expect(icon!.getAttribute('width')).toBe('14');
+  });
+
+  it('fallback when no hunks are parsed', () => {
     render(<DiffPart diff="" />);
     expect(screen.getByText('No changes to display')).toBeInTheDocument();
   });

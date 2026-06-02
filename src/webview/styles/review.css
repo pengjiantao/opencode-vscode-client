@@ -208,6 +208,10 @@
   max-height: none;
 }
 
+.review-file-diff .diff-file-header {
+  display: none;
+}
+
 /* Loading and empty states */
 .review-loading,
 .review-empty,
