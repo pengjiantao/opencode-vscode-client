@@ -69,6 +69,7 @@ export function App() {
   const mergeChildSessionData = useSessionStore((s) => s.mergeChildSessionData);
 
   const setWorkspaceName = useSessionStore((s) => s.setWorkspaceName);
+  const setWorkspaceRoot = useSessionStore((s) => s.setWorkspaceRoot);
   const setLspServers = useSessionStore((s) => s.setLspServers);
   const setMcpServers = useSessionStore((s) => s.setMcpServers);
   const setSkills = useSessionStore((s) => s.setSkills);
@@ -149,6 +150,7 @@ export function App() {
           break;
         case 'metadata:sync':
           setWorkspaceName(message.workspaceName);
+          setWorkspaceRoot(message.workspaceRoot);
           setLspServers(message.lspServers);
           setMcpServers(message.mcpServers);
           setSkills(message.skills);
@@ -188,6 +190,7 @@ export function App() {
     setSessionMessagesAndParts,
     setSessions,
     setWorkspaceName,
+    setWorkspaceRoot,
     setLspServers,
     setMcpServers,
     setSkills,

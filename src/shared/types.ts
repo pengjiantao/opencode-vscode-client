@@ -211,6 +211,7 @@ export type ExtToWebview =
   | {
       type: 'metadata:sync';
       workspaceName: string | null;
+      workspaceRoot: string | null;
       lspServers: LspServerInfo[];
       mcpServers: McpServerInfo[];
       skills: SkillInfo[];

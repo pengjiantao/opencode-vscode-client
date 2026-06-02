@@ -20,6 +20,7 @@ export async function syncMetadata(
   try {
     const workspaceFolder = workspace.workspaceFolders?.[0];
     const workspaceName = workspaceFolder ? workspaceFolder.name : null;
+    const workspaceRoot = workspaceFolder ? workspaceFolder.uri.fsPath : null;
 
     // 1. Fetch LSP Status from SDK
     let lspServers: LspServerInfo[] = [];
@@ -107,6 +108,7 @@ export async function syncMetadata(
     sendIpc({
       type: 'metadata:sync',
       workspaceName,
+      workspaceRoot,
       lspServers,
       mcpServers,
       skills,

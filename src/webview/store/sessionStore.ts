@@ -39,6 +39,7 @@ export interface SessionStore {
   loadedChildSessions: Set<string>;
 
   workspaceName: string | null;
+  workspaceRoot: string | null;
   lspServers: LspServerInfo[];
   mcpServers: McpServerInfo[];
   skills: SkillInfo[];
@@ -100,6 +101,7 @@ export interface SessionStore {
   clearChildSessions: () => void;
 
   setWorkspaceName: (name: string | null) => void;
+  setWorkspaceRoot: (root: string | null) => void;
   setLspServers: (lsp: LspServerInfo[]) => void;
   setMcpServers: (mcp: McpServerInfo[]) => void;
   setSkills: (skills: SkillInfo[]) => void;
@@ -390,6 +392,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
     })),
 
   workspaceName: null,
+  workspaceRoot: null,
   lspServers: [],
   mcpServers: [],
   skills: [],
@@ -398,6 +401,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   extensionVersion: 'unknown',
 
   setWorkspaceName: (workspaceName) => set({ workspaceName }),
+  setWorkspaceRoot: (workspaceRoot) => set({ workspaceRoot }),
   setSessionDiffs: (sessionID, diffs) =>
     set((state) => ({
       sessionDiffs: { ...state.sessionDiffs, [sessionID]: diffs },

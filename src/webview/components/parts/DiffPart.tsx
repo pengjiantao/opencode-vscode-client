@@ -6,9 +6,11 @@
 
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useIPC } from '../../hooks/useIPC';
+import { useSessionStore } from '../../store/sessionStore';
 import { buildSegments } from '../../utils/diff-fold';
 import type { DiffLine } from '../../utils/diff-parser';
 import { parseDiff } from '../../utils/diff-parser';
+import { toDisplayPath } from '../../utils/path-utils';
 import { FileIcon } from '../FileIcon';
 import { ScrollFadeContainer } from '../ScrollFadeContainer';
 import { CollapsedBlock } from './CollapsedBlock';
@@ -168,11 +170,18 @@ const DiffLineRow = memo(function DiffLineRow({ line }: { line: DiffLine }) {
  */
 export function DiffPart({ diff, filePath }: DiffPartProps) {
   const { send } = useIPC(() => {});
+  const workspaceRoot = useSessionStore((s) => s.workspaceRoot);
   const parsed = useMemo(() => parseDiff(diff), [diff]);
 
   const resolvedPath = filePath || parsed.newFile;
   const hasValidPath =
     !!resolvedPath && resolvedPath !== '/dev/null' && resolvedPath !== 'dev/null';
+
+  /** Display path: relative if within workspace, absolute otherwise. */
+  const displayPath = useMemo(
+    () => toDisplayPath(resolvedPath || '', workspaceRoot),
+    [resolvedPath, workspaceRoot],
+  );
 
   const segments = useMemo(
     () => buildSegments(parsed.hunks, DEFAULT_CONTEXT_LINES),
@@ -237,7 +246,7 @@ export function DiffPart({ diff, filePath }: DiffPartProps) {
         >
           <FileIcon path={resolvedPath} size={14} />
           <span className="diff-file-name" data-custom-title={resolvedPath}>
-            {resolvedPath}
+            {displayPath}
           </span>
         </div>
       )}
