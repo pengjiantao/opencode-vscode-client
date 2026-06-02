@@ -26,11 +26,19 @@ export interface SessionTabsProps {
 export function SessionTabs({ sessions, activeSessionID, onSwitch, onClose }: SessionTabsProps) {
   const tabsListRef = useRef<HTMLDivElement>(null);
   const [showMore, setShowMore] = useState(false);
+  const prevActiveSessionIDRef = useRef(activeSessionID);
 
   useEffect(() => {
     if (!activeSessionID) {
       return;
     }
+    // Only scroll when the active session actually changes (user switched tabs),
+    // not when the sessions list changes (e.g. closing a non-active tab).
+    if (prevActiveSessionIDRef.current === activeSessionID) {
+      return;
+    }
+    prevActiveSessionIDRef.current = activeSessionID;
+
     // Query the active tab element within our list and scroll it into view.
     // We check typeof scrollIntoView to be safe in non-browser or test contexts.
     const activeTab = tabsListRef.current?.querySelector('.tab.active');

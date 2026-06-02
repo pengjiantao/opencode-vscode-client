@@ -165,15 +165,11 @@ describe('SessionTabs', () => {
         />,
       );
 
-      // Verifies scrollIntoView is called upon initial render/mount for the active session
-      expect(scrollIntoViewSpy).toHaveBeenCalledTimes(1);
-      expect(scrollIntoViewSpy).toHaveBeenCalledWith({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'nearest',
-      });
+      // Initial render should not trigger scrollIntoView (prevActiveSessionIDRef
+      // is initialized to the same value, so there is no "change" on mount).
+      expect(scrollIntoViewSpy).not.toHaveBeenCalled();
 
-      // Change activeSessionID and rerender to verify auto-scroll fires again
+      // Change activeSessionID and rerender to verify auto-scroll fires
       rerender(
         <SessionTabs
           sessions={sessions}
@@ -183,9 +179,58 @@ describe('SessionTabs', () => {
         />,
       );
 
-      expect(scrollIntoViewSpy).toHaveBeenCalledTimes(2);
+      // scrollIntoView should be called once when the active session actually changes
+      expect(scrollIntoViewSpy).toHaveBeenCalledTimes(1);
+      expect(scrollIntoViewSpy).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
     } finally {
       // Restore original scrollIntoView
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+    }
+  });
+
+  it('does NOT scroll into view when a non-active tab is closed', () => {
+    const scrollIntoViewSpy = vi.fn();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoViewSpy;
+
+    try {
+      const sessions = [
+        createMockSession({ id: 'session-1', title: 'Session 1' }),
+        createMockSession({ id: 'session-2', title: 'Session 2' }),
+        createMockSession({ id: 'session-3', title: 'Session 3' }),
+      ];
+
+      const { rerender } = render(
+        <SessionTabs
+          sessions={sessions}
+          activeSessionID="session-3"
+          onSwitch={() => {}}
+          onClose={() => {}}
+        />,
+      );
+
+      // Initial render triggers scroll (activeSessionID differs from initial ref null)
+      scrollIntoViewSpy.mockClear();
+
+      // Close session-1 (a non-active tab) — activeSessionID stays the same
+      const updatedSessions = sessions.filter((s) => s.id !== 'session-1');
+      rerender(
+        <SessionTabs
+          sessions={updatedSessions}
+          activeSessionID="session-3"
+          onSwitch={() => {}}
+          onClose={() => {}}
+        />,
+      );
+
+      // scrollIntoView should NOT be called when closing a non-active tab
+      expect(scrollIntoViewSpy).not.toHaveBeenCalled();
+    } finally {
       Element.prototype.scrollIntoView = originalScrollIntoView;
     }
   });
