@@ -4,7 +4,7 @@
  */
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
-import { getChipDisplayLabel, getIconClass } from './chipUtils';
+import { getChipDisplayLabel, getIconClass, parseFileUrl } from './chipUtils';
 import { getFileIconUrl } from './file-icons';
 import { createChipIconElement } from './inlineChipDom';
 
@@ -183,7 +183,7 @@ export function restoreUserMessageToEditor(editor: HTMLDivElement, userParts: Pa
     } else {
       chipType = 'file';
       chipFilename = fp.filename;
-      chipPath = source?.path;
+      chipPath = source?.path ?? parseFileUrl(fp.url, fp.mime).path;
       placeholder = `[File: ${fp.filename}]`;
     }
 

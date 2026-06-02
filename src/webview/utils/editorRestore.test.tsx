@@ -258,4 +258,39 @@ describe('restoreUserMessageToEditor', () => {
     expect(chips[0].getAttribute('data-chip-filename')).toBe('Pasted 3 Lines');
     expect(chips[0].getAttribute('data-chip-lines-count')).toBe('3');
   });
+
+  it('regression: renders correct icon for file chip with file:// URL but no source', () => {
+    const editor = document.createElement('div');
+    const parts = [
+      makeTextPart('t1', 'Review [File: helper.ts]'),
+      makeFilePart('f1', 'helper.ts', 'text/plain', 'file:///workspace/helper.ts'),
+    ];
+
+    restoreUserMessageToEditor(editor, parts);
+
+    const chips = editor.querySelectorAll('.opencode-chip');
+    expect(chips).toHaveLength(1);
+    expect(chips[0].getAttribute('data-chip-type')).toBe('file');
+    expect(chips[0].getAttribute('data-chip-path')).toBe('/workspace/helper.ts');
+    const iconImg = chips[0].querySelector('.chip-icon img.chip-icon-img');
+    expect(iconImg).not.toBeNull();
+    expect((iconImg as HTMLImageElement).src).toBeTruthy();
+  });
+
+  it('regression: renders correct icon for file chip with data: URL and no source (no path fallback)', () => {
+    const editor = document.createElement('div');
+    const parts = [
+      makeTextPart('t1', 'Review [File: helper.ts]'),
+      makeFilePart('f1', 'helper.ts', 'text/plain', 'data:text/plain;base64,dGVzdA=='),
+    ];
+
+    restoreUserMessageToEditor(editor, parts);
+
+    const chips = editor.querySelectorAll('.opencode-chip');
+    expect(chips).toHaveLength(1);
+    expect(chips[0].getAttribute('data-chip-type')).toBe('file');
+    expect(chips[0].getAttribute('data-chip-path')).toBeNull();
+    const iconCodicon = chips[0].querySelector('.chip-icon i.codicon');
+    expect(iconCodicon).not.toBeNull();
+  });
 });
