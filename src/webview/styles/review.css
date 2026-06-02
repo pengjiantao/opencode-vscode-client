@@ -136,6 +136,21 @@
   transform: rotate(90deg);
 }
 
+.review-file-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.review-file-icon img {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
 .review-file-name {
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 12px;

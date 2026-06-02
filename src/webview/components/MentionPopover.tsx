@@ -3,7 +3,8 @@
  * Wraps the generic SearchListPopover with file-specific icon and path rendering.
  */
 
-import { getIconClass } from '../utils/chipUtils';
+import { Codicon } from './Codicon';
+import { FileIcon } from './FileIcon';
 import { SearchListPopover } from './SearchListPopover';
 
 /** Shape of a workspace search result item from the extension host. */
@@ -40,7 +41,6 @@ export function MentionPopover({ show, results, selectedIndex, onSelect }: Menti
       onSelect={onSelect}
       getKey={(item) => `${item.type}-${item.relativePath}`}
       renderItem={(item) => {
-        const iconClass = getIconClass('file', item.type === 'dir' ? 'directory' : 'text/plain');
         const parts = item.relativePath.split('/');
         const isRoot = parts.length <= 1;
         const parentDir = isRoot ? '' : parts.slice(0, -1).join('/');
@@ -48,7 +48,11 @@ export function MentionPopover({ show, results, selectedIndex, onSelect }: Menti
         return (
           <>
             <span className="item-icon">
-              <i className={`codicon codicon-${iconClass}`} />
+              {item.type === 'dir' ? (
+                <Codicon name="folder" />
+              ) : (
+                <FileIcon path={item.fsPath} size={16} className="item-icon-img" />
+              )}
             </span>
             <div className="item-info">
               <span className="item-name">{item.name}</span>

@@ -7,6 +7,7 @@ import type { SnapshotFileDiff } from '@opencode-ai/sdk/v2/client';
 import { useState } from 'react';
 import { getDirectory, getFilename } from '../utils/file-icons';
 import { Codicon } from './Codicon';
+import { FileIcon } from './FileIcon';
 import { DiffPart } from './parts/DiffPart';
 
 /** Props for the FileDiffItem component. */
@@ -50,6 +51,9 @@ export function FileDiffItem({ diff, defaultExpanded = false }: FileDiffItemProp
       >
         <span className={`review-file-chevron ${expanded ? 'expanded' : ''}`}>
           <Codicon name="chevron-right" />
+        </span>
+        <span className="review-file-icon" aria-hidden="true">
+          <FileIcon path={filePath} />
         </span>
         <span className="review-file-name" data-custom-title={filePath}>
           {filename}

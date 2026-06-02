@@ -324,6 +324,13 @@
   color: var(--vscode-descriptionForeground, #888888);
 }
 
+.mention-item .item-icon img,
+.search-list-item .item-icon img {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
 .mention-item:hover .item-icon,
 .mention-item.selected .item-icon,
 .search-list-item:hover .item-icon,

@@ -5,6 +5,8 @@
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
 import { getChipDisplayLabel, getIconClass } from './chipUtils';
+import { getFileIconUrl } from './file-icons';
+import { createChipIconElement } from './inlineChipDom';
 
 /** Checks if a text part is a display text part (not a metadata/backing part). */
 function isDisplayTextPart(part: Part): boolean {
@@ -64,7 +66,11 @@ function createChipElement(chip: {
   if (chip.startLine) chipNode.setAttribute('data-chip-start-line', String(chip.startLine));
   if (chip.endLine) chipNode.setAttribute('data-chip-end-line', String(chip.endLine));
 
-  const iconClass = getIconClass(chip.type);
+  const iconClass = getIconClass(chip.type, chip.mime);
+  const iconUrl =
+    (chip.type === 'file' || chip.type === 'code-selection') && chip.path
+      ? getFileIconUrl(chip.path)
+      : undefined;
   const displayLabel = getChipDisplayLabel(
     chip.type,
     chip.filename,
@@ -74,12 +80,7 @@ function createChipElement(chip: {
     chip.text,
   );
 
-  const iconSpan = document.createElement('span');
-  iconSpan.className = 'chip-icon';
-  const iconI = document.createElement('i');
-  iconI.className = `codicon codicon-${iconClass}`;
-  iconSpan.appendChild(iconI);
-  chipNode.appendChild(iconSpan);
+  chipNode.appendChild(createChipIconElement(iconClass, iconUrl));
 
   const labelSpan = document.createElement('span');
   labelSpan.className = 'chip-label';

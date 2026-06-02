@@ -17,10 +17,44 @@ export interface InlineChipConfig {
   attributes: Record<string, string>;
   /** The name of the codicon icon to display inside the chip */
   iconClass: string;
+  /** Optional URL of a file-type SVG icon. When set, takes precedence over the codicon. */
+  iconUrl?: string;
   /** The label text of the chip */
   label: string;
   /** The HTML content for the chip's custom tooltip */
   tooltipHtml: string;
+}
+
+/**
+ * Creates the leading `<span class="chip-icon">` for a chip.
+ *
+ * When `iconUrl` is set, renders an `<img>` with the file-type SVG;
+ * otherwise renders a codicon `<i>` using the provided codicon class name.
+ * This is the single source of truth for chip icon DOM shape — callers
+ * that need to build chip nodes by hand (e.g. `usePromptEditor`,
+ * `editorRestore`) should use this helper rather than duplicating the logic.
+ *
+ * @param iconClass The codicon class name (without the `codicon-` prefix), used as fallback.
+ * @param iconUrl Optional file-type SVG URL; takes precedence when present.
+ * @returns The constructed `<span class="chip-icon">` element.
+ */
+export function createChipIconElement(iconClass: string, iconUrl?: string): HTMLSpanElement {
+  const iconSpan = document.createElement('span');
+  iconSpan.className = 'chip-icon';
+  if (iconUrl) {
+    const img = document.createElement('img');
+    img.src = iconUrl;
+    img.alt = '';
+    img.setAttribute('aria-hidden', 'true');
+    img.draggable = false;
+    img.className = 'chip-icon-img';
+    iconSpan.appendChild(img);
+  } else {
+    const iconI = document.createElement('i');
+    iconI.className = `codicon codicon-${iconClass}`;
+    iconSpan.appendChild(iconI);
+  }
+  return iconSpan;
 }
 
 /**
@@ -43,13 +77,7 @@ export function createInlineChipElement(config: InlineChipConfig): HTMLSpanEleme
     }
   }
 
-  // Create icon element
-  const iconSpan = document.createElement('span');
-  iconSpan.className = 'chip-icon';
-  const iconI = document.createElement('i');
-  iconI.className = `codicon codicon-${config.iconClass}`;
-  iconSpan.appendChild(iconI);
-  chipNode.appendChild(iconSpan);
+  chipNode.appendChild(createChipIconElement(config.iconClass, config.iconUrl));
 
   // Create label element
   const labelSpan = document.createElement('span');

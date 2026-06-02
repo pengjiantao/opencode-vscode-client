@@ -14,6 +14,7 @@ import {
   getTooltipHtml,
 } from '../utils/chipUtils';
 import { Codicon } from './Codicon';
+import { FileIcon } from './FileIcon';
 
 /**
  * Properties accepted by the Chip component.
@@ -73,9 +74,26 @@ export function Chip({
     }
   }, [type, path, cachedInfo, send]);
 
-  /** Determines the VS Code codicon name based on the attachment type. */
-  const getIconName = (): string =>
-    `$(${type === 'command' ? getCommandIconClass(mime) : type === 'skill' ? getIconClass('skill') : getIconClass(type, mime)})`;
+  /** Renders the leading icon for the chip. Directory mime types and other
+   *  non-file types fall back to codicons; file types with a real path get
+   *  the per-extension SVG icon. */
+  const renderIcon = () => {
+    // Directory mime types always render the folder codicon regardless of type.
+    if (mime === 'directory' || mime === 'application/x-directory') {
+      return <Codicon name="folder" />;
+    }
+    // File/code-selection with a real path get the per-extension icon.
+    if ((type === 'file' || type === 'code-selection') && path) {
+      return <FileIcon path={path} size={14} className="chip-icon-img" />;
+    }
+    const cls =
+      type === 'command'
+        ? getCommandIconClass(mime)
+        : type === 'skill'
+          ? getIconClass('skill')
+          : getIconClass(type, mime);
+    return <Codicon name={`$(${cls})`} />;
+  };
 
   /** Handles click events, sending open file IPC commands for workspace files. */
   const handleClick = (e: React.MouseEvent) => {
@@ -120,9 +138,7 @@ export function Chip({
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
     >
-      <span className="chip-icon">
-        <Codicon name={getIconName()} />
-      </span>
+      <span className="chip-icon">{renderIcon()}</span>
       <span className="chip-label">{displayLabel}</span>
     </span>
   );

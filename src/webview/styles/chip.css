@@ -59,6 +59,14 @@
   height: 1em;
 }
 
+.chip-icon img.chip-icon-img {
+  display: block;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  user-select: none;
+}
+
 .chip-label {
   display: inline-flex;
   align-items: center;

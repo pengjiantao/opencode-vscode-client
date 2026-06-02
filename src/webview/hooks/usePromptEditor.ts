@@ -7,6 +7,8 @@ import { useCallback } from 'react';
 import type { WebviewToExt } from '../../shared/types';
 import { getMimeType } from '../../shared/utils';
 import { getChipDisplayLabel, getIconClass, getTooltipHtml } from '../utils/chipUtils';
+import { getFileIconUrl } from '../utils/file-icons';
+import { createChipIconElement } from '../utils/inlineChipDom';
 
 /**
  * Interface representing the properties required by the usePromptEditor hook.
@@ -96,6 +98,10 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
       }
 
       const iconClass = getIconClass(chip.type, chip.mime);
+      const iconUrl =
+        (chip.type === 'file' || chip.type === 'code-selection') && chip.path
+          ? getFileIconUrl(chip.path)
+          : undefined;
       const displayLabel = getChipDisplayLabel(
         chip.type,
         chip.filename,
@@ -105,11 +111,7 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
         chip.text,
       );
 
-      const iconSpan = document.createElement('span');
-      iconSpan.className = 'chip-icon';
-      const iconI = document.createElement('i');
-      iconI.className = `codicon codicon-${iconClass}`;
-      iconSpan.appendChild(iconI);
+      const iconSpan = createChipIconElement(iconClass, iconUrl);
       chipNode.appendChild(iconSpan);
 
       const labelSpan = document.createElement('span');

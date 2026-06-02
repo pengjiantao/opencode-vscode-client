@@ -6,6 +6,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import type { WebviewToExt, WorkspaceSearchResult } from '../../shared/types';
 import { getMimeType } from '../../shared/utils';
 import { getChipDisplayLabel, getIconClass, getTooltipHtml } from '../utils/chipUtils';
+import { getFileIconUrl } from '../utils/file-icons';
 import { createInlineChipElement, insertInlineChipNode } from '../utils/inlineChipDom';
 
 /** State shape for tracking the active autocomplete mention trigger session. */
@@ -97,6 +98,7 @@ export function useMentionEditor({ editorRef, fileInfos, send, onInput }: UseMen
       }
 
       const iconClass = getIconClass(chipType, mime);
+      const iconUrl = item.type === 'file' ? getFileIconUrl(item.fsPath) : undefined;
       const tooltipHtml = getTooltipHtml(
         {
           type: chipType,
@@ -119,6 +121,7 @@ export function useMentionEditor({ editorRef, fileInfos, send, onInput }: UseMen
           'data-chip-is-workspace': 'true',
         },
         iconClass,
+        iconUrl,
         label: getChipDisplayLabel('file', item.name),
         tooltipHtml,
       });

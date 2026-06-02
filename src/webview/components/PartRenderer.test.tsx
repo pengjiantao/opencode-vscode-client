@@ -303,8 +303,9 @@ describe('PartRenderer', () => {
     expect(chipElement).toHaveClass('file-chip');
     expect(screen.getByText('main.py')).toBeInTheDocument();
     expect(screen.queryByText('main.py [1-1]')).not.toBeInTheDocument();
-    const iconElement = container.querySelector('.codicon-file-text');
-    expect(iconElement).toBeInTheDocument();
+    // main.py resolves to the per-extension Python SVG icon.
+    const iconImg = container.querySelector('.chip-icon img');
+    expect(iconImg).toBeInTheDocument();
   });
 
   it('regression: renders whole file part with source text but no line range as file chip without line range suffix', () => {
@@ -330,8 +331,9 @@ describe('PartRenderer', () => {
     expect(chipElement).toHaveClass('file-chip');
     expect(screen.getByText('main.py')).toBeInTheDocument();
     expect(screen.queryByText('main.py [1-1]')).not.toBeInTheDocument();
-    const iconElement = container.querySelector('.codicon-file-text');
-    expect(iconElement).toBeInTheDocument();
+    // main.py resolves to the per-extension Python SVG icon.
+    const iconImg = container.querySelector('.chip-icon img');
+    expect(iconImg).toBeInTheDocument();
   });
 
   describe('ToolPart display optimizations', () => {

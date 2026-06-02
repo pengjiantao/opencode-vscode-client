@@ -65,4 +65,28 @@ describe('MentionPopover', () => {
     fireEvent.click(packageItem);
     expect(selectSpy).toHaveBeenCalledWith(mockResults[0]);
   });
+
+  it('should render an <img> for file items and a codicon folder for directories', () => {
+    const withDir = [
+      ...mockResults,
+      {
+        name: 'src',
+        relativePath: 'src',
+        type: 'dir' as const,
+        fsPath: '/w/src',
+      },
+    ];
+    const { container } = render(
+      <MentionPopover show={true} results={withDir} selectedIndex={0} onSelect={vi.fn()} />,
+    );
+
+    // File items get <img class="item-icon-img"> rendered.
+    const fileImgs = container.querySelectorAll('.item-icon img');
+    expect(fileImgs.length).toBe(2);
+    expect((fileImgs[0] as HTMLImageElement).getAttribute('src')).toBeTruthy();
+
+    // Directory items fall back to the codicon folder glyph.
+    const dirFolder = container.querySelector('.item-icon .codicon.codicon-folder');
+    expect(dirFolder).not.toBeNull();
+  });
 });

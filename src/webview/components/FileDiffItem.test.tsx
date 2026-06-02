@@ -83,4 +83,22 @@ describe('FileDiffItem', () => {
     expect(screen.getByText('-5')).toBeDefined();
     expect(screen.queryByText('+0')).toBeNull();
   });
+
+  it('renders a file-type icon for the diff path', () => {
+    const { container } = render(<FileDiffItem diff={baseDiff} />);
+    const iconWrapper = container.querySelector('.review-file-icon');
+    expect(iconWrapper).not.toBeNull();
+    expect(iconWrapper?.getAttribute('aria-hidden')).toBe('true');
+    // helper.ts is mapped to typescript.svg in the curated set.
+    const img = iconWrapper?.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute('src')).toBeTruthy();
+  });
+
+  it('keeps the header role=button query matching the filename only', () => {
+    // Regression: codicon/icon spans must be aria-hidden so the
+    // name regex match is not contaminated.
+    render(<FileDiffItem diff={baseDiff} />);
+    expect(screen.getAllByRole('button', { name: /helper\.ts/ }).length).toBe(1);
+  });
 });

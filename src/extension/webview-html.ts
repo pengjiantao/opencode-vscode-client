@@ -47,7 +47,9 @@ export function getWebviewHtml(webview: Webview, extensionPath: string, params?:
     `$1default-src 'self'; script-src 'self' 'unsafe-inline' ${webview.cspSource}; style-src 'self' 'unsafe-inline' ${webview.cspSource}; img-src 'self' data: https: ${webview.cspSource}; connect-src 'self' http://127.0.0.1:* https://*; font-src 'self' data: ${webview.cspSource};$2`,
   );
 
-  // Vite outputs module scripts; convert to defer for VS Code webview compatibility
+  // Vite outputs module scripts; convert to defer for VS Code webview compatibility.
+  // The bundle must therefore avoid `import.meta` — see vite.config.ts for the
+  // matching `assetsInlineLimit` invariant that keeps that true.
   html = html.replace(/ type="module"/g, ' defer');
   html = html.replace(/ crossorigin="[^"]*"/g, '');
 

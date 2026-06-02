@@ -54,6 +54,24 @@ describe('Chip', () => {
     });
   });
 
+  it('renders a per-extension <img> for file-type chips', () => {
+    const { container } = render(
+      <Chip type="file" filename="helper.ts" path="/test/helper.ts" isWorkspace={true} />,
+    );
+    const img = container.querySelector('.chip-icon img');
+    expect(img).not.toBeNull();
+    expect((img as HTMLImageElement).getAttribute('src')).toBeTruthy();
+  });
+
+  it('falls back to a codicon for file-type chips with unknown extensions', () => {
+    const { container } = render(
+      <Chip type="file" filename="weird.zzznotreal" path="/test/weird.zzznotreal" />,
+    );
+    const img = container.querySelector('.chip-icon img');
+    expect(img).toBeNull();
+    expect(container.querySelector('.chip-icon .codicon')).not.toBeNull();
+  });
+
   it('renders an image chip with custom labels', () => {
     render(<Chip type="image" filename="Pasted Image" dataUrl="data:image/png;base64,..." />);
 
