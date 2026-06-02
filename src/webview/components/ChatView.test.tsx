@@ -3,9 +3,11 @@
  */
 
 import { act, render, screen } from '@testing-library/react';
+import { createRef } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockAssistantMessage, createMockUserMessage } from '../../test/mocks/sdk';
 import { useSessionStore } from '../store/sessionStore';
+import type { ChatViewHandle } from './ChatView';
 import { ChatView } from './ChatView';
 
 vi.mock('@vscode/webview-ui-toolkit/react', () => ({
@@ -143,6 +145,55 @@ describe('ChatView', () => {
       expect(screen.getByText('Copy Answer')).toBeInTheDocument();
       expect(screen.getByText('To Top')).toBeInTheDocument();
       expect(screen.getByText('To User Message')).toBeInTheDocument();
+    });
+  });
+
+  describe('triggerScrollToBottom', () => {
+    it('exposes triggerScrollToBottom method via ref', () => {
+      const ref = createRef<ChatViewHandle>();
+      render(<ChatView ref={ref} sessionID="session-1" messages={[]} parts={{}} />);
+
+      expect(ref.current).toBeDefined();
+      expect(ref.current?.triggerScrollToBottom).toBeInstanceOf(Function);
+    });
+
+    it('forces scroll to bottom when triggerScrollToBottom is called after user scrolled up', () => {
+      const ref = createRef<ChatViewHandle>();
+      const { container, rerender } = render(
+        <ChatView ref={ref} sessionID="session-1" messages={[]} parts={{}} />,
+      );
+
+      const chatView = container.querySelector('.chat-view') as HTMLDivElement;
+
+      // Mock the scroll properties
+      Object.defineProperty(chatView, 'scrollHeight', { configurable: true, value: 500 });
+      Object.defineProperty(chatView, 'clientHeight', { configurable: true, value: 200 });
+      Object.defineProperty(chatView, 'scrollTop', {
+        configurable: true,
+        writable: true,
+        value: 0,
+      });
+
+      // Simulate user scrolling up (not at bottom)
+      act(() => {
+        chatView.scrollTop = 100;
+        chatView.dispatchEvent(new Event('scroll'));
+      });
+
+      // Verify auto-scroll is disabled after user scrolls up
+      const userMsg = createMockUserMessage();
+      act(() => {
+        rerender(<ChatView ref={ref} sessionID="session-1" messages={[userMsg]} parts={{}} />);
+      });
+      expect(chatView.scrollTop).toBe(100);
+
+      // Call triggerScrollToBottom to force scroll back to bottom
+      act(() => {
+        ref.current?.triggerScrollToBottom();
+      });
+
+      // Verify scroll position is now at bottom
+      expect(chatView.scrollTop).toBe(500);
     });
   });
 });

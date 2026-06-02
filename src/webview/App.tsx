@@ -4,8 +4,9 @@
  */
 
 import type { Part, SnapshotFileDiff } from '@opencode-ai/sdk/v2/client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AgentInfo, ExtToWebview, ModelInfo } from '../shared/types';
+import type { ChatViewHandle } from './components/ChatView';
 import { ChatView } from './components/ChatView';
 import { Codicon } from './components/Codicon';
 import { ForkConfirmDialog } from './components/ForkConfirmDialog';
@@ -38,6 +39,7 @@ const EMPTY_PARTS_FOR_MESSAGE: Part[] = [];
 
 /** Main application component — orchestrates IPC, session state, and child components. */
 export function App() {
+  const chatViewRef = useRef<ChatViewHandle>(null);
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [activeModel, setActiveModel] = useState<string>('');
@@ -220,6 +222,8 @@ export function App() {
       console.warn('[Webview] handleSubmitPrompt aborted because activeSessionID is null');
       return;
     }
+    // Force scroll to bottom when user sends a message
+    chatViewRef.current?.triggerScrollToBottom();
     console.log('[Webview] posting prompt:send to extension host');
     send({ type: 'prompt:send', text, parts } as never);
   };
@@ -375,6 +379,7 @@ export function App() {
       {activeSessionID ? (
         <>
           <ChatView
+            ref={chatViewRef}
             sessionID={activeSessionID}
             messages={messages[activeSessionID] || []}
             parts={activeSessionParts}

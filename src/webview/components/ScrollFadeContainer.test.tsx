@@ -151,4 +151,118 @@ describe('ScrollFadeContainer', () => {
     expect(outer).not.toHaveClass('has-top-shadow');
     expect(outer).not.toHaveClass('has-bottom-shadow');
   });
+
+  describe('scrollTrigger', () => {
+    it('should force scroll to bottom when scrollTrigger changes', () => {
+      const { container, rerender } = render(
+        <ScrollFadeContainer autoScroll={true} scrollTrigger={0}>
+          <div>Content</div>
+        </ScrollFadeContainer>,
+      );
+
+      const inner = container.querySelector('.scroll-fade-content') as HTMLDivElement;
+
+      // Mock scroll height/client height properties
+      Object.defineProperty(inner, 'scrollHeight', { configurable: true, value: 500 });
+      Object.defineProperty(inner, 'clientHeight', { configurable: true, value: 200 });
+      Object.defineProperty(inner, 'scrollTop', { configurable: true, writable: true, value: 0 });
+
+      // Simulate user scrolling up (not at bottom)
+      act(() => {
+        inner.scrollTop = 100;
+        inner.dispatchEvent(new Event('scroll'));
+      });
+
+      // Verify scroll is not at bottom
+      expect(inner.scrollTop).toBe(100);
+
+      // Change scrollTrigger to force scroll to bottom
+      act(() => {
+        rerender(
+          <ScrollFadeContainer autoScroll={true} scrollTrigger={1}>
+            <div>Content</div>
+          </ScrollFadeContainer>,
+        );
+      });
+
+      // Verify scroll position is now at bottom
+      expect(inner.scrollTop).toBe(500);
+    });
+
+    it('should re-enable auto-scroll when scrollTrigger changes', () => {
+      const { container, rerender } = render(
+        <ScrollFadeContainer autoScroll={true} scrollTrigger={0}>
+          <div>Content</div>
+        </ScrollFadeContainer>,
+      );
+
+      const inner = container.querySelector('.scroll-fade-content') as HTMLDivElement;
+
+      // Mock scroll height/client height properties
+      Object.defineProperty(inner, 'scrollHeight', { configurable: true, value: 500 });
+      Object.defineProperty(inner, 'clientHeight', { configurable: true, value: 200 });
+      Object.defineProperty(inner, 'scrollTop', { configurable: true, writable: true, value: 0 });
+
+      // Simulate user scrolling up (not at bottom)
+      act(() => {
+        inner.scrollTop = 100;
+        inner.dispatchEvent(new Event('scroll'));
+      });
+
+      // Change scrollTrigger to force scroll to bottom
+      act(() => {
+        rerender(
+          <ScrollFadeContainer autoScroll={true} scrollTrigger={1}>
+            <div>Content</div>
+          </ScrollFadeContainer>,
+        );
+      });
+
+      // Simulate new content arriving
+      act(() => {
+        rerender(
+          <ScrollFadeContainer autoScroll={true} scrollTrigger={1}>
+            <div>Content</div>
+            <div>New Content</div>
+          </ScrollFadeContainer>,
+        );
+      });
+
+      // Verify auto-scroll is re-enabled (scrollTop should be at bottom)
+      expect(inner.scrollTop).toBe(500);
+    });
+
+    it('should not affect behavior when scrollTrigger is undefined', () => {
+      const { container, rerender } = render(
+        <ScrollFadeContainer autoScroll={true}>
+          <div>Content</div>
+        </ScrollFadeContainer>,
+      );
+
+      const inner = container.querySelector('.scroll-fade-content') as HTMLDivElement;
+
+      // Mock scroll height/client height properties
+      Object.defineProperty(inner, 'scrollHeight', { configurable: true, value: 500 });
+      Object.defineProperty(inner, 'clientHeight', { configurable: true, value: 200 });
+      Object.defineProperty(inner, 'scrollTop', { configurable: true, writable: true, value: 0 });
+
+      // Simulate user scrolling up
+      act(() => {
+        inner.scrollTop = 100;
+        inner.dispatchEvent(new Event('scroll'));
+      });
+
+      // Re-render without scrollTrigger
+      act(() => {
+        rerender(
+          <ScrollFadeContainer autoScroll={true}>
+            <div>Content</div>
+          </ScrollFadeContainer>,
+        );
+      });
+
+      // Verify scroll position is unchanged (auto-scroll remains disabled)
+      expect(inner.scrollTop).toBe(100);
+    });
+  });
 });

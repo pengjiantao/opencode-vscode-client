@@ -18,6 +18,8 @@ export interface ScrollFadeContainerProps {
   dependencies?: unknown[];
   /** Custom max height style for the outer container. */
   maxHeight?: string | number;
+  /** Trigger value that forces auto-scroll reset and scroll to bottom when changed. Used for user-initiated actions like sending a message. */
+  scrollTrigger?: number;
 }
 
 /**
@@ -32,11 +34,16 @@ export function ScrollFadeContainer({
   autoScroll = false,
   dependencies = [],
   maxHeight,
+  scrollTrigger,
 }: ScrollFadeContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(autoScroll);
+  /** Tracks the previous scrollTrigger value to detect changes reliably (handles wraparound). */
+  const prevScrollTriggerRef = useRef(scrollTrigger);
+  /** Flag to force scroll to bottom on next effect cycle (set by scrollTrigger changes). */
+  const forceScrollRef = useRef(false);
 
   /**
    * Evaluates the scroll position and container heights to toggle top/bottom shadow fade overlays.
@@ -88,11 +95,30 @@ export function ScrollFadeContainer({
     updateShadows();
   };
 
+  // Force reset auto-scroll and scroll to bottom when scrollTrigger changes
+  // This is used for user-initiated actions like sending a message
+  useEffect(() => {
+    // Only trigger when scrollTrigger actually changes (handles wraparound to 0)
+    if (scrollTrigger === undefined || scrollTrigger === prevScrollTriggerRef.current) return;
+    prevScrollTriggerRef.current = scrollTrigger;
+    // Set flag to force scroll on next effect cycle (avoids setState in effect)
+    forceScrollRef.current = true;
+    // Trigger re-render by updating state (this is acceptable as it's a direct user action)
+    setIsAutoScrollEnabled(true);
+    return () => {
+      forceScrollRef.current = false;
+    };
+  }, [scrollTrigger]);
+
   // Perform auto-scroll to bottom and update shadow states when dependencies or children update
   useEffect(() => {
     const runUpdate = () => {
       if (scrollRef.current) {
-        if (autoScroll && isAutoScrollEnabled) {
+        // Check if forced scroll was requested (from scrollTrigger change)
+        if (forceScrollRef.current) {
+          forceScrollRef.current = false;
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        } else if (autoScroll && isAutoScrollEnabled) {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
         updateShadows();
