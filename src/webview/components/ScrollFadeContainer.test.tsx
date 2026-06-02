@@ -111,6 +111,24 @@ describe('ScrollFadeContainer', () => {
     expect(outer).not.toHaveClass('has-bottom-shadow');
   });
 
+  it('should apply flex layout to inner content wrapper so children can vertically center', () => {
+    const { container } = render(
+      <ScrollFadeContainer>
+        <div data-testid="child">Child</div>
+      </ScrollFadeContainer>,
+    );
+
+    const inner = container.querySelector('.scroll-fade-content') as HTMLDivElement;
+    // The wrapper div around children (next sibling of scroll-fade-content's first child = the wrapper)
+    const wrapper = inner.firstElementChild as HTMLDivElement;
+
+    expect(wrapper).toHaveStyle({
+      display: 'flex',
+      'flex-direction': 'column',
+      flex: '1 1 0%',
+    });
+  });
+
   it('should not display shadow effects when clientHeight is 0 (hidden or not fully laid out)', () => {
     const { container } = render(
       <ScrollFadeContainer>

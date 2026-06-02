@@ -132,7 +132,9 @@ export function ScrollFadeContainer({
         ref={scrollRef}
         onScroll={handleScroll}
       >
-        <div ref={contentRef}>{children}</div>
+        <div ref={contentRef} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+          {children}
+        </div>
       </div>
       <div className="scroll-fade-layer scroll-fade-bottom" />
     </div>
