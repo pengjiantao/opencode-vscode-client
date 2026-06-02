@@ -370,4 +370,56 @@ ${contextLines}
     expect(screen.getByText('previous')).toBeInTheDocument();
     expect(screen.getByText('updated')).toBeInTheDocument();
   });
+
+  it('expandAll renders all context lines without collapsed blocks', () => {
+    const contextLines = Array.from({ length: 15 }, (_, i) => ` line${i + 1};`).join('\n');
+    const diff = `
+--- a/file.ts
++++ b/file.ts
+@@ -1,18 +1,18 @@
+${contextLines}
+-oldLine
++newLine
+ line16;
+ line17;
+ line18;
+`;
+
+    const { container } = render(<DiffPart diff={diff.trim()} filePath="file.ts" expandAll />);
+
+    // No collapsed blocks should exist
+    expect(container.querySelector('.diff-collapsed-row')).not.toBeInTheDocument();
+
+    // All context lines should be visible
+    expect(screen.getByText('line1;')).toBeInTheDocument();
+    expect(screen.getByText('line10;')).toBeInTheDocument();
+    expect(screen.getByText('line15;')).toBeInTheDocument();
+    expect(screen.getByText('line16;')).toBeInTheDocument();
+    expect(screen.getByText('line18;')).toBeInTheDocument();
+
+    // Change lines should still be present
+    expect(screen.getByText('oldLine')).toBeInTheDocument();
+    expect(screen.getByText('newLine')).toBeInTheDocument();
+  });
+
+  it('expandAll=false (default) still folds context lines', () => {
+    const contextLines = Array.from({ length: 15 }, (_, i) => ` line${i + 1};`).join('\n');
+    const diff = `
+--- a/file.ts
++++ b/file.ts
+@@ -1,18 +1,18 @@
+${contextLines}
+-oldLine
++newLine
+ line16;
+ line17;
+ line18;
+`;
+
+    const { container } = render(<DiffPart diff={diff.trim()} filePath="file.ts" />);
+
+    // Should have collapsed blocks (default behavior)
+    const collapsedRows = container.querySelectorAll('.diff-collapsed-row');
+    expect(collapsedRows.length).toBeGreaterThan(0);
+  });
 });

@@ -1,12 +1,14 @@
 /**
  * @file Renders a structured, syntax-aware or color-coded diff view for file modifications.
- * Context lines far from changes are folded, showing 3 lines of context around each change.
+ * Context lines far from changes are folded by default, showing 3 lines of context around
+ * each change. When `expandAll` is true, folding is skipped and all lines are rendered.
  * Supports per-segment directional expansion (first 10 / last 10 / all).
  */
 
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useIPC } from '../../hooks/useIPC';
 import { useSessionStore } from '../../store/sessionStore';
+import type { DiffSegment } from '../../utils/diff-fold';
 import { buildSegments } from '../../utils/diff-fold';
 import type { DiffLine } from '../../utils/diff-parser';
 import { parseDiff } from '../../utils/diff-parser';
@@ -29,6 +31,11 @@ interface DiffPartProps {
   diff: string;
   /** Optional file path to show context. */
   filePath?: string;
+  /**
+   * When true, all lines are rendered without folding. Used in the chat area
+   * where diffs are shown inline and folding is undesirable. Defaults to false.
+   */
+  expandAll?: boolean;
 }
 
 /**
@@ -168,7 +175,7 @@ const DiffLineRow = memo(function DiffLineRow({ line }: { line: DiffLine }) {
  * directional expansion. Contiguous modifications are grouped into interactive
  * tbody blocks.
  */
-export function DiffPart({ diff, filePath }: DiffPartProps) {
+export function DiffPart({ diff, filePath, expandAll = false }: DiffPartProps) {
   const { send } = useIPC(() => {});
   const workspaceRoot = useSessionStore((s) => s.workspaceRoot);
   const parsed = useMemo(() => parseDiff(diff), [diff]);
@@ -183,10 +190,25 @@ export function DiffPart({ diff, filePath }: DiffPartProps) {
     [resolvedPath, workspaceRoot],
   );
 
-  const segments = useMemo(
-    () => buildSegments(parsed.hunks, DEFAULT_CONTEXT_LINES),
-    [parsed.hunks],
-  );
+  const segments = useMemo(() => {
+    if (expandAll) {
+      // Flatten all hunks into a single visible segment with hunk headers interspersed
+      const allLines: DiffLine[] = [];
+      for (const hunk of parsed.hunks) {
+        allLines.push({
+          type: 'context',
+          content: hunk.header,
+          oldLineNumber: null,
+          newLineNumber: null,
+        });
+        allLines.push(...hunk.lines);
+      }
+      return allLines.length > 0
+        ? ([{ type: 'visible' as const, lines: allLines }] as DiffSegment[])
+        : [];
+    }
+    return buildSegments(parsed.hunks, DEFAULT_CONTEXT_LINES);
+  }, [parsed.hunks, expandAll]);
 
   // Per-collapsed-segment expansion state: how many lines expanded from start and end
   const [expansionMap, setExpansionMap] = useState<Record<number, SegmentExpansion>>({});

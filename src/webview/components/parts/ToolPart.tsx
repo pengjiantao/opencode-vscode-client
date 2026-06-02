@@ -281,7 +281,7 @@ export function ToolPart({
         state.input?.path ||
         '') as string;
       // Return only the diff element, omitting label and wrapping div as per instructions
-      return <DiffPart diff={diffText} filePath={filePath} />;
+      return <DiffPart diff={diffText} filePath={filePath} expandAll />;
     }
 
     // Check if it is a multi-file patch application tool call
@@ -311,7 +311,7 @@ export function ToolPart({
                 <div key={`patch-file-${idx}`} className="patch-file-block">
                   <div className="patch-file-title">{title}</div>
                   {patch ? (
-                    <DiffPart diff={patch} />
+                    <DiffPart diff={patch} expandAll />
                   ) : (
                     (() => {
                       const deletions = typeof file.deletions === 'number' ? file.deletions : 0;
