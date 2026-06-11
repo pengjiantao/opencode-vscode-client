@@ -354,37 +354,37 @@ export const MessageTurn = memo(function MessageTurn({
       {userContent && (
         <div className="user-message" data-message-id={userMessage.id}>
           <div className="message-content">{userContent}</div>
-          {showUserActions && (
-            <div className="user-message-actions">
-              {showRevert && (
-                <button
-                  className={`action-btn revert-btn${isSessionBusy ? ' disabled' : ''}`}
-                  onClick={() => !isSessionBusy && setShowRevertConfirm(true)}
-                  disabled={isSessionBusy}
-                  data-custom-title={
-                    isSessionBusy ? 'Cannot revert while running' : 'Revert this message'
-                  }
-                  data-testid="revert-btn"
-                >
-                  <Codicon name="discard" />
-                  <span>Revert</span>
-                </button>
-              )}
-              {showFork && (
-                <button
-                  className={`action-btn fork-btn${isSessionBusy ? ' disabled' : ''}`}
-                  onClick={() => !isSessionBusy && setShowForkConfirm(true)}
-                  disabled={isSessionBusy}
-                  data-custom-title={
-                    isSessionBusy ? 'Cannot fork while running' : 'Fork from this message'
-                  }
-                  data-testid="fork-btn"
-                >
-                  <Codicon name="repo-forked" />
-                  <span>Fork</span>
-                </button>
-              )}
-            </div>
+        </div>
+      )}
+      {showUserActions && (
+        <div className="user-message-actions">
+          {showRevert && (
+            <button
+              className={`action-btn revert-btn${isSessionBusy ? ' disabled' : ''}`}
+              onClick={() => !isSessionBusy && setShowRevertConfirm(true)}
+              disabled={isSessionBusy}
+              data-custom-title={
+                isSessionBusy ? 'Cannot revert while running' : 'Revert this message'
+              }
+              data-testid="revert-btn"
+            >
+              <Codicon name="discard" />
+              <span>Revert</span>
+            </button>
+          )}
+          {showFork && (
+            <button
+              className={`action-btn fork-btn${isSessionBusy ? ' disabled' : ''}`}
+              onClick={() => !isSessionBusy && setShowForkConfirm(true)}
+              disabled={isSessionBusy}
+              data-custom-title={
+                isSessionBusy ? 'Cannot fork while running' : 'Fork from this message'
+              }
+              data-testid="fork-btn"
+            >
+              <Codicon name="repo-forked" />
+              <span>Fork</span>
+            </button>
           )}
         </div>
       )}
