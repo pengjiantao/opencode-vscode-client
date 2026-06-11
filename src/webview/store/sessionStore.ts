@@ -242,7 +242,11 @@ export const useSessionStore = create<SessionStore>((set) => ({
         groupedMessages[m.sessionID].push(m);
       }
 
-      // Initialize empty part arrays for each message, then populate
+      // Initialize empty part arrays for each message, then populate.
+      // When merging, preserve the local version of a part if it has more
+      // accumulated text/reasoning content than the server snapshot. This
+      // prevents losing streaming delta content when the user switches
+      // sessions or reloads the webview mid-stream.
       const partsMap: Record<string, Part[]> = { ...state.parts };
       for (const m of messages) {
         partsMap[m.id] = [];
@@ -251,7 +255,24 @@ export const useSessionStore = create<SessionStore>((set) => ({
         if (!partsMap[p.messageID]) {
           partsMap[p.messageID] = [];
         }
-        partsMap[p.messageID].push(p);
+        const localParts = state.parts[p.messageID] || [];
+        const localPart = localParts.find((lp) => lp.id === p.id);
+        if (localPart) {
+          // Keep the local version if it has more accumulated streaming content.
+          // Deltas are append-only, so longer text means more up-to-date data.
+          // Both TextPart and ReasoningPart use a `.text` field for accumulated content.
+          const getLen = (part: Part): number =>
+            typeof (part as Record<string, unknown>).text === 'string'
+              ? ((part as Record<string, unknown>).text as string).length
+              : 0;
+          if (getLen(localPart) > getLen(p)) {
+            partsMap[p.messageID].push(localPart);
+          } else {
+            partsMap[p.messageID].push(p);
+          }
+        } else {
+          partsMap[p.messageID].push(p);
+        }
       }
       const newSessionStatus = status
         ? { ...state.sessionStatus, [sessionID]: status }

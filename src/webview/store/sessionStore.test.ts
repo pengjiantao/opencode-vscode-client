@@ -2,9 +2,15 @@
  * @file Unit tests for sessionStore (Zustand) — sessions, messages, parts, and status operations.
  */
 
-import type { UserMessage } from '@opencode-ai/sdk/v2/client';
+import type { ReasoningPart, TextPart, UserMessage } from '@opencode-ai/sdk/v2/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMockSession, createMockTextPart, createMockUserMessage } from '../../test/mocks/sdk';
+import {
+  createMockReasoningPart,
+  createMockSession,
+  createMockTextPart,
+  createMockToolPart,
+  createMockUserMessage,
+} from '../../test/mocks/sdk';
 import { useSessionStore } from './sessionStore';
 
 // Mock window.vscode for fetchChildSession IPC calls
@@ -318,6 +324,136 @@ describe('sessionStore', () => {
 
       useSessionStore.getState().clearChildSessions();
       expect(useSessionStore.getState().loadedChildSessions.size).toBe(0);
+    });
+  });
+
+  describe('setSessionMessagesAndParts streaming merge', () => {
+    it('preserves locally accumulated text when server returns shorter version', () => {
+      const message = createMockUserMessage();
+      message.id = 'stream-msg';
+
+      // Simulate accumulated streaming content in local store
+      const localPart = createMockTextPart(
+        'Hello! This is accumulated streaming text from deltas.',
+      );
+      localPart.id = 'part-stream';
+      localPart.messageID = 'stream-msg';
+
+      useSessionStore.setState({
+        messages: { 'session-1': [message] },
+        parts: { 'stream-msg': [localPart] },
+      });
+
+      // Server returns the same part but with only the initial empty text (not accumulated deltas)
+      const serverPart = createMockTextPart('');
+      serverPart.id = 'part-stream';
+      serverPart.messageID = 'stream-msg';
+
+      useSessionStore
+        .getState()
+        .setSessionMessagesAndParts('session-1', [message], [serverPart], { type: 'busy' });
+
+      // The local accumulated content should be preserved
+      const parts = useSessionStore.getState().parts['stream-msg'];
+      expect(parts).toHaveLength(1);
+      expect(parts[0].id).toBe('part-stream');
+      expect((parts[0] as TextPart).text).toBe(
+        'Hello! This is accumulated streaming text from deltas.',
+      );
+    });
+
+    it('uses server version when it has more text than local', () => {
+      const message = createMockUserMessage();
+      message.id = 'msg-update';
+
+      // Local has short text
+      const localPart = createMockTextPart('Hello');
+      localPart.id = 'part-update';
+      localPart.messageID = 'msg-update';
+
+      useSessionStore.setState({
+        messages: { 'session-1': [message] },
+        parts: { 'msg-update': [localPart] },
+      });
+
+      // Server has more text (e.g. from text-end event that was persisted)
+      const serverPart = createMockTextPart('Hello! This is the complete text from the server.');
+      serverPart.id = 'part-update';
+      serverPart.messageID = 'msg-update';
+
+      useSessionStore.getState().setSessionMessagesAndParts('session-1', [message], [serverPart]);
+
+      const parts = useSessionStore.getState().parts['msg-update'];
+      expect(parts).toHaveLength(1);
+      expect((parts[0] as TextPart).text).toBe('Hello! This is the complete text from the server.');
+    });
+
+    it('preserves locally accumulated reasoning when server returns shorter version', () => {
+      const message = createMockUserMessage();
+      message.id = 'reasoning-msg';
+
+      // Simulate accumulated reasoning content
+      const localPart = createMockReasoningPart(
+        'Let me think about this problem carefully. I need to consider multiple angles.',
+      );
+      localPart.id = 'part-reasoning';
+      localPart.messageID = 'reasoning-msg';
+
+      useSessionStore.setState({
+        messages: { 'session-1': [message] },
+        parts: { 'reasoning-msg': [localPart] },
+      });
+
+      // Server returns the same part but with only the initial empty reasoning
+      const serverPart = createMockReasoningPart('');
+      serverPart.id = 'part-reasoning';
+      serverPart.messageID = 'reasoning-msg';
+
+      useSessionStore
+        .getState()
+        .setSessionMessagesAndParts('session-1', [message], [serverPart], { type: 'busy' });
+
+      const parts = useSessionStore.getState().parts['reasoning-msg'];
+      expect(parts).toHaveLength(1);
+      expect((parts[0] as ReasoningPart).text).toBe(
+        'Let me think about this problem carefully. I need to consider multiple angles.',
+      );
+    });
+
+    it('preserves new server parts while keeping accumulated content for existing parts', () => {
+      const message = createMockUserMessage();
+      message.id = 'mixed-msg';
+
+      // Local has accumulated text for existing part
+      const localTextPart = createMockTextPart('Accumulated streaming text');
+      localTextPart.id = 'part-text';
+      localTextPart.messageID = 'mixed-msg';
+
+      useSessionStore.setState({
+        messages: { 'session-1': [message] },
+        parts: { 'mixed-msg': [localTextPart] },
+      });
+
+      // Server returns a new part (tool part) plus the text part with shorter content
+      const serverTextPart = createMockTextPart('');
+      serverTextPart.id = 'part-text';
+      serverTextPart.messageID = 'mixed-msg';
+
+      const serverToolPart = createMockToolPart('bash');
+      serverToolPart.id = 'tool-new';
+      serverToolPart.messageID = 'mixed-msg';
+
+      useSessionStore
+        .getState()
+        .setSessionMessagesAndParts('session-1', [message], [serverTextPart, serverToolPart]);
+
+      const parts = useSessionStore.getState().parts['mixed-msg'];
+      expect(parts).toHaveLength(2);
+      // First part should preserve local accumulated content
+      expect(parts[0].id).toBe('part-text');
+      expect((parts[0] as TextPart).text).toBe('Accumulated streaming text');
+      // Second part is new from server
+      expect(parts[1].id).toBe('tool-new');
     });
   });
 });
