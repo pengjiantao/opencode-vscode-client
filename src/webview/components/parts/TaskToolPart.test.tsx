@@ -4,7 +4,7 @@
  * statistical aggregations (tool call counts and durations), and interactive tab switching.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TaskToolPart } from './TaskToolPart';
 
@@ -145,5 +145,85 @@ describe('TaskToolPart', () => {
 
     // Verify executing header step is not rendered (header has only title/description)
     expect(screen.queryByText(' - Tool: Reading file index.ts')).not.toBeInTheDocument();
+  });
+
+  it('regression: auto-collapse on completion has no CSS transition to prevent flash', () => {
+    const { rerender } = render(
+      <TaskToolPart
+        tool="task"
+        state={{
+          status: 'running',
+          input: { description: 'Run tests' },
+          metadata: { sessionId: 'child-session-123' },
+          time: { start: Date.now() },
+        }}
+      />,
+    );
+
+    // During execution, wrapper should have CSS transition (no isAutoCollapsing)
+    const wrapper = document.querySelector('.collapsible-wrapper');
+    expect(wrapper).not.toHaveStyle({ transition: 'none' });
+
+    // Transition to completed state
+    rerender(
+      <TaskToolPart
+        tool="task"
+        state={{
+          status: 'completed',
+          input: { description: 'Run tests', prompt: 'Run tests' },
+          metadata: { sessionId: 'child-session-123' },
+          output: '<task_result>Done</task_result>',
+          time: { start: Date.now() - 5000, end: Date.now() },
+        }}
+      />,
+    );
+
+    // Immediately after completion, transition should be 'none' (auto-collapse)
+    expect(wrapper).toHaveStyle({ transition: 'none' });
+
+    // Finished content should NOT be visible during auto-collapse
+    expect(screen.queryByText('Prompt Input')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sub-agent Output')).not.toBeInTheDocument();
+  });
+
+  it('regression: finished content appears after auto-collapse completes', async () => {
+    const { rerender } = render(
+      <TaskToolPart
+        tool="task"
+        state={{
+          status: 'running',
+          input: { description: 'Run tests' },
+          metadata: { sessionId: 'child-session-123' },
+          time: { start: Date.now() },
+        }}
+      />,
+    );
+
+    // Transition to completed state
+    rerender(
+      <TaskToolPart
+        tool="task"
+        state={{
+          status: 'completed',
+          input: { description: 'Run tests', prompt: 'Run tests' },
+          metadata: { sessionId: 'child-session-123' },
+          output: '<task_result>Done</task_result>',
+          time: { start: Date.now() - 5000, end: Date.now() },
+        }}
+      />,
+    );
+
+    // Wait for requestAnimationFrame to clear isAutoCollapsing
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      // Allow React to flush the state update
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    // After auto-collapse completes, finished content should be visible
+    expect(screen.getByText('Prompt Input')).toBeInTheDocument();
+    expect(screen.getByText('Sub-agent Output')).toBeInTheDocument();
+    expect(screen.getAllByText('Run tests').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Done')).toBeInTheDocument();
   });
 });

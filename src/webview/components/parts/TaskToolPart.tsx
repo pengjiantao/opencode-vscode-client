@@ -150,16 +150,27 @@ export function TaskToolPart({
 
   const [prevStatus, setPrevStatus] = useState(state.status);
   const [collapsed, setCollapsed] = useState(true);
+  const [isAutoCollapsing, setIsAutoCollapsing] = useState(false);
 
   // Synchronously adjust state when status prop changes during render
   if (state.status !== prevStatus) {
     setPrevStatus(state.status);
     if (isExecuting) {
       setCollapsed(false);
+      setIsAutoCollapsing(false);
     } else if (isFinished) {
       setCollapsed(true);
+      setIsAutoCollapsing(true);
     }
   }
+
+  // Clear auto-collapsing flag after the immediate collapse completes
+  useEffect(() => {
+    if (isAutoCollapsing) {
+      const id = requestAnimationFrame(() => setIsAutoCollapsing(false));
+      return () => cancelAnimationFrame(id);
+    }
+  }, [isAutoCollapsing]);
 
   /** Triggers IPC switch to the sub-agent session tab. */
   const handleOpenSubagent = (e: React.MouseEvent) => {
@@ -218,10 +229,12 @@ export function TaskToolPart({
           maxHeight: collapsed ? 0 : '2000px',
           opacity: collapsed ? 0 : 1,
           overflow: 'hidden',
+          transition: isAutoCollapsing ? 'none' : undefined,
         }}
       >
         <div className="tool-content">
-          {isExecuting && (
+          {/* Show executing details during execution OR during auto-collapse to avoid height spike */}
+          {(isExecuting || isAutoCollapsing) && (
             <div className="subagent-executing-details">
               <div className="subagent-status-row">
                 <span className="spinner-wrapper">
@@ -235,7 +248,8 @@ export function TaskToolPart({
             </div>
           )}
 
-          {isFinished && (
+          {/* Show finished details only after auto-collapse completes to prevent flash */}
+          {isFinished && !isAutoCollapsing && (
             <div className="subagent-finished-details">
               {promptInput && (
                 <div className="tool-input">
