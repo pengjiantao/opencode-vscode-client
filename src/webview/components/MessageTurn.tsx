@@ -306,10 +306,15 @@ export const MessageTurn = memo(function MessageTurn({
   };
 
   const scrollToUserMessage = () => {
-    // 查找当前 turn 的用户消息元素
+    const chatView = document.querySelector('.chat-view');
     const turnElement = document.querySelector(`[data-message-id="${userMessage.id}"]`);
-    if (turnElement) {
-      turnElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (chatView && turnElement) {
+      const scrollContainer = chatView as HTMLDivElement;
+      const offset =
+        turnElement.getBoundingClientRect().top -
+        scrollContainer.getBoundingClientRect().top +
+        scrollContainer.scrollTop;
+      scrollContainer.scrollTo({ top: offset, behavior: 'smooth' });
     }
   };
 

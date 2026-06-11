@@ -16,13 +16,11 @@ import { MessageTurn } from './MessageTurn';
 describe('MessageTurn', () => {
   let writeTextSpy: ReturnType<typeof vi.fn>;
   let scrollToSpy: ReturnType<typeof vi.fn>;
-  let scrollIntoViewSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     writeTextSpy = vi.fn().mockImplementation(() => Promise.resolve());
     scrollToSpy = vi.fn();
-    scrollIntoViewSpy = vi.fn();
 
     // Mock navigator.clipboard
     Object.assign(navigator, {
@@ -30,9 +28,8 @@ describe('MessageTurn', () => {
         writeText: writeTextSpy,
       },
     });
-    // Mock scrollTo and scrollIntoView
+    // Mock scrollTo
     Element.prototype.scrollTo = scrollToSpy;
-    Element.prototype.scrollIntoView = scrollIntoViewSpy;
   });
 
   it('renders user message in user-message container without role title', () => {
@@ -266,6 +263,10 @@ describe('MessageTurn', () => {
       const userMsg = createMockUserMessage();
       const assistantMsg = createMockAssistantMessage();
 
+      const chatViewDiv = document.createElement('div');
+      chatViewDiv.className = 'chat-view';
+      document.body.appendChild(chatViewDiv);
+
       render(
         <MessageTurn
           userMessage={userMsg}
@@ -276,14 +277,43 @@ describe('MessageTurn', () => {
         />,
       );
 
+      const userMsgEl = document.querySelector(`[data-message-id="${userMsg.id}"]`);
+      if (userMsgEl) {
+        vi.spyOn(userMsgEl, 'getBoundingClientRect').mockReturnValue({
+          top: 300,
+          bottom: 340,
+          left: 0,
+          right: 100,
+          width: 100,
+          height: 40,
+          x: 0,
+          y: 300,
+          toJSON: () => {},
+        });
+      }
+      Object.defineProperty(chatViewDiv, 'getBoundingClientRect', {
+        value: () => ({
+          top: 30,
+          bottom: 500,
+          left: 0,
+          right: 300,
+          width: 300,
+          height: 470,
+          x: 0,
+          y: 30,
+          toJSON: () => {},
+        }),
+      });
+      Object.defineProperty(chatViewDiv, 'scrollTop', { value: 100, writable: true });
+
       const toUserBtn = screen.getByText('To User Message').closest('button')!;
       fireEvent.click(toUserBtn);
 
-      // 验证 scrollIntoView 被调用（用户消息元素由组件自身渲染）
-      expect(scrollIntoViewSpy).toHaveBeenCalledWith({
+      expect(scrollToSpy).toHaveBeenCalledWith({
+        top: 300 - 30 + 100,
         behavior: 'smooth',
-        block: 'start',
       });
+      document.body.removeChild(chatViewDiv);
     });
 
     it('uses data-custom-title instead of native title on buttons to support custom tooltips', () => {
