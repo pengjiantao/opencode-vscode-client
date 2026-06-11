@@ -6,21 +6,11 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import {
-  Position,
-  Range,
-  RelativePattern,
-  Selection,
-  Uri,
-  commands,
-  window,
-  workspace,
-} from 'vscode';
+import { Position, Range, Selection, Uri, commands, window, workspace } from 'vscode';
 import { getMimeType } from '../../shared/utils';
 import type { IPCBridge } from '../ipc';
+import type { SDKClient } from '../sdk-client';
 import type { SelectedFileInfo, WorkspaceSearchResult } from '../types';
-import { getConfiguration } from './config';
-import { isPathIgnored, loadGitignorePatterns } from './gitignore';
 
 /**
  * Resolves a given path string to a canonical absolute file path.
@@ -54,188 +44,16 @@ export function resolveFilePath(filePath: string): string {
   return resolved;
 }
 
-let cachedWorkspaceItems: WorkspaceSearchResult[] | null = null;
-let lastCacheTime = 0;
-const CACHE_DURATION = 10000; // 10 seconds
-
-/**
- * Clears the cached workspace items. Primarily used during testing.
- */
-export function clearWorkspaceCache(): void {
-  cachedWorkspaceItems = null;
-  lastCacheTime = 0;
-}
-
-/**
- * Rebuilds the cache of all files and directories in the workspace if expired.
- * Filters out common build, version control, and temporary folders as well as patterns in .gitignore.
- *
- * @returns A promise resolving to the list of all workspace items.
- */
-async function getWorkspaceItems(): Promise<WorkspaceSearchResult[]> {
-  const now = Date.now();
-  if (cachedWorkspaceItems && now - lastCacheTime < CACHE_DURATION) {
-    return cachedWorkspaceItems;
-  }
-
-  const items: WorkspaceSearchResult[] = [];
-  const seenDirs = new Set<string>();
-  const config = getConfiguration();
-
-  if (workspace.workspaceFolders) {
-    for (const folder of workspace.workspaceFolders) {
-      const gitignorePatterns = await loadGitignorePatterns(folder.uri.fsPath);
-
-      // Find files in the workspace (exclude node_modules, build, dist, out, git, etc.)
-      const files = await workspace.findFiles(
-        new RelativePattern(folder, '**/*'),
-        '**/{node_modules,.git,dist,build,out,.gemini}/**',
-        config.maxCacheFiles,
-      );
-
-      for (const file of files) {
-        const fsPath = file.fsPath;
-        const relativePath = path.relative(folder.uri.fsPath, fsPath).replace(/\\/g, '/');
-
-        // Skip ignored files and subdirectories
-        const isIgnored = isPathIgnored(relativePath, false, gitignorePatterns);
-        if (isIgnored) {
-          continue;
-        }
-
-        const name = path.basename(fsPath);
-
-        items.push({
-          name,
-          relativePath,
-          type: 'file',
-          fsPath,
-        });
-
-        // Traverse up the directories
-        let dirPath = path.dirname(fsPath);
-        while (dirPath !== folder.uri.fsPath && dirPath.startsWith(folder.uri.fsPath)) {
-          const dirRelativePath = path.relative(folder.uri.fsPath, dirPath).replace(/\\/g, '/');
-
-          // If a parent folder itself is ignored, stop traversing up
-          const isDirIgnored = isPathIgnored(dirRelativePath, true, gitignorePatterns);
-          if (isDirIgnored) {
-            break;
-          }
-
-          if (seenDirs.has(dirPath)) {
-            break;
-          }
-          seenDirs.add(dirPath);
-
-          const dirName = path.basename(dirPath);
-
-          items.push({
-            name: dirName,
-            relativePath: dirRelativePath,
-            type: 'dir',
-            fsPath: dirPath,
-          });
-
-          dirPath = path.dirname(dirPath);
-        }
-      }
-    }
-  }
-
-  cachedWorkspaceItems = items;
-  lastCacheTime = now;
-  return items;
-}
-
-/**
- * Checks if a string fuzzy matches a query.
- * Characters in the query must appear in order in the target text.
- *
- * @param text The target string to check.
- * @param query The search query.
- * @returns True if the text fuzzy matches the query.
- */
-function fuzzyMatch(text: string, query: string): boolean {
-  if (!query) return true;
-  const cleanText = text.toLowerCase();
-  const cleanQuery = query.toLowerCase();
-  let queryIdx = 0;
-  for (let i = 0; i < cleanText.length; i++) {
-    if (cleanText[i] === cleanQuery[queryIdx]) {
-      queryIdx++;
-      if (queryIdx === cleanQuery.length) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-/**
- * Filters and sorts workspace items based on a query.
- * Prioritizes exact matches, prefix matches, and substring matches on the filename.
- *
- * @param items The list of workspace items.
- * @param query The search query.
- * @returns A sorted list of matching workspace items.
- */
-function sortMatches(items: WorkspaceSearchResult[], query: string): WorkspaceSearchResult[] {
-  if (!query) {
-    // If query is empty, sort by relativePath length and then alphabetically
-    return [...items].sort((a, b) => {
-      const depthA = a.relativePath.split('/').length;
-      const depthB = b.relativePath.split('/').length;
-      if (depthA !== depthB) {
-        return depthA - depthB;
-      }
-      return a.relativePath.localeCompare(b.relativePath);
-    });
-  }
-
-  const cleanQuery = query.toLowerCase();
-
-  return items
-    .filter((item) => fuzzyMatch(item.name, query) || fuzzyMatch(item.relativePath, query))
-    .map((item) => {
-      let score: number;
-      const nameLower = item.name.toLowerCase();
-      const pathLower = item.relativePath.toLowerCase();
-
-      if (nameLower === cleanQuery) {
-        score = 100; // Exact match on name
-      } else if (nameLower.startsWith(cleanQuery)) {
-        score = 80; // Prefix match on name
-      } else if (nameLower.includes(cleanQuery)) {
-        score = 60; // Substring match on name
-      } else if (fuzzyMatch(item.name, query)) {
-        score = 40; // Fuzzy match on name
-      } else if (pathLower.includes(cleanQuery)) {
-        score = 20; // Substring match on path
-      } else {
-        score = 10; // Fuzzy match on path
-      }
-
-      return { item, score };
-    })
-    .sort((a, b) => {
-      if (b.score !== a.score) {
-        return b.score - a.score;
-      }
-      return a.item.relativePath.localeCompare(b.item.relativePath);
-    })
-    .map((x) => x.item);
-}
-
 /**
  * Registers IPC event handlers for file operations:
  * - `file:open`: Opens a workspace file in the VS Code editor.
  * - `file:query`: Queries metadata (existence, size, content preview, isWorkspace status) for a file.
- * - `workspace:search-files`: Searches the workspace for files and directories matching a query.
+ * - `workspace:search-files`: Searches the workspace for files and directories matching a query via the opencode SDK.
  *
  * @param ipc The extension's IPC bridge instance.
+ * @param sdkClient The SDK client for opencode server communication.
  */
-export function registerFileHandlers(ipc: IPCBridge): void {
+export function registerFileHandlers(ipc: IPCBridge, sdkClient: SDKClient): void {
   // IPC command to open a file in VS Code editor
   ipc.on('file:open', (msg) => {
     const {
@@ -374,26 +192,30 @@ export function registerFileHandlers(ipc: IPCBridge): void {
     })();
   });
 
-  // IPC command to search workspace files/directories
+  // IPC command to search workspace files/directories via the opencode SDK
   ipc.on('workspace:search-files', (msg) => {
     const { query } = msg as { query: string };
     void (async () => {
       try {
-        const items = await getWorkspaceItems();
-        const sorted = sortMatches(items, query);
-        const results = sorted.slice(0, 50);
-        ipc.send({
-          type: 'workspace:search-files-response',
-          query,
-          results,
-        });
+        const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+        const paths = await sdkClient.find.files(query, 50);
+        const resolved = paths.map((p) => ({
+          p,
+          fsPath: path.resolve(workspaceRoot, p),
+        }));
+        const stats = await Promise.all(
+          resolved.map(({ fsPath }) => fs.promises.stat(fsPath).catch(() => null)),
+        );
+        const results: WorkspaceSearchResult[] = resolved.map(({ p, fsPath }, i) => ({
+          name: path.basename(p),
+          relativePath: p,
+          type: stats[i]?.isDirectory() ? 'dir' : 'file',
+          fsPath,
+        }));
+        ipc.send({ type: 'workspace:search-files-response', query, results });
       } catch (err) {
         console.error('Error searching workspace files:', err);
-        ipc.send({
-          type: 'workspace:search-files-response',
-          query,
-          results: [],
-        });
+        ipc.send({ type: 'workspace:search-files-response', query, results: [] });
       }
     })();
   });

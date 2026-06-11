@@ -37,7 +37,6 @@ describe('SessionStateStore', () => {
     vi.mocked(getConfiguration).mockReturnValue({
       model: 'config-model',
       agent: 'config-agent',
-      maxCacheFiles: 100,
     });
   });
 
@@ -176,7 +175,6 @@ describe('SessionStateStore', () => {
       vi.mocked(getConfiguration).mockReturnValue({
         model: '',
         agent: '',
-        maxCacheFiles: 100,
       });
 
       const defaults = store.getDefaults(

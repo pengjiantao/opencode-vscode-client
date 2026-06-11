@@ -321,5 +321,12 @@ export function createSDKClient(directory?: string): SDKClient {
         return [];
       }
     },
+    find: {
+      files: async (query: string, limit?: number): Promise<string[]> => {
+        const result = await client.find.files({ query, limit });
+        if (!result.data) return [];
+        return result.data;
+      },
+    },
   };
 }

@@ -222,6 +222,7 @@ describe('session handlers', () => {
     it('handles session:switch when child session is not in openIDs and SDK load fails', async () => {
       const switchHandler = handlers.get('session:switch');
       expect(switchHandler).toBeDefined();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       vi.mocked(mockSessionManager.getOpenSessionIDs).mockReturnValue(['session-1']);
       vi.mocked(mockSdk.session.get).mockRejectedValue(new Error('SDK load error'));
@@ -236,6 +237,8 @@ describe('session handlers', () => {
         type: 'error',
         message: 'Failed to load child session: SDK load error',
       });
+
+      consoleSpy.mockRestore();
     });
 
     it('handles session:archive and falls back to create session if no open sessions left', async () => {

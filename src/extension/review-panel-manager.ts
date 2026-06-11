@@ -70,7 +70,7 @@ export class ReviewPanelManager {
 
     const ipc = new IPCBridge();
     ipc.setPanel(panel);
-    registerFileHandlers(ipc);
+    registerFileHandlers(ipc, this.sdk);
 
     panel.webview.html = getWebviewHtml(
       panel.webview,

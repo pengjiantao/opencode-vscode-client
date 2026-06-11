@@ -27,7 +27,6 @@ describe('config', () => {
     const config = getConfiguration();
     expect(config.model).toBe('');
     expect(config.agent).toBe('');
-    expect(config.maxCacheFiles).toBe(2000);
   });
 
   it('should return configured values when set in workspace properties', () => {
@@ -35,7 +34,6 @@ describe('config', () => {
     const mockGet = vi.fn().mockImplementation((key: string, defaultValue: unknown) => {
       if (key === 'model') return 'provider/model-x';
       if (key === 'agent') return 'agent-y';
-      if (key === 'maxCacheFiles') return 100;
       return defaultValue;
     });
     workspaceMock.mockReturnValueOnce({
@@ -46,7 +44,6 @@ describe('config', () => {
     const config = getConfiguration();
     expect(config.model).toBe('provider/model-x');
     expect(config.agent).toBe('agent-y');
-    expect(config.maxCacheFiles).toBe(100);
   });
 
   it('should call config.update with correct arguments for setConfiguration', () => {

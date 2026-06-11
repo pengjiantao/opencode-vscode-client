@@ -107,4 +107,8 @@ export interface SDKClient {
   getSkills(): Promise<SkillInfo[]>;
   /** Retrieves the list of available built-in and user-defined commands. */
   getCommands(): Promise<CommandInfo[]>;
+  find: {
+    /** Searches for files by name or pattern using the opencode backend. */
+    files(query: string, limit?: number): Promise<string[]>;
+  };
 }

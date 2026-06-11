@@ -13,8 +13,6 @@ export interface ExtensionConfig {
   model: string;
   /** Default agent to use */
   agent: string;
-  /** Maximum number of files to index in workspace cache */
-  maxCacheFiles: number;
 }
 
 /** Supported configuration keys that can be written. */
@@ -30,7 +28,6 @@ export function getConfiguration(): ExtensionConfig {
   return {
     model: config.get<string>('model', ''),
     agent: config.get<string>('agent', ''),
-    maxCacheFiles: config.get<number>('maxCacheFiles', 2000),
   };
 }
 

@@ -377,7 +377,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       });
     };
 
-    registerFileHandlers(ipc);
+    registerFileHandlers(ipc, sdk);
     registerSessionStateHandlers({
       ipc,
       sessionManager,

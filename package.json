@@ -244,11 +244,6 @@
           "type": "string",
           "default": "",
           "description": "Default agent to use"
-        },
-        "opencode.maxCacheFiles": {
-          "type": "integer",
-          "default": 2000,
-          "description": "Maximum number of files to index in the workspace cache"
         }
       }
     }
