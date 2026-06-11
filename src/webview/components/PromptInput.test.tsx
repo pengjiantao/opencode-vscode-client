@@ -316,6 +316,35 @@ describe('PromptInput', () => {
     expect(screen.queryAllByText('Claude').length).toBe(0);
   });
 
+  /** Regression: models within the same provider group are sorted alphabetically (case-insensitive). */
+  it('regression: models are sorted alphabetically within each provider group', () => {
+    const models = [
+      { id: 'm1', name: 'GPT-4o', providerName: 'OpenAI', isConnected: true },
+      { id: 'm2', name: 'Claude', providerName: 'Anthropic', isConnected: true },
+      { id: 'm3', name: 'gpt-3.5-turbo', providerName: 'OpenAI', isConnected: true },
+      { id: 'm4', name: 'claude-3-opus', providerName: 'Anthropic', isConnected: true },
+    ];
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={models}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const trigger = screen.getByRole('combobox', { name: /select model/i });
+    fireEvent.click(trigger);
+
+    const allOptions = screen.getAllByRole('option');
+    const optionNames = allOptions.map((el) => el.textContent?.replace('✓', '').trim());
+
+    // Within Anthropic: Claude and claude-3-opus are sorted case-insensitively
+    // Within OpenAI: gpt-3.5-turbo comes before GPT-4o
+    expect(optionNames).toEqual(['Claude', 'claude-3-opus', 'gpt-3.5-turbo', 'GPT-4o']);
+  });
+
   /** Regression: respects controlled activeModel and activeAgent props. */
   it('regression: respects controlled activeModel and activeAgent props', () => {
     render(

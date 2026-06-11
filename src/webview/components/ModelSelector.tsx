@@ -32,12 +32,18 @@ export function ModelSelector({ models, value, onChange }: ModelSelectorProps) {
   // Only show connected models in the dropdown
   const configuredModels = models.filter(isConnectedModel);
 
-  // Map Model items to generic SelectOption format
-  const options = configuredModels.map((m) => ({
-    id: m.id,
-    label: m.name,
-    group: m.providerName || 'Other',
-  }));
+  // Map Model items to generic SelectOption format and sort alphabetically within each provider group
+  const options = configuredModels
+    .map((m) => ({
+      id: m.id,
+      label: m.name,
+      group: m.providerName || 'Other',
+    }))
+    .sort((a, b) => {
+      const groupCmp = a.group.localeCompare(b.group);
+      if (groupCmp !== 0) return groupCmp;
+      return a.label.localeCompare(b.label, undefined, { sensitivity: 'base' });
+    });
 
   return (
     <Select

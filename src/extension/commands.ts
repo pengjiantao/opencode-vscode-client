@@ -357,6 +357,10 @@ export async function showModelQuickPick(sdk: SDKClient): Promise<void> {
     }
   }
 
+  for (const list of byProvider.values()) {
+    list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  }
+
   interface ModelPickItem extends QuickPickItem {
     id: string;
   }
