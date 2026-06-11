@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.27](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.26...v0.1.27) (2026-06-11)
+
+### Features
+
+- add copy user message button to chat actions bar ([039d806](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/039d806654720d8a4e76b60d64d6260b06dd6699))
+
+### Bug Fixes
+
+- decouple user message bubble width from revert/fork button row ([8292044](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/829204440b9508452bba1a175e06e9f8fa1a9806))
+- replace scrollIntoView with scrollTo in scrollToUserMessage to prevent webview layout shift ([34c07be](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/34c07be626f9712075b9ac98a6b70b3de4010e93))
+
 ### [0.1.26](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.25...v0.1.26) (2026-06-11)
 
 ### Features
