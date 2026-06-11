@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.26](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.25...v0.1.26) (2026-06-11)
+
+### Features
+
+- add per-extension file-type icons via Material Icon Theme SVGs ([62b49ae](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/62b49ae64e9a501015ffc16ca0a763c9a412e1d9))
+- **bash-output:** add ANSI code 22/24 support for resetting bold/dim and underline styles ([aee9c96](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/aee9c963554fa7dda764b1333240df11f8aa2be0))
+- **bash-output:** add ANSI color parsing and replace status icons with prompt ([bcc2e74](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/bcc2e7413e9176423e2493898e4b2057abbf30d1))
+- **ChatView:** force scroll to bottom when user sends a message ([de2d55a](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/de2d55adf2e8e20f90a102cdf5f8303fa014e2ec))
+- **DiffPart:** add expandAll prop to disable context line folding ([cc475d8](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/cc475d838ae11338d161ac8b1fbbab64fef228ee))
+- **DiffPart:** add file type icon to file header ([aab63df](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/aab63df8ded8e1dc6abdef63b1596f762ad8f8d2))
+- display workspace-relative paths in diff file headers ([d2a5ea3](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/d2a5ea374103e418d847ba8ad46a83a613f08ca8))
+- sort models alphabetically within provider groups in dropdown and QuickPick ([109e57e](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/109e57ea4373cc790f10e7487d42ee4f9c6a78f4))
+
+### Bug Fixes
+
+- **editorRestore:** fall back to parseFileUrl for file chip path when source is missing ([fa0ede3](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/fa0ede3e1d63c5b780199d4b942b25724736bcdb))
+- increase spacing between actions button and next user message ([4cc466a](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/4cc466a0934bff0cd6b33aa54837d61b6b97120d))
+- **ScrollFadeContainer:** add flex layout to inner content wrapper for vertical centering ([dbc66d2](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/dbc66d2f43a01362464f5f72356bab9d0c27651a))
+- **SessionTabs:** prevent auto-scroll when closing non-active tabs ([47bfa45](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/47bfa45fed3388ff11bb761e5a3caff34c203aa4))
+- suppress phantom scroll shadows when content does not overflow or container is hidden ([4935fdf](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/4935fdf6dd59a23ad269c05678a34c633784d116))
+
 ### [0.1.25](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.24...v0.1.25) (2026-05-31)
 
 ### Features
