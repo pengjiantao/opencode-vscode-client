@@ -140,6 +140,15 @@ function getInlinePlaceholder(part: Part): string | undefined {
   );
 }
 
+/** Extracts concatenated text from non-synthetic text parts. */
+function extractTextFromParts(parts: Part[]): string {
+  return parts
+    .filter((p) => p.type === 'text' && !(p as { synthetic?: boolean }).synthetic)
+    .map((p) => ('text' in p && typeof p.text === 'string' ? p.text : ''))
+    .filter(Boolean)
+    .join('\n');
+}
+
 /**
  * Determines whether a text part should be rendered as visible prose.
  * Inline payloads are resolved by Markdown placeholders and must not render twice.
@@ -232,6 +241,7 @@ export const MessageTurn = memo(function MessageTurn({
   onFork,
 }: MessageTurnProps) {
   const [copied, setCopied] = useState(false);
+  const [userCopied, setUserCopied] = useState(false);
   const [showRevertConfirm, setShowRevertConfirm] = useState(false);
   const [showForkConfirm, setShowForkConfirm] = useState(false);
   const { send } = useIPC(() => {});
@@ -249,6 +259,15 @@ export const MessageTurn = memo(function MessageTurn({
     }
   }, [copied]);
 
+  useEffect(() => {
+    if (userCopied) {
+      const timer = setTimeout(() => {
+        setUserCopied(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [userCopied]);
+
   const messagesToRender = assistantMessages
     ? assistantMessages
     : assistantMessage
@@ -257,19 +276,26 @@ export const MessageTurn = memo(function MessageTurn({
 
   const copyAnswer = () => {
     if (messagesToRender.length === 0) return;
-    const answerText = messagesToRender
-      .flatMap((msg) => parts[msg.id] || [])
-      .filter((part) => part.type === 'text')
-      .map((part) => {
-        if ('text' in part && typeof part.text === 'string') {
-          return part.text;
-        }
-        return '';
-      })
-      .filter(Boolean)
-      .join('\n');
+    const answerText = extractTextFromParts(messagesToRender.flatMap((msg) => parts[msg.id] || []));
     void navigator.clipboard.writeText(answerText || '');
     setCopied(true);
+  };
+
+  const copyUserMessage = () => {
+    const userPartsList = parts[userMessage.id];
+    if (userPartsList) {
+      const text = extractTextFromParts(userPartsList);
+      if (text) {
+        void navigator.clipboard.writeText(text);
+        setUserCopied(true);
+        return;
+      }
+    }
+    const fallback = getMessageText(userMessage);
+    if (fallback) {
+      void navigator.clipboard.writeText(fallback);
+      setUserCopied(true);
+    }
   };
 
   const scrollToTop = () => {
@@ -347,7 +373,6 @@ export const MessageTurn = memo(function MessageTurn({
 
   const showRevert = !hasSubtask && !!onRevert;
   const showFork = !hasSubtask && !!onFork;
-  const showUserActions = showRevert || showFork;
 
   return (
     <div className="message-turn">
@@ -356,8 +381,17 @@ export const MessageTurn = memo(function MessageTurn({
           <div className="message-content">{userContent}</div>
         </div>
       )}
-      {showUserActions && (
+      {userContent && (
         <div className="user-message-actions">
+          <button
+            className="action-btn copy-user-msg-btn"
+            onClick={copyUserMessage}
+            data-custom-title={userCopied ? 'Copied!' : 'Copy User Message'}
+            data-testid="copy-user-msg-btn"
+          >
+            <Codicon name={userCopied ? '$(check)' : '$(copy)'} />
+            <span>{userCopied ? 'Copied!' : 'Copy'}</span>
+          </button>
           {showRevert && (
             <button
               className={`action-btn revert-btn${isSessionBusy ? ' disabled' : ''}`}

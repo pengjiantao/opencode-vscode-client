@@ -587,6 +587,103 @@ describe('MessageTurn', () => {
     });
   });
 
+  describe('Copy User Message button', () => {
+    it('renders copy user message button in user-message-actions', () => {
+      const userMsg = createMockUserMessage();
+      const textPart = createMockTextPart('Hello, user message!');
+      textPart.messageID = userMsg.id;
+
+      render(<MessageTurn userMessage={userMsg} parts={{ [userMsg.id]: [textPart] }} />);
+
+      expect(screen.getByTestId('copy-user-msg-btn')).toBeInTheDocument();
+      expect(screen.getByText('Copy')).toBeInTheDocument();
+    });
+
+    it('copies user message text parts to clipboard when clicked', () => {
+      const userMsg = createMockUserMessage();
+      const textPart1 = createMockTextPart('First line of user message.');
+      textPart1.messageID = userMsg.id;
+      const textPart2 = createMockTextPart('Second line of user message.');
+      textPart2.id = 'user-part-2';
+      textPart2.messageID = userMsg.id;
+
+      render(
+        <MessageTurn userMessage={userMsg} parts={{ [userMsg.id]: [textPart1, textPart2] }} />,
+      );
+
+      const copyBtn = screen.getByTestId('copy-user-msg-btn');
+      act(() => {
+        fireEvent.click(copyBtn);
+      });
+
+      expect(writeTextSpy).toHaveBeenCalledWith(
+        'First line of user message.\nSecond line of user message.',
+      );
+    });
+
+    it('falls back to getMessageText when no text parts exist', () => {
+      const userMsg = { ...createMockUserMessage(), text: 'Fallback user text' };
+
+      render(<MessageTurn userMessage={userMsg} parts={{}} />);
+
+      const copyBtn = screen.getByTestId('copy-user-msg-btn');
+      act(() => {
+        fireEvent.click(copyBtn);
+      });
+
+      expect(writeTextSpy).toHaveBeenCalledWith('Fallback user text');
+    });
+
+    it('excludes synthetic text parts from copied content', () => {
+      const userMsg = createMockUserMessage();
+      const realPart = createMockTextPart('Real user question');
+      realPart.messageID = userMsg.id;
+      const syntheticPart = createMockTextPart('Called the Read tool...');
+      syntheticPart.id = 'synthetic-1';
+      syntheticPart.messageID = userMsg.id;
+      syntheticPart.synthetic = true;
+
+      render(
+        <MessageTurn userMessage={userMsg} parts={{ [userMsg.id]: [realPart, syntheticPart] }} />,
+      );
+
+      const copyBtn = screen.getByTestId('copy-user-msg-btn');
+      act(() => {
+        fireEvent.click(copyBtn);
+      });
+
+      expect(writeTextSpy).toHaveBeenCalledWith('Real user question');
+    });
+
+    it('shows copied feedback and reverts after timeout', () => {
+      vi.useFakeTimers();
+      const userMsg = createMockUserMessage();
+      const textPart = createMockTextPart('User message text');
+      textPart.messageID = userMsg.id;
+
+      render(<MessageTurn userMessage={userMsg} parts={{ [userMsg.id]: [textPart] }} />);
+
+      const copyBtn = screen.getByTestId('copy-user-msg-btn');
+      expect(screen.getByText('Copy')).toBeInTheDocument();
+
+      act(() => {
+        fireEvent.click(copyBtn);
+      });
+
+      expect(screen.getByText('Copied!')).toBeInTheDocument();
+      expect(copyBtn).toHaveAttribute('data-custom-title', 'Copied!');
+
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      expect(screen.getByText('Copy')).toBeInTheDocument();
+      expect(copyBtn).toHaveAttribute('data-custom-title', 'Copy User Message');
+
+      vi.useRealTimers();
+    });
+  });
+
   describe('Fork button', () => {
     it('renders fork button when onFork callback is provided', () => {
       const userMsg = createMockUserMessage();
