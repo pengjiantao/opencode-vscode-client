@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.28](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.27...v0.1.28) (2026-06-12)
+
+### Bug Fixes
+
+- eliminate visual flash when TaskToolPart auto-collapses on completion ([4fa7659](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/4fa765920039aa77620d27a9f92a88c373ab6bd3))
+- preserve locally accumulated streaming content when merging server snapshots in sessionStore ([1589648](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/158964890897a3bb0395aa889c6f1be3232e31c9))
+
 ### [0.1.27](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.26...v0.1.27) (2026-06-11)
 
 ### Features
