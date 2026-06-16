@@ -4,6 +4,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createReviewID } from '../webview/utils/review-utils';
 import { ReviewPanelManager } from './review-panel-manager';
 
 const mockDispose = vi.fn();
@@ -57,17 +58,15 @@ describe('ReviewPanelManager', () => {
   } as unknown as import('vscode').ExtensionContext;
   const mockSdk = {
     session: {
-      diff: vi
-        .fn()
-        .mockResolvedValue([
-          {
-            file: 'test.ts',
-            additions: 5,
-            deletions: 2,
-            status: 'modified',
-            patch: '--- a\n+++ b\n@@ -1 +1 @@\n-old\n+new',
-          },
-        ]),
+      diff: vi.fn().mockResolvedValue([
+        {
+          file: 'test.ts',
+          additions: 5,
+          deletions: 2,
+          status: 'modified',
+          patch: '--- a\n+++ b\n@@ -1 +1 @@\n-old\n+new',
+        },
+      ]),
     },
   } as unknown as import('./sdk-client').SDKClient;
 
@@ -114,6 +113,35 @@ describe('ReviewPanelManager', () => {
     await manager.open('review-1', 'session-1', undefined, 'Review 1');
     await manager.open('review-2', 'session-1', undefined, 'Review 2');
     expect(window.createWebviewPanel).toHaveBeenCalledTimes(2);
+  });
+
+  // Regression: clicking the same "summary" button multiple times used to open
+  // a new review tab on every click because createReviewID() appended a
+  // Date.now() suffix, defeating the dedup key in ReviewPanelManager.open().
+  // The ID is now stable, so repeat clicks must reuse (reveal) the existing
+  // panel and only create a new one for a genuinely different summary target.
+  it('dedupes repeated opens of the same summary target (regression for Date.now() in reviewID)', async () => {
+    const { window } = await import('vscode');
+
+    // Same turn-scope button clicked twice (per-message summary).
+    const turnID = createReviewID('sess-A', 'turn', 'msg-1');
+    await manager.open(turnID, 'sess-A', 'msg-1', 'Review Changes');
+    await manager.open(turnID, 'sess-A', 'msg-1', 'Review Changes');
+    expect(window.createWebviewPanel).toHaveBeenCalledTimes(1);
+    expect(mockReveal).toHaveBeenCalledTimes(1);
+
+    // Same session-scope button clicked twice (input-box summary).
+    const sessionID = createReviewID('sess-A', 'session');
+    await manager.open(sessionID, 'sess-A', undefined, 'Review Changes');
+    await manager.open(sessionID, 'sess-A', undefined, 'Review Changes');
+    expect(window.createWebviewPanel).toHaveBeenCalledTimes(2);
+    expect(mockReveal).toHaveBeenCalledTimes(2);
+
+    // A different message of the same session must still get its own tab.
+    const otherTurnID = createReviewID('sess-A', 'turn', 'msg-2');
+    expect(otherTurnID).not.toBe(turnID);
+    await manager.open(otherTurnID, 'sess-A', 'msg-2', 'Review Changes');
+    expect(window.createWebviewPanel).toHaveBeenCalledTimes(3);
   });
 
   it('disposes all panels on disposeAll', async () => {
