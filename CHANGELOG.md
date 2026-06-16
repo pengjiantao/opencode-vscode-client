@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.29](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.28...v0.1.29) (2026-06-16)
+
+### Features
+
+- **Select:** add combobox keyboard navigation with scroll-centering ([de979a4](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/de979a4a85f6baa1231c9e0351d8ebcd303fd379))
+- **SessionTabs:** show running spinner on tabs and More menu for busy sessions ([b1b9e54](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/b1b9e541b413073edfa504ea272ee2c75f22bd61))
+
+### Bug Fixes
+
+- **review:** dedupe repeated clicks on the same summary button ([a5d726e](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/a5d726ebf0a078f0b0933972e3e485c9fb3ae474))
+
 ### [0.1.28](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.27...v0.1.28) (2026-06-12)
 
 ### Bug Fixes
