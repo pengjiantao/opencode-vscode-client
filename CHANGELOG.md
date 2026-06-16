@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.30](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.29...v0.1.30) (2026-06-16)
+
+### Features
+
+- **prompt:** add Up/Down prompt history recall ([ec708b3](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/ec708b3f9b4afbdc5f9f5658ff0ad079c25d1a5e))
+
 ### [0.1.29](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.28...v0.1.29) (2026-06-16)
 
 ### Features
