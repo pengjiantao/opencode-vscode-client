@@ -1,8 +1,10 @@
 /**
  * @file Reusable Select (Combobox) component using the generic Popover.
+ * Implements a true combobox pattern: the keyboard-highlighted item is purely
+ * visual until the user commits it with Enter or a mouse click.
  */
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Codicon } from './Codicon';
 import { Popover } from './Popover';
 
@@ -48,9 +50,219 @@ export interface SelectProps {
   icon?: ReactNode;
 }
 
+/** Props for the popover body sub-component. */
+interface SelectPopoverBodyProps {
+  options: SelectOption[];
+  value: string;
+  onChange: (value: string) => void;
+  onClose: () => void;
+  searchable: boolean;
+  placeholder: string;
+  noResultsText: string;
+}
+
+/**
+ * Popover body sub-component. Owns the search/filter/keyboard-navigation state.
+ *
+ * It is rendered as the children of `Popover`, which conditionally mounts it
+ * based on the popover's open state. This means the body component (re)mounts
+ * on every popover open, so transient state like the keyboard highlight is
+ * automatically reset to the committed `value` on each open — no cross-render
+ * state synchronization required.
+ */
+function SelectPopoverBody({
+  options,
+  value,
+  onChange,
+  onClose,
+  searchable,
+  placeholder,
+  noResultsText,
+}: SelectPopoverBodyProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  // Transient keyboard-highlighted option id. `null` means "no override; use the real `value`".
+  // Reset to `null` on each mount (handled implicitly by useState initial value).
+  const [keyboardActiveId, setKeyboardActiveId] = useState<string | null>(null);
+  const optionsListRef = useRef<HTMLDivElement>(null);
+
+  // Filter options by search query
+  const filteredOptions = useMemo(() => {
+    if (!searchable || !searchQuery) return options;
+    const query = searchQuery.toLowerCase();
+    return options.filter(
+      (opt) =>
+        opt.label.toLowerCase().includes(query) ||
+        (opt.group && opt.group.toLowerCase().includes(query)),
+    );
+  }, [options, searchQuery, searchable]);
+
+  // Group options by group name if provided, otherwise place in standard list
+  const groups: Record<string, SelectOption[]> = {};
+  const ungrouped: SelectOption[] = [];
+
+  filteredOptions.forEach((opt) => {
+    if (opt.group) {
+      if (!groups[opt.group]) {
+        groups[opt.group] = [];
+      }
+      groups[opt.group].push(opt);
+    } else {
+      ungrouped.push(opt);
+    }
+  });
+
+  // The effective highlight id is derived from state, not stored separately.
+  // Priority: keyboardActiveId if still in the filtered list (user has navigated
+  // and the item is visible), else value if in the list (the committed selection
+  // shown on open), else the first filtered option (snap-on-search behavior when
+  // the current selection is excluded by a query).
+  const effectiveHighlightId = useMemo(() => {
+    if (filteredOptions.length === 0) return null;
+    if (keyboardActiveId !== null && filteredOptions.some((o) => o.id === keyboardActiveId)) {
+      return keyboardActiveId;
+    }
+    if (filteredOptions.some((o) => o.id === value)) {
+      return value;
+    }
+    return filteredOptions[0].id;
+  }, [keyboardActiveId, filteredOptions, value]);
+
+  // Center the effective highlight in the options list whenever it changes. We
+  // deliberately avoid `scrollIntoView()` because it cascades to all scrollable
+  // ancestors and would shift the entire webview; manual `scrollTop` math keeps
+  // the scroll contained to the dropdown list.
+  useEffect(() => {
+    if (!effectiveHighlightId || !optionsListRef.current) return;
+    const container = optionsListRef.current;
+    const selectedEl = container.querySelector<HTMLElement>(
+      `.select-option[data-option-id="${CSS.escape(effectiveHighlightId)}"]`,
+    );
+    if (!selectedEl) return;
+    const desired = selectedEl.offsetTop - container.clientHeight / 2 + selectedEl.offsetHeight / 2;
+    const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+    container.scrollTop = Math.max(0, Math.min(desired, maxScroll));
+  }, [effectiveHighlightId, filteredOptions]);
+
+  const handleOptionCommit = (id: string) => {
+    if (id !== value) {
+      onChange(id);
+    }
+    // No need to reset searchQuery here — the body component is about to unmount
+    // (onClose flips Popover's isOpen, which removes the children subtree).
+    onClose();
+  };
+
+  const handleKeyDownOnSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (filteredOptions.length === 0) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const idx = filteredOptions.findIndex((o) => o.id === effectiveHighlightId);
+      const safeIdx = idx < 0 ? 0 : idx;
+      const next =
+        e.key === 'ArrowDown'
+          ? (safeIdx + 1) % filteredOptions.length
+          : (safeIdx - 1 + filteredOptions.length) % filteredOptions.length;
+      setKeyboardActiveId(filteredOptions[next].id);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      // Commit the visual highlight (which already accounts for the snap-to-first
+      // rule); Enter on the already-committed value is a no-op for business logic.
+      const target = effectiveHighlightId ?? value;
+      if (target && target !== value) {
+        onChange(target);
+      }
+      onClose();
+    }
+    // Letter keys and other inputs fall through to update searchQuery normally.
+  };
+
+  return (
+    <div className="select-popover-content">
+      {searchable && (
+        <div className="select-search-container">
+          <input
+            type="text"
+            className="select-search-input"
+            placeholder={placeholder}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleKeyDownOnSearch}
+            autoFocus
+          />
+        </div>
+      )}
+      <div className="select-options-list" role="listbox" ref={optionsListRef}>
+        {filteredOptions.length === 0 ? (
+          <div className="select-no-results">{noResultsText}</div>
+        ) : (
+          <>
+            {/* Render grouped options */}
+            {Object.entries(groups).map(([groupName, groupOptions]) => (
+              <div key={groupName} className="select-group" role="group" aria-label={groupName}>
+                <div className="select-group-header">{groupName}</div>
+                {groupOptions.map((opt) => (
+                  <SelectOptionRow
+                    key={opt.id}
+                    option={opt}
+                    isHighlighted={opt.id === effectiveHighlightId}
+                    isCommitted={opt.id === value}
+                    onCommit={handleOptionCommit}
+                  />
+                ))}
+              </div>
+            ))}
+
+            {/* Render ungrouped options */}
+            {ungrouped.map((opt) => (
+              <SelectOptionRow
+                key={opt.id}
+                option={opt}
+                isHighlighted={opt.id === effectiveHighlightId}
+                isCommitted={opt.id === value}
+                onCommit={handleOptionCommit}
+              />
+            ))}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Props for a single selectable row inside the popover list. */
+interface SelectOptionRowProps {
+  option: SelectOption;
+  isHighlighted: boolean;
+  isCommitted: boolean;
+  onCommit: (id: string) => void;
+}
+
+/**
+ * Single option row. Renders a `<div role="option">` with the label and an
+ * optional check icon for the committed selection. Extracted to remove the
+ * duplication between the grouped and ungrouped render paths.
+ */
+function SelectOptionRow({ option, isHighlighted, isCommitted, onCommit }: SelectOptionRowProps) {
+  return (
+    <div
+      role="option"
+      aria-selected={isHighlighted}
+      data-option-id={option.id}
+      className={`select-option ${isHighlighted ? 'selected' : ''}`}
+      onClick={() => onCommit(option.id)}
+    >
+      <span className="select-option-name" data-custom-title={option.label}>
+        {option.label}
+      </span>
+      {isCommitted && <span className="select-check-icon">✓</span>}
+    </div>
+  );
+}
+
 /**
  * Reusable Select component that styles a combobox trigger and list popup.
- * Connects with `Popover` and handles searching, grouping, and active selections.
+ * Connects with `Popover` and delegates search, filtering, keyboard navigation,
+ * and scroll-centering to a sub-component that resets its state on every open.
  */
 export function Select({
   options,
@@ -68,39 +280,10 @@ export function Select({
   ariaLabel,
   icon,
 }: SelectProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-
   // Find currently active option to determine trigger label if not custom
   const activeOption = options.find((opt) => opt.id === value);
   const resolvedTriggerText = activeOption ? activeOption.label : value;
   const displayLabel = isLoading ? loadingText : triggerText || resolvedTriggerText || 'Select...';
-
-  // Filter options by search query
-  const filteredOptions = options.filter((opt) => {
-    if (!searchable || !searchQuery) {
-      return true;
-    }
-    const query = searchQuery.toLowerCase();
-    return (
-      opt.label.toLowerCase().includes(query) ||
-      (opt.group && opt.group.toLowerCase().includes(query))
-    );
-  });
-
-  // Group options by group name if provided, otherwise place in standard list
-  const groups: Record<string, SelectOption[]> = {};
-  const ungrouped: SelectOption[] = [];
-
-  filteredOptions.forEach((opt) => {
-    if (opt.group) {
-      if (!groups[opt.group]) {
-        groups[opt.group] = [];
-      }
-      groups[opt.group].push(opt);
-    } else {
-      ungrouped.push(opt);
-    }
-  });
 
   return (
     <Popover
@@ -125,72 +308,15 @@ export function Select({
       }
     >
       {({ close }) => (
-        <div className="select-popover-content">
-          {searchable && (
-            <div className="select-search-container">
-              <input
-                type="text"
-                className="select-search-input"
-                placeholder={placeholder}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
-              />
-            </div>
-          )}
-          <div className="select-options-list" role="listbox">
-            {filteredOptions.length === 0 ? (
-              <div className="select-no-results">{noResultsText}</div>
-            ) : (
-              <>
-                {/* Render grouped options */}
-                {Object.entries(groups).map(([groupName, groupOptions]) => (
-                  <div key={groupName} className="select-group" role="group" aria-label={groupName}>
-                    <div className="select-group-header">{groupName}</div>
-                    {groupOptions.map((opt) => (
-                      <div
-                        key={opt.id}
-                        role="option"
-                        aria-selected={opt.id === value}
-                        className={`select-option ${opt.id === value ? 'selected' : ''}`}
-                        onClick={() => {
-                          onChange(opt.id);
-                          setSearchQuery('');
-                          close();
-                        }}
-                      >
-                        <span className="select-option-name" data-custom-title={opt.label}>
-                          {opt.label}
-                        </span>
-                        {opt.id === value && <span className="select-check-icon">✓</span>}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-
-                {/* Render ungrouped options */}
-                {ungrouped.map((opt) => (
-                  <div
-                    key={opt.id}
-                    role="option"
-                    aria-selected={opt.id === value}
-                    className={`select-option ${opt.id === value ? 'selected' : ''}`}
-                    onClick={() => {
-                      onChange(opt.id);
-                      setSearchQuery('');
-                      close();
-                    }}
-                  >
-                    <span className="select-option-name" data-custom-title={opt.label}>
-                      {opt.label}
-                    </span>
-                    {opt.id === value && <span className="select-check-icon">✓</span>}
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        </div>
+        <SelectPopoverBody
+          options={options}
+          value={value}
+          onChange={onChange}
+          onClose={close}
+          searchable={searchable}
+          placeholder={placeholder}
+          noResultsText={noResultsText}
+        />
       )}
     </Popover>
   );
