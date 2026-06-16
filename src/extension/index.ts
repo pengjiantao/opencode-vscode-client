@@ -6,12 +6,14 @@
 
 import type { Part, Session, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import { window, workspace, type ExtensionContext } from 'vscode';
+import type { PromptHistoryEntry } from '../shared/types';
 import { pasteClipboardTextAsPlainText, registerExtensionCommands } from './commands';
 import { registerEventHandlers } from './event-handlers';
 import { handleSelectHistory } from './history-handlers';
 import { IPCBridge } from './ipc';
 import { syncMetadata as importSyncMetadata } from './metadata';
 import { PendingRequestBuffer } from './pending-request-buffer';
+import { PromptHistoryStore } from './prompt-history-store';
 import { ReviewPanelManager } from './review-panel-manager';
 import type { SDKClient } from './sdk-client';
 import { createSDKClient } from './sdk-client-impl';
@@ -34,6 +36,7 @@ let sdk: SDKClient;
 let sessionManager: SessionManager;
 let ipc: IPCBridge;
 let provider: OpencodeSidebarViewProvider;
+let promptHistoryStore: PromptHistoryStore;
 
 /**
  * Activates the OpenCode sidebar extension.
@@ -43,6 +46,7 @@ let provider: OpencodeSidebarViewProvider;
  */
 export async function activate(context: ExtensionContext): Promise<void> {
   const sessionStateStore = new SessionStateStore(context.globalState);
+  promptHistoryStore = new PromptHistoryStore(context.globalState);
   const sessionStatuses = new Map<string, SessionStatus>();
   const pendingBuffer = new PendingRequestBuffer();
   let cachedModels: ModelInfo[] = [];
@@ -313,6 +317,17 @@ export async function activate(context: ExtensionContext): Promise<void> {
       void invokeCreateSession();
     });
 
+    ipc.on('prompt-history:list', () => {
+      ipc.send({ type: 'prompt-history:list', entries: promptHistoryStore.list() });
+    });
+
+    ipc.on('prompt-history:append', (msg) => {
+      const { entry } = msg as { entry: PromptHistoryEntry };
+      Promise.resolve(promptHistoryStore.append(entry)).catch((err: unknown) => {
+        console.error('Failed to persist prompt history entry:', err);
+      });
+    });
+
     registerSessionLifecycleHandlers({
       sdk,
       ipc,
@@ -376,6 +391,32 @@ export async function activate(context: ExtensionContext): Promise<void> {
           text: text || '',
         } as unknown as Part,
       ];
+
+      // Mirror the opencode TUI's "append on submit" policy. We persist the history
+      // entry from the extension side (not the webview) so the source of truth lives
+      // in the same Memento the rest of the extension's persistent state uses, and
+      // the webview can stay focused on UI. We then notify the webview of the new
+      // entry so its in-memory mirror is up to date — otherwise the just-submitted
+      // prompt is not recallable via Up/Down until the webview is reloaded.
+      if (text && text.trim().length > 0) {
+        const entry: PromptHistoryEntry = {
+          input: text.trim(),
+          parts: promptParts,
+          mode: 'normal',
+        };
+        Promise.resolve(promptHistoryStore.append(entry))
+          .then((persisted) => {
+            // Skip the IPC echo on a back-to-back duplicate — `append` returns
+            // `false` because no write happened, so the persisted list is
+            // unchanged and the webview mirror is already in sync.
+            if (persisted) {
+              ipc.send({ type: 'prompt-history:appended', entry });
+            }
+          })
+          .catch((err: unknown) => {
+            console.error('Failed to persist prompt history entry on submit:', err);
+          });
+      }
 
       sessionManager
         .sendPrompt(

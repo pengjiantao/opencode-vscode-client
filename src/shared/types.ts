@@ -14,9 +14,21 @@ import type {
   SnapshotFileDiff,
 } from '@opencode-ai/sdk/v2/client';
 
-export type { SnapshotFileDiff };
+export type { Event, Part, SnapshotFileDiff };
 
-export type { Event };
+/**
+ * A single entry in the prompt input history (Up/Down recall).
+ * Mirrors the shape persisted by the opencode TUI in `prompt-history.jsonl` so the
+ * two clients behave consistently for users who switch between them.
+ */
+export interface PromptHistoryEntry {
+  /** The expanded prompt text the user submitted (paste placeholders resolved). */
+  input: string;
+  /** The associated rich parts (file/image/code-selection/etc.) at submit time. */
+  parts: Part[];
+  /** Editor mode at submit time. Reserved for future shell-mode parity. */
+  mode?: 'normal';
+}
 
 /**
  * Status information for an active Language Server Protocol (LSP) server.
@@ -259,7 +271,21 @@ export type ExtToWebview =
       scope?: 'turn' | 'session';
     }
   | { type: 'review:error'; reviewID: string; message: string }
-  | { type: 'review:closed'; reviewID: string };
+  | { type: 'review:closed'; reviewID: string }
+  | {
+      /** Bulk snapshot of stored prompt history entries, sent in response to `prompt-history:list`. */
+      type: 'prompt-history:list';
+      entries: PromptHistoryEntry[];
+    }
+  | {
+      /**
+       * Notifies the webview that the extension just appended a new history entry
+       * (e.g. after a submit). The webview's mirror needs this to make the entry
+       * immediately recallable via Up/Down without requiring a reload.
+       */
+      type: 'prompt-history:appended';
+      entry: PromptHistoryEntry;
+    };
 
 /**
  * Protocol messages sent from the webview to the extension host.
@@ -312,4 +338,6 @@ export type WebviewToExt =
   | { type: 'session:revert'; sessionID: string; messageID: string }
   | { type: 'session:unrevert'; sessionID: string }
   | { type: 'session:fork'; sessionID: string; messageID?: string }
-  | { type: 'session:load-child-messages'; sessionID: string };
+  | { type: 'session:load-child-messages'; sessionID: string }
+  | { type: 'prompt-history:list' }
+  | { type: 'prompt-history:append'; entry: PromptHistoryEntry };

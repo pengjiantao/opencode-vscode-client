@@ -37,6 +37,7 @@ describe('SessionStateStore', () => {
     vi.mocked(getConfiguration).mockReturnValue({
       model: 'config-model',
       agent: 'config-agent',
+      historySize: 50,
     });
   });
 
@@ -175,6 +176,7 @@ describe('SessionStateStore', () => {
       vi.mocked(getConfiguration).mockReturnValue({
         model: '',
         agent: '',
+        historySize: 50,
       });
 
       const defaults = store.getDefaults(

@@ -6,15 +6,23 @@
 import type { Part, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import React from 'react';
 import { resolveDefaultModelId } from '../../shared/model-selection';
+import { DRAFT_RETENTION_MIN_CHARS } from '../../shared/promptHistory';
 import type { AgentInfo, ModelInfo, WebviewToExt } from '../../shared/types';
 import { useCommandEditor } from '../hooks/useCommandEditor';
 import { useIPC } from '../hooks/useIPC';
 import { useMentionEditor } from '../hooks/useMentionEditor';
 import { usePromptEditor } from '../hooks/usePromptEditor';
+import { usePromptHistory } from '../hooks/usePromptHistory';
 import { usePromptSelectionIPC } from '../hooks/usePromptSelectionIPC';
+import { usePromptHistoryStore } from '../store/promptHistoryStore';
 import { useSessionStore } from '../store/sessionStore';
 import { getTooltipHtml } from '../utils/chipUtils';
 import { restoreUserMessageToEditor } from '../utils/editorRestore';
+import {
+  isCaretAtEditorEnd,
+  isCaretAtEditorStart,
+  restoreHistoryEntryToEditor,
+} from '../utils/historyRestore';
 import { getPromptData } from '../utils/promptSerializer';
 import { AgentSelector } from './AgentSelector';
 import { CommandListPopover } from './CommandListPopover';
@@ -93,6 +101,14 @@ export function PromptInput({
   const editorRef = React.useRef<HTMLDivElement>(null);
   const isRunning = status?.type === 'busy' || status?.type === 'retry';
 
+  // Prompt history (Up/Down) — wires the persistent history from the extension
+  // and exposes a single helper for the clear-when-long policy.
+  const { recordClearedDraft } = usePromptHistory();
+  // Refs let handleInput detect a "long draft cleared to empty" transition
+  // without re-rendering the editor on every keystroke.
+  const lastTextRef = React.useRef('');
+  const lastPartsRef = React.useRef<Part[]>([]);
+
   const defaultModel = React.useMemo(() => resolveDefaultModelId(models), [models]);
   const activeModel = selectedModel || defaultModel;
   const activeAgent = selectedAgent || (agents.length > 0 ? agents[0].id : '');
@@ -134,6 +150,11 @@ export function PromptInput({
           editorRef.current.innerHTML = '';
         }
         setHasContent(false);
+        // A successful submit invalidates any active history navigation: the
+        // user's in-progress draft is gone, so the cursor must reset.
+        usePromptHistoryStore.getState().resetCursor();
+        lastTextRef.current = '';
+        lastPartsRef.current = [];
       }
     }
   }, [isRunning, onAbort, activeSessionID, fileInfos, onSubmit]);
@@ -143,9 +164,22 @@ export function PromptInput({
   }, []);
 
   const handleInput = React.useCallback(() => {
-    const { text } = getPromptData(editorRef.current, activeSessionID, fileInfos);
+    const { text, parts } = getPromptData(editorRef.current, activeSessionID, fileInfos);
     setHasContent(text.trim().length > 0);
-  }, [activeSessionID, fileInfos]);
+
+    // Clear-when-long policy (TUI parity): if the previous content was a
+    // long draft (>= 20 chars or had parts) and the user has now emptied the
+    // editor without submitting, retain the previous content in history.
+    const previous = lastTextRef.current;
+    const previousParts = lastPartsRef.current;
+    const wasLong = previous.trim().length >= DRAFT_RETENTION_MIN_CHARS || previousParts.length > 0;
+    if (wasLong && text.length === 0 && parts.length === 0) {
+      recordClearedDraft(previous, previousParts);
+    }
+
+    lastTextRef.current = text;
+    lastPartsRef.current = parts;
+  }, [activeSessionID, fileInfos, recordClearedDraft]);
 
   const { handlePaste, insertChip, insertText } = usePromptEditor({
     editorRef,
@@ -401,6 +435,63 @@ export function PromptInput({
       e.preventDefault();
       if (!isRunning) {
         handleSubmit();
+      }
+      return;
+    }
+
+    // Prompt history (Up/Down recall). Mirrors the opencode TUI's
+    // `prompt.history.previous` / `prompt.history.next` keybinds: navigate
+    // history only when the caret sits at the matching edge of the editor
+    // so normal vertical caret movement inside a multi-line draft is
+    // untouched.
+    if (disabled) return;
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const editor = editorRef.current;
+    if (!editor) return;
+    const history = usePromptHistoryStore.getState();
+    if (history.entries.length === 0) return;
+
+    if (e.key === 'ArrowUp' && isCaretAtEditorStart(editor)) {
+      e.preventDefault();
+      history.startNavigation(lastTextRef.current);
+      const entry = history.previous();
+      if (entry) {
+        restoreHistoryEntryToEditor(editor, entry, { caret: 'start' });
+        lastTextRef.current = entry.input;
+        lastPartsRef.current = entry.parts;
+        setHasContent(entry.input.trim().length > 0);
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown' && isCaretAtEditorEnd(editor)) {
+      e.preventDefault();
+      if (history.cursor === 0) return;
+      const result = history.next();
+      if (result === null) return;
+      if (result.kind === 'entry') {
+        restoreHistoryEntryToEditor(editor, result.entry, { caret: 'end' });
+        lastTextRef.current = result.entry.input;
+        lastPartsRef.current = result.entry.parts;
+        setHasContent(result.entry.input.trim().length > 0);
+      } else {
+        // Crossed past the newest entry — restore the user's in-progress draft.
+        editor.innerHTML = '';
+        if (result.draft) {
+          editor.appendChild(document.createTextNode(result.draft));
+        }
+        const sel = window.getSelection();
+        if (sel) {
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          range.collapse(false);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        lastTextRef.current = result.draft;
+        lastPartsRef.current = [];
+        setHasContent(result.draft.trim().length > 0);
       }
     }
   };

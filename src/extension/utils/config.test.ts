@@ -5,7 +5,12 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { workspace, WorkspaceConfiguration } from 'vscode';
-import { getConfiguration, setConfiguration } from './config';
+import {
+  clampHistorySize,
+  DEFAULT_HISTORY_SIZE,
+  getConfiguration,
+  setConfiguration,
+} from './config';
 
 const updateMock = vi.fn();
 
@@ -27,6 +32,7 @@ describe('config', () => {
     const config = getConfiguration();
     expect(config.model).toBe('');
     expect(config.agent).toBe('');
+    expect(config.historySize).toBe(DEFAULT_HISTORY_SIZE);
   });
 
   it('should return configured values when set in workspace properties', () => {
@@ -34,6 +40,7 @@ describe('config', () => {
     const mockGet = vi.fn().mockImplementation((key: string, defaultValue: unknown) => {
       if (key === 'model') return 'provider/model-x';
       if (key === 'agent') return 'agent-y';
+      if (key === 'historySize') return 25;
       return defaultValue;
     });
     workspaceMock.mockReturnValueOnce({
@@ -44,6 +51,7 @@ describe('config', () => {
     const config = getConfiguration();
     expect(config.model).toBe('provider/model-x');
     expect(config.agent).toBe('agent-y');
+    expect(config.historySize).toBe(25);
   });
 
   it('should call config.update with correct arguments for setConfiguration', () => {
@@ -54,5 +62,30 @@ describe('config', () => {
   it('should clear a configuration value when set to empty string', () => {
     setConfiguration('agent', '');
     expect(updateMock).toHaveBeenCalledWith('agent', '', true);
+  });
+});
+
+describe('clampHistorySize', () => {
+  it('returns the default for non-finite or missing values', () => {
+    expect(clampHistorySize(undefined)).toBe(DEFAULT_HISTORY_SIZE);
+    expect(clampHistorySize(null)).toBe(DEFAULT_HISTORY_SIZE);
+    expect(clampHistorySize('not-a-number')).toBe(DEFAULT_HISTORY_SIZE);
+    expect(clampHistorySize(NaN)).toBe(DEFAULT_HISTORY_SIZE);
+  });
+
+  it('clamps to the configured minimum and maximum', () => {
+    expect(clampHistorySize(0)).toBe(1);
+    expect(clampHistorySize(-5)).toBe(1);
+    expect(clampHistorySize(1000)).toBe(500);
+  });
+
+  it('floors fractional values', () => {
+    expect(clampHistorySize(10.9)).toBe(10);
+  });
+
+  it('passes through valid integers unchanged', () => {
+    expect(clampHistorySize(1)).toBe(1);
+    expect(clampHistorySize(50)).toBe(50);
+    expect(clampHistorySize(500)).toBe(500);
   });
 });
