@@ -152,6 +152,19 @@ export async function activate(context: ExtensionContext): Promise<void> {
       },
     });
 
+    // Seed the in-memory status map from the backend before the webview mounts so that
+    // an extension restart (which wipes the Map) does not lose the running state of
+    // any sessions that were already busy. Subsequent SSE `session.status` events keep
+    // the map up to date.
+    try {
+      const initialStatuses = await sdk.session.statusAll();
+      for (const [sessionID, status] of Object.entries(initialStatuses)) {
+        sessionStatuses.set(sessionID, status);
+      }
+    } catch (err) {
+      console.error('Failed to seed session statuses from backend:', err);
+    }
+
     context.subscriptions.push(
       window.registerWebviewViewProvider('opencode-sidebar.main', provider),
     );
@@ -283,6 +296,12 @@ export async function activate(context: ExtensionContext): Promise<void> {
           });
           syncPendingRequests(activeID);
         }
+
+        // Send a bulk snapshot of every known session's status so the webview can
+        // immediately render running (busy/retry) indicators across all tabs without
+        // waiting for the next per-session SSE event to arrive. Sent last so the
+        // per-session `messages:list` for the active tab is in place first.
+        ipc.send({ type: 'session:statuses-bulk', statuses: Object.fromEntries(sessionStatuses) });
       } catch (err) {
         console.error('Failed to load session list on init:', err);
       } finally {

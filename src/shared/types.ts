@@ -160,6 +160,15 @@ export type ExtToWebview =
   | { type: 'session:updated'; session: Session }
   | { type: 'session:deleted'; sessionID: string }
   | {
+      /**
+       * Bulk snapshot of every session's processing status, sourced from the backend
+       * during init. The webview uses this to immediately render busy/retry indicators
+       * across all open tabs without waiting for per-session SSE events to arrive.
+       */
+      type: 'session:statuses-bulk';
+      statuses: Record<string, SessionStatus>;
+    }
+  | {
       type: 'session:diffs';
       diffs: Record<
         string,

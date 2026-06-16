@@ -206,6 +206,30 @@ describe('sessionStore', () => {
     });
   });
 
+  describe('setSessionStatuses', () => {
+    it('replaces the entire status map with a backend-sourced snapshot', () => {
+      // Pre-seed a stale entry that should be dropped by the snapshot
+      useSessionStore.getState().setSessionStatus('stale-session', { type: 'busy' });
+      useSessionStore.getState().setSessionStatus('keep-busy', { type: 'busy' });
+
+      useSessionStore.getState().setSessionStatuses({
+        'keep-busy': { type: 'busy' },
+        'keep-retry': { type: 'retry', attempt: 1, message: '', next: 1 },
+      });
+
+      const { sessionStatus } = useSessionStore.getState();
+      expect(Object.keys(sessionStatus)).toHaveLength(2);
+      expect(sessionStatus['stale-session']).toBeUndefined();
+      expect(sessionStatus['keep-busy']).toEqual({ type: 'busy' });
+      expect(sessionStatus['keep-retry']).toEqual({
+        type: 'retry',
+        attempt: 1,
+        message: '',
+        next: 1,
+      });
+    });
+  });
+
   describe('setPendingRequests', () => {
     it('overwrites pending requests for a specific session without affecting other sessions', () => {
       const perm1 = {

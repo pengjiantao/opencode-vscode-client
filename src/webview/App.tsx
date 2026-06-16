@@ -63,6 +63,7 @@ export function App() {
   const removeSession = useSessionStore((s) => s.removeSession);
   const updateSession = useSessionStore((s) => s.updateSession);
   const setSessionMessagesAndParts = useSessionStore((s) => s.setSessionMessagesAndParts);
+  const setSessionStatuses = useSessionStore((s) => s.setSessionStatuses);
   const setPendingRequests = useSessionStore((s) => s.setPendingRequests);
   const setSessionDiffs = useSessionStore((s) => s.setSessionDiffs);
   const clearChildSessions = useSessionStore((s) => s.clearChildSessions);
@@ -177,6 +178,9 @@ export function App() {
         case 'pending-requests':
           setPendingRequests(message.sessionID, message.permissions, message.questions);
           break;
+        case 'session:statuses-bulk':
+          setSessionStatuses(message.statuses);
+          break;
       }
     };
 
@@ -188,6 +192,7 @@ export function App() {
     removeSession,
     updateSession,
     setSessionMessagesAndParts,
+    setSessionStatuses,
     setSessions,
     setWorkspaceName,
     setWorkspaceRoot,
@@ -375,6 +380,7 @@ export function App() {
       <SessionTabs
         sessions={sessions}
         activeSessionID={activeSessionID}
+        sessionStatus={sessionStatus}
         onSwitch={handleSwitchSession}
         onClose={handleCloseSession}
       />

@@ -17,6 +17,7 @@ vi.mock('@opencode-ai/sdk/v2/client', () => ({
   createOpencodeClient: vi.fn().mockImplementation(() => ({
     session: {
       list: vi.fn().mockResolvedValue({ data: [] }),
+      status: vi.fn().mockResolvedValue({ data: {} }),
     },
   })),
 }));
@@ -54,5 +55,29 @@ describe('SDK Client Implementation', () => {
       baseUrl: mockServerUrl,
       directory: '/mock/workspace',
     });
+  });
+
+  it('exposes statusAll() that returns the backend session status map', async () => {
+    // Regression: session.statusAll is the new API used during extension activate()
+    // to seed the in-memory status cache after a restart. If it returned undefined
+    // (e.g. dropped the data field) every tab would render as idle until the next
+    // SSE event.
+    const mockStatusMap = {
+      'session-1': { type: 'busy' },
+      'session-2': { type: 'idle' },
+    };
+    vi.mocked(createOpencodeClient).mockImplementation(() => {
+      const client: { session: { status: ReturnType<typeof vi.fn> } } = {
+        session: {
+          status: vi.fn().mockResolvedValue({ data: mockStatusMap }),
+        },
+      };
+      return client as unknown as ReturnType<typeof createOpencodeClient>;
+    });
+
+    const sdkClient = createSDKClient('/mock/workspace');
+    const statuses = await sdkClient.session.statusAll();
+
+    expect(statuses).toEqual(mockStatusMap);
   });
 });

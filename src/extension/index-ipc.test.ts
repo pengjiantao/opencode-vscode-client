@@ -44,6 +44,9 @@ const mockSdk = {
     }),
     messages: vi.fn().mockResolvedValue([]),
     messagesWithParts: vi.fn().mockResolvedValue([]),
+    // Mirrors the new statusAll() SDKClient method used to seed the in-memory
+    // sessionStatuses map on extension activation.
+    statusAll: vi.fn().mockResolvedValue({}),
   },
   subscribeEvents: vi.fn((handler: (event: unknown) => void) => {
     sseHandlerCallback = handler;

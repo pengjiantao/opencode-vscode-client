@@ -104,6 +104,21 @@
   pointer-events: none;
 }
 
+/* Spinner shown next to a tab title (and inside the more-menu option) when the
+   underlying session is currently busy or retrying. Sized to match the tab text
+   baseline and uses a theme-aware progress color so it remains visible in both
+   light and dark themes without hardcoded values. */
+.tab-spinner {
+  flex-shrink: 0;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--vscode-progressBar-background, var(--vscode-textLink-foreground, #3794ff));
+  opacity: 0.85;
+  pointer-events: none;
+  margin-right: 2px;
+  vertical-align: middle;
+}
+
 .tab .tab-close {
   opacity: 0;
   transition: opacity 0.15s;
@@ -234,6 +249,9 @@
 }
 
 .popover-option .option-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

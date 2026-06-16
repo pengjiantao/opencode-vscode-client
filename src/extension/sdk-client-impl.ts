@@ -14,6 +14,7 @@ import type {
   Message,
   Part,
   Session,
+  SessionStatus,
   SnapshotFileDiff,
   SubtaskPartInput,
   TextPartInput,
@@ -111,6 +112,11 @@ export function createSDKClient(directory?: string): SDKClient {
       },
       abort: async (id: string) => {
         await client.session.abort({ sessionID: id });
+      },
+      /** Fetches the current status of every session from the backend in a single call. */
+      statusAll: async (): Promise<Record<string, SessionStatus>> => {
+        const result = await client.session.status();
+        return result.data ?? {};
       },
       revert: async (sessionID: string, messageID: string, partID?: string): Promise<Session> => {
         const result = await client.session.revert({

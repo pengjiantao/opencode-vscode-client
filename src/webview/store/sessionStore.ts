@@ -60,6 +60,12 @@ export interface SessionStore {
   updatePart: (part: Part) => void;
   updatePartDelta: (messageID: string, partID: string, field: string, delta: string) => void;
   setSessionStatus: (sessionID: string, status: SessionStatus) => void;
+  /**
+   * Replaces the per-session status map with a snapshot received from the extension
+   * host during init. Used so the webview can immediately reflect the running state
+   * of every open session (not just the active one) without waiting for SSE events.
+   */
+  setSessionStatuses: (statuses: Record<string, SessionStatus>) => void;
   addPendingPermission: (permission: PermissionRequest) => void;
   removePendingPermission: (id: string) => void;
   addPendingQuestion: (question: QuestionRequest) => void;
@@ -367,6 +373,16 @@ export const useSessionStore = create<SessionStore>((set) => ({
   setSessionStatus: (sessionID, status) =>
     set((state) => ({
       sessionStatus: { ...state.sessionStatus, [sessionID]: status },
+    })),
+
+  /**
+   * Bulk-replaces the session status map. Sessions not present in the snapshot
+   * are dropped so the store always reflects the authoritative state from the
+   * backend and cannot accumulate stale entries.
+   */
+  setSessionStatuses: (statuses) =>
+    set(() => ({
+      sessionStatus: { ...statuses },
     })),
 
   /** Adds a pending permission request if it's not already in the list. */

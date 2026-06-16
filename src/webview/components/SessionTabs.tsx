@@ -2,8 +2,9 @@
  * @file Tab bar showing open sessions with switch, close, and more-actions menu.
  */
 
-import type { Session } from '@opencode-ai/sdk/v2/client';
-import { useEffect, useRef, useState } from 'react';
+import type { Session, SessionStatus } from '@opencode-ai/sdk/v2/client';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Codicon } from './Codicon';
 import { IconButton } from './IconButton';
 import { Popover } from './Popover';
 
@@ -13,17 +14,45 @@ export interface SessionTabsProps {
   sessions: Session[];
   /** Currently active session identifier. */
   activeSessionID: string | null;
+  /**
+   * Per-session processing status map (idle/busy/retry). Sourced from the session
+   * store so the bar can render a running indicator for both the active tab and
+   * any inactive tabs whose background tasks are still in flight.
+   */
+  sessionStatus: Record<string, SessionStatus>;
   /** Callback fired when a tab is selected/clicked. */
   onSwitch: (sessionID: string) => void;
   /** Callback fired when the close button on a specific tab is clicked. */
   onClose: (sessionID: string) => void;
 }
 
+/** Returns true when a session is in a non-idle processing state. */
+function isSessionRunning(status: SessionStatus | undefined): boolean {
+  return status?.type === 'busy' || status?.type === 'retry';
+}
+
 /**
  * Top tab bar for managing multiple open sessions.
  * Displays horizontal list of sessions and a Popover actions menu.
  */
-export function SessionTabs({ sessions, activeSessionID, onSwitch, onClose }: SessionTabsProps) {
+export function SessionTabs({
+  sessions,
+  activeSessionID,
+  sessionStatus,
+  onSwitch,
+  onClose,
+}: SessionTabsProps) {
+  // Memoise the set of running session IDs so child re-renders are cheap and the
+  // per-row lookup is a constant-time set check instead of a property read.
+  const runningSessionIDs = useMemo<Set<string>>(() => {
+    const next = new Set<string>();
+    for (const [id, status] of Object.entries(sessionStatus)) {
+      if (isSessionRunning(status)) {
+        next.add(id);
+      }
+    }
+    return next;
+  }, [sessionStatus]);
   const tabsListRef = useRef<HTMLDivElement>(null);
   const [showMore, setShowMore] = useState(false);
   const prevActiveSessionIDRef = useRef(activeSessionID);
@@ -89,27 +118,31 @@ export function SessionTabs({ sessions, activeSessionID, onSwitch, onClose }: Se
           e.currentTarget.scrollLeft += e.deltaY;
         }}
       >
-        {sessions.map((session) => (
-          <div
-            key={session.id}
-            className={`tab ${session.id === activeSessionID ? 'active' : ''}`}
-            onClick={() => onSwitch(session.id)}
-            data-custom-title={session.title || 'Untitled'}
-          >
-            <span className="tab-title">{session.title || 'Untitled'}</span>
-            <IconButton
-              className="tab-close"
-              name="close"
-              size="small"
-              title="Close Session"
-              onClick={(e) => {
-                // Prevent bubbling to tab activation click handler
-                e.stopPropagation();
-                onClose(session.id);
-              }}
-            />
-          </div>
-        ))}
+        {sessions.map((session) => {
+          const isRunning = runningSessionIDs.has(session.id);
+          return (
+            <div
+              key={session.id}
+              className={`tab ${session.id === activeSessionID ? 'active' : ''}`}
+              onClick={() => onSwitch(session.id)}
+              data-custom-title={session.title || 'Untitled'}
+            >
+              {isRunning && <Codicon name="sync~spin" className="tab-spinner" />}
+              <span className="tab-title">{session.title || 'Untitled'}</span>
+              <IconButton
+                className="tab-close"
+                name="close"
+                size="small"
+                title="Close Session"
+                onClick={(e) => {
+                  // Prevent bubbling to tab activation click handler
+                  e.stopPropagation();
+                  onClose(session.id);
+                }}
+              />
+            </div>
+          );
+        })}
       </div>
 
       {showMore && (
@@ -124,21 +157,25 @@ export function SessionTabs({ sessions, activeSessionID, onSwitch, onClose }: Se
                 <div className="popover-group">
                   <div className="popover-group-header">Switch Session</div>
                   <div className="popover-options-list">
-                    {sessions.map((s) => (
-                      <div
-                        key={s.id}
-                        className={`popover-option ${s.id === activeSessionID ? 'selected' : ''}`}
-                        onClick={() => {
-                          onSwitch(s.id);
-                          close();
-                        }}
-                      >
-                        <span className="option-text" data-custom-title={s.title || 'Untitled'}>
-                          {s.title || 'Untitled'}
-                        </span>
-                        {s.id === activeSessionID && <span className="check-icon">✓</span>}
-                      </div>
-                    ))}
+                    {sessions.map((s) => {
+                      const isRunning = runningSessionIDs.has(s.id);
+                      return (
+                        <div
+                          key={s.id}
+                          className={`popover-option ${s.id === activeSessionID ? 'selected' : ''}`}
+                          onClick={() => {
+                            onSwitch(s.id);
+                            close();
+                          }}
+                        >
+                          <span className="option-text" data-custom-title={s.title || 'Untitled'}>
+                            {isRunning && <Codicon name="sync~spin" className="tab-spinner" />}
+                            {s.title || 'Untitled'}
+                          </span>
+                          {s.id === activeSessionID && <span className="check-icon">✓</span>}
+                        </div>
+                      );
+                    })}
                     {sessions.length === 0 && (
                       <div className="popover-no-results">No open sessions</div>
                     )}

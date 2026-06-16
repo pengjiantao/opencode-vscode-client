@@ -26,6 +26,7 @@ const mockSdk = {
     }),
     messages: vi.fn().mockResolvedValue([]),
     messagesWithParts: vi.fn().mockResolvedValue([]),
+    statusAll: vi.fn().mockResolvedValue({}),
   },
   subscribeEvents: vi.fn((handler: (event: unknown) => void) => {
     sseHandlerCallback = handler;
@@ -504,6 +505,50 @@ describe('Extension Status Bar Activation', () => {
           status: session2Status,
         }),
       );
+    });
+
+    it('seeds sessionStatuses from sdk.session.statusAll and broadcasts a bulk snapshot on init', async () => {
+      // Regression: previously the in-memory sessionStatuses map was empty after
+      // an extension restart, so busy sessions on non-active tabs were only
+      // recovered when the next SSE event arrived. The fix queries the backend
+      // once during activate() and emits session:statuses-bulk during init.
+      mockWorkspaceStateStore.set('openSessionIDs', ['session-1', 'session-2']);
+      mockWorkspaceStateStore.set('activeSessionID', 'session-2');
+
+      const session1Busy = { type: 'busy' } as SessionStatus;
+      const session2Idle = { type: 'idle' } as SessionStatus;
+      vi.mocked(mockSdk.session.statusAll).mockResolvedValue({
+        'session-1': session1Busy,
+        'session-2': session2Idle,
+      });
+
+      await activate(mockContext);
+
+      const mockSessions = [
+        { id: 'session-1', title: 'Session 1', time: { created: Date.now(), updated: Date.now() } },
+        { id: 'session-2', title: 'Session 2', time: { created: Date.now(), updated: Date.now() } },
+      ];
+      vi.mocked(mockSdk.session.list).mockResolvedValue(mockSessions);
+
+      const initHandler = ipcHandlers.get('init');
+      expect(initHandler).toBeDefined();
+      if (initHandler) {
+        await initHandler();
+      }
+
+      // Backend was queried at startup to seed the in-memory status map.
+      expect(mockSdk.session.statusAll).toHaveBeenCalled();
+
+      // The webview receives a single bulk snapshot covering every known session,
+      // not just the active one. This is the message that lets the SessionTabs
+      // component render a running spinner on inactive tabs.
+      expect(mockIpcSend).toHaveBeenCalledWith({
+        type: 'session:statuses-bulk',
+        statuses: {
+          'session-1': session1Busy,
+          'session-2': session2Idle,
+        },
+      });
     });
 
     it('preserves the order of openSessionIDs on init even if sdk.session.list returns them in desc/reverse order', async () => {

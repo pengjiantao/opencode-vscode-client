@@ -4,7 +4,7 @@
 
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMockSession } from '../../test/mocks/sdk';
+import { createMockSession, createMockSessionStatus } from '../../test/mocks/sdk';
 import { SessionTabs } from './SessionTabs';
 
 // Mock ResizeObserver globally for this test suite
@@ -48,6 +48,7 @@ describe('SessionTabs', () => {
       <SessionTabs
         sessions={sessions}
         activeSessionID="session-1"
+        sessionStatus={{}}
         onSwitch={() => {}}
         onClose={() => {}}
       />,
@@ -67,6 +68,7 @@ describe('SessionTabs', () => {
       <SessionTabs
         sessions={sessions}
         activeSessionID="session-2"
+        sessionStatus={{}}
         onSwitch={() => {}}
         onClose={() => {}}
       />,
@@ -84,6 +86,7 @@ describe('SessionTabs', () => {
       <SessionTabs
         sessions={sessions}
         activeSessionID={null}
+        sessionStatus={{}}
         onSwitch={onSwitch}
         onClose={() => {}}
       />,
@@ -101,6 +104,7 @@ describe('SessionTabs', () => {
       <SessionTabs
         sessions={sessions}
         activeSessionID="session-1"
+        sessionStatus={{}}
         onSwitch={() => {}}
         onClose={onClose}
       />,
@@ -123,6 +127,7 @@ describe('SessionTabs', () => {
       <SessionTabs
         sessions={sessions}
         activeSessionID="s1"
+        sessionStatus={{}}
         onSwitch={() => {}}
         onClose={() => {}}
       />,
@@ -160,6 +165,7 @@ describe('SessionTabs', () => {
         <SessionTabs
           sessions={sessions}
           activeSessionID="session-1"
+          sessionStatus={{}}
           onSwitch={() => {}}
           onClose={() => {}}
         />,
@@ -174,6 +180,7 @@ describe('SessionTabs', () => {
         <SessionTabs
           sessions={sessions}
           activeSessionID="session-2"
+          sessionStatus={{}}
           onSwitch={() => {}}
           onClose={() => {}}
         />,
@@ -209,6 +216,7 @@ describe('SessionTabs', () => {
         <SessionTabs
           sessions={sessions}
           activeSessionID="session-3"
+          sessionStatus={{}}
           onSwitch={() => {}}
           onClose={() => {}}
         />,
@@ -223,6 +231,7 @@ describe('SessionTabs', () => {
         <SessionTabs
           sessions={updatedSessions}
           activeSessionID="session-3"
+          sessionStatus={{}}
           onSwitch={() => {}}
           onClose={() => {}}
         />,
@@ -255,6 +264,7 @@ describe('SessionTabs', () => {
       <SessionTabs
         sessions={sessions}
         activeSessionID="s1"
+        sessionStatus={{}}
         onSwitch={() => {}}
         onClose={() => {}}
       />,
@@ -277,11 +287,125 @@ describe('SessionTabs', () => {
       <SessionTabs
         sessions={[...sessions]}
         activeSessionID="s1"
+        sessionStatus={{}}
         onSwitch={() => {}}
         onClose={() => {}}
       />,
     );
 
     expect(screen.getByRole('button', { name: 'More Actions' })).toBeInTheDocument();
+  });
+
+  it('shows a running spinner on tabs whose session status is busy', () => {
+    const sessions = [
+      createMockSession({ id: 'session-busy', title: 'Busy Session' }),
+      createMockSession({ id: 'session-idle', title: 'Idle Session' }),
+    ];
+    const sessionStatus = {
+      'session-busy': createMockSessionStatus({ type: 'busy' }),
+      'session-idle': createMockSessionStatus({ type: 'idle' }),
+    };
+
+    render(
+      <SessionTabs
+        sessions={sessions}
+        activeSessionID="session-idle"
+        sessionStatus={sessionStatus}
+        onSwitch={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    const busyTab = screen.getByText('Busy Session').closest('.tab') as HTMLElement;
+    const idleTab = screen.getByText('Idle Session').closest('.tab') as HTMLElement;
+
+    expect(busyTab.querySelector('.tab-spinner.codicon-sync')).toBeInTheDocument();
+    expect(idleTab.querySelector('.tab-spinner')).toBeNull();
+  });
+
+  it('shows a running spinner on tabs whose session status is retry', () => {
+    const sessions = [createMockSession({ id: 'session-retry', title: 'Retry Session' })];
+    const sessionStatus = {
+      'session-retry': createMockSessionStatus({ type: 'retry' }),
+    };
+
+    render(
+      <SessionTabs
+        sessions={sessions}
+        activeSessionID="session-retry"
+        sessionStatus={sessionStatus}
+        onSwitch={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    const tab = screen.getByText('Retry Session').closest('.tab') as HTMLElement;
+    expect(tab.querySelector('.tab-spinner.codicon-modifier-spin')).toBeInTheDocument();
+  });
+
+  it('keeps the spinner on the active tab when it is busy', () => {
+    // Regression: a previous version considered the active tab's running state
+    // implicit (via the stop button) and skipped the spinner; users want parity
+    // across all tabs regardless of which one is active.
+    const sessions = [createMockSession({ id: 'session-active', title: 'Active Busy' })];
+    const sessionStatus = {
+      'session-active': createMockSessionStatus({ type: 'busy' }),
+    };
+
+    render(
+      <SessionTabs
+        sessions={sessions}
+        activeSessionID="session-active"
+        sessionStatus={sessionStatus}
+        onSwitch={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    const activeTab = screen.getByText('Active Busy').closest('.tab') as HTMLElement;
+    expect(activeTab).toHaveClass('active');
+    expect(activeTab.querySelector('.tab-spinner')).toBeInTheDocument();
+  });
+
+  it('shows the running spinner inside the More menu popover for busy sessions', () => {
+    const sessions = [
+      createMockSession({ id: 's1', title: 'Session 1' }),
+      createMockSession({ id: 's2', title: 'Session 2' }),
+    ];
+    const sessionStatus = {
+      s1: createMockSessionStatus({ type: 'busy' }),
+      s2: createMockSessionStatus({ type: 'idle' }),
+    };
+
+    // Force overflow so the More Actions button renders
+    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', {
+      configurable: true,
+      value: 300,
+    });
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      value: 200,
+    });
+
+    render(
+      <SessionTabs
+        sessions={sessions}
+        activeSessionID="s2"
+        sessionStatus={sessionStatus}
+        onSwitch={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'More Actions' }));
+
+    // Both the tab and the popover option render the title; scope the lookup
+    // to inside the popover so we are asserting against the menu row only.
+    const popover = document.querySelector('.more-menu-popover') as HTMLElement;
+    const busyOption = popover.querySelectorAll('.popover-option')[0] as HTMLElement;
+    const idleOption = popover.querySelectorAll('.popover-option')[1] as HTMLElement;
+
+    expect(busyOption.querySelector('.tab-spinner')).toBeInTheDocument();
+    expect(idleOption.querySelector('.tab-spinner')).toBeNull();
   });
 });

@@ -10,6 +10,7 @@ import type {
   Message,
   Part,
   Session,
+  SessionStatus,
   SnapshotFileDiff,
 } from '@opencode-ai/sdk/v2/client';
 import type { AgentInfo, CommandInfo, ModelInfo, SkillInfo } from './types';
@@ -67,6 +68,12 @@ export interface SDKClient {
     /** Sends a prompt without waiting for completion (non-blocking). */
     promptAsync(options: PromptOptions): Promise<void>;
     abort(id: string): Promise<void>;
+    /**
+     * Retrieves the current status of every session known to the backend, keyed by session ID.
+     * Used to seed the in-memory status cache after an extension restart so the UI can
+     * immediately reflect running (busy/retry) sessions without waiting for the next SSE event.
+     */
+    statusAll(): Promise<Record<string, SessionStatus>>;
     /** Sends a built-in command for execution. */
     command(options: CommandOptions): Promise<void>;
     /** Reverts a message and all subsequent messages, undoing file changes. */
