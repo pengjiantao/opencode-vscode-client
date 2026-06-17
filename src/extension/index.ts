@@ -208,8 +208,17 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
         // Load activeSessionID from sessionManager's unified persistence
         let activeID = sessionManager.activeSessionID;
+        // If the persisted active session no longer exists on the server (e.g.
+        // stale workspace state from a prior install, or session was deleted),
+        // reset it to null so the auto-create path below can trigger. Without
+        // this, a stale ID would skip auto-creation and cause sessionManager
+        // .switch() to throw, which is silently caught and leaves the webview
+        // without any session.
+        if (activeID && !openIDs.includes(activeID)) {
+          activeID = null;
+        }
         // Fall back to first open session or most recent active session
-        if (!activeID || !openIDs.includes(activeID)) {
+        if (!activeID) {
           if (openIDs.length > 0) {
             activeID = openIDs[0];
           } else if (activeSessions.length > 0) {

@@ -592,5 +592,56 @@ describe('Extension Status Bar Activation', () => {
         }),
       );
     });
+
+    it('auto-creates a new session on init when activeSessionID is stale and server returns no sessions', async () => {
+      // Regression: on Windows, the path normalization bug in sdk-client caused
+      // sdk.session.list() to return an empty array even when sessions existed
+      // on the server. When workspaceState had a stale activeSessionID, the
+      // init handler would try to switch to that non-existent session, throw
+      // a "Session not found" error that was silently caught, and never create
+      // a new session — leaving the webview with no active session.
+      // The fix: reset stale activeSessionID to null so the auto-create path
+      // can trigger.
+      mockWorkspaceStateStore.set('openSessionIDs', ['stale-session-id']);
+      mockWorkspaceStateStore.set('activeSessionID', 'stale-session-id');
+
+      const newSession = {
+        id: 'new-session',
+        title: 'Untitled',
+        time: { created: Date.now(), updated: Date.now() },
+      };
+      vi.mocked(mockSdk.session.create).mockResolvedValue(newSession);
+      vi.mocked(mockSdk.session.list).mockResolvedValue([]);
+
+      await activate(mockContext);
+
+      const initHandler = ipcHandlers.get('init');
+      expect(initHandler).toBeDefined();
+      if (initHandler) {
+        await initHandler();
+      }
+
+      // The stale activeSessionID should be reset and auto-create triggered.
+      expect(mockSdk.session.create).toHaveBeenCalledTimes(1);
+
+      // The webview should receive the init message with the new session.
+      expect(mockIpcSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'init',
+          sessions: [expect.objectContaining({ id: 'new-session' })],
+        }),
+      );
+
+      // The webview should be switched to the new session.
+      expect(mockIpcSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'session:switched',
+          sessionID: 'new-session',
+        }),
+      );
+
+      // The new session should be persisted as active.
+      expect(mockWorkspaceStateStore.get('activeSessionID')).toBe('new-session');
+    });
   });
 });
