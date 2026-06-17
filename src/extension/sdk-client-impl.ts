@@ -4,6 +4,7 @@
  * and wraps the @opencode-ai/sdk library operations.
  */
 
+import type { ServerOptions } from '@opencode-ai/sdk';
 import { createOpencodeServer } from '@opencode-ai/sdk';
 import type {
   AgentPartInput,
@@ -23,15 +24,25 @@ import { createOpencodeClient } from '@opencode-ai/sdk/v2/client';
 import type { CommandOptions, PromptOptions, SDKClient, ServerHandle } from './sdk-client';
 import type { AgentInfo, CommandInfo, ModelInfo, SkillInfo } from './types';
 
+/** Options for creating an SDK client instance. */
+export interface SDKClientOptions {
+  /** Working directory for the opencode server. */
+  directory?: string;
+  /** Server start timeout in milliseconds. */
+  timeout?: number;
+}
+
 /** Creates a configured SDK client. Every client instance starts its own dedicated server. */
-export function createSDKClient(directory?: string): SDKClient {
+export function createSDKClient(options?: SDKClientOptions): SDKClient {
+  const directory = options?.directory;
+  const timeout = options?.timeout;
   let serverHandle: ServerHandle | null = null;
   let client = createOpencodeClient({ directory });
 
   /** Starts a new dedicated server for this client instance. */
   const startServer = async (): Promise<ServerHandle> => {
-    // Spawn the opencode server on a free port (port fallback is handled by the SDK).
-    const server = await createOpencodeServer({ port: 0 });
+    const serverOpts: ServerOptions = { port: 0, timeout };
+    const server = await createOpencodeServer(serverOpts);
     serverHandle = {
       url: server.url,
       close: () => server.close(),

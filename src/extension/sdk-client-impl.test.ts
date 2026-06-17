@@ -37,7 +37,7 @@ describe('SDK Client Implementation', () => {
       close: mockClose,
     });
 
-    const sdkClient = createSDKClient('/mock/workspace');
+    const sdkClient = createSDKClient({ directory: '/mock/workspace' });
     const handle = await sdkClient.startServer();
 
     // Verify the server is created on a dynamically allocated port (port: 0)
@@ -75,7 +75,7 @@ describe('SDK Client Implementation', () => {
       return client as unknown as ReturnType<typeof createOpencodeClient>;
     });
 
-    const sdkClient = createSDKClient('/mock/workspace');
+    const sdkClient = createSDKClient({ directory: '/mock/workspace' });
     const statuses = await sdkClient.session.statusAll();
 
     expect(statuses).toEqual(mockStatusMap);

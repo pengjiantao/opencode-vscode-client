@@ -11,8 +11,17 @@
   },
   "private": true,
   "main": "./dist/extension/index.js",
+  "activationEvents": [
+    "onView:opencode-sidebar.main",
+    "onCommand:opencode-sidebar.focus",
+    "onCommand:opencode-sidebar.sendSelectionToOpencode",
+    "onCommand:opencode-sidebar.explainSelectionToOpencode",
+    "onCommand:opencode-sidebar.sendTerminalToOpencode",
+    "onCommand:opencode-sidebar.explainTerminalToOpencode",
+    "onCommand:opencode-sidebar.pasteAsPlainText"
+  ],
   "engines": {
-    "vscode": "^1.120.0"
+    "vscode": "^1.65.0"
   },
   "scripts": {
     "test": "npm run test:extension && npm run test:webview",
@@ -60,7 +69,7 @@
     "@types/prismjs": "^1.26.6",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
-    "@types/vscode": "^1.120.0",
+    "@types/vscode": "^1.65.0",
     "@vitejs/plugin-react": "^4.3.0",
     "@vscode/test-electron": "^1.1.0",
     "@vscode/vsce": "^3.9.1",
@@ -251,6 +260,13 @@
           "minimum": 1,
           "maximum": 500,
           "description": "Maximum number of prompts retained in input history (Up/Down recall)."
+        },
+        "opencode.serverTimeout": {
+          "type": "number",
+          "default": 15000,
+          "minimum": 5000,
+          "maximum": 120000,
+          "description": "Timeout in milliseconds for the opencode server to start. Increase this on low-spec machines."
         }
       }
     }

@@ -25,4 +25,6 @@ vitest.config.webview.ts
 dist/extension/test/**
 node_modules
 .opencode/
+.mimocode/
+.claude/
 

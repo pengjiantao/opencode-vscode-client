@@ -7,7 +7,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { workspace, WorkspaceConfiguration } from 'vscode';
 import {
   clampHistorySize,
+  clampServerTimeout,
   DEFAULT_HISTORY_SIZE,
+  DEFAULT_SERVER_TIMEOUT,
   getConfiguration,
   setConfiguration,
 } from './config';
@@ -87,5 +89,31 @@ describe('clampHistorySize', () => {
     expect(clampHistorySize(1)).toBe(1);
     expect(clampHistorySize(50)).toBe(50);
     expect(clampHistorySize(500)).toBe(500);
+  });
+});
+
+describe('clampServerTimeout', () => {
+  it('returns the default for non-finite or missing values', () => {
+    expect(clampServerTimeout(undefined)).toBe(DEFAULT_SERVER_TIMEOUT);
+    expect(clampServerTimeout(null)).toBe(DEFAULT_SERVER_TIMEOUT);
+    expect(clampServerTimeout('not-a-number')).toBe(DEFAULT_SERVER_TIMEOUT);
+    expect(clampServerTimeout(NaN)).toBe(DEFAULT_SERVER_TIMEOUT);
+  });
+
+  it('clamps to the configured minimum and maximum', () => {
+    expect(clampServerTimeout(0)).toBe(5000);
+    expect(clampServerTimeout(-5)).toBe(5000);
+    expect(clampServerTimeout(1000)).toBe(5000);
+    expect(clampServerTimeout(999999)).toBe(120000);
+  });
+
+  it('floors fractional values', () => {
+    expect(clampServerTimeout(15000.9)).toBe(15000);
+  });
+
+  it('passes through valid integers unchanged', () => {
+    expect(clampServerTimeout(5000)).toBe(5000);
+    expect(clampServerTimeout(30000)).toBe(30000);
+    expect(clampServerTimeout(120000)).toBe(120000);
   });
 });

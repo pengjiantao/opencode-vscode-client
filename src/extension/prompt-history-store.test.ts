@@ -102,6 +102,7 @@ describe('PromptHistoryStore', () => {
       model: '',
       agent: '',
       historySize: 50,
+      serverTimeout: 15000,
     });
   });
 
@@ -154,7 +155,12 @@ describe('PromptHistoryStore', () => {
   });
 
   it('enforces the configured cap by dropping the oldest entries', () => {
-    vi.mocked(getConfiguration).mockReturnValue({ model: '', agent: '', historySize: 3 });
+    vi.mocked(getConfiguration).mockReturnValue({
+      model: '',
+      agent: '',
+      historySize: 3,
+      serverTimeout: 15000,
+    });
     const store = new PromptHistoryStore(mockMemento);
 
     void store.append(entry('a'));
@@ -166,7 +172,12 @@ describe('PromptHistoryStore', () => {
   });
 
   it('falls back to the default cap when the configuration is invalid', () => {
-    vi.mocked(getConfiguration).mockReturnValue({ model: '', agent: '', historySize: 0 });
+    vi.mocked(getConfiguration).mockReturnValue({
+      model: '',
+      agent: '',
+      historySize: 0,
+      serverTimeout: 15000,
+    });
     const store = new PromptHistoryStore(mockMemento);
 
     for (let i = 0; i < 51; i += 1) void store.append(entry(`e${i}`));

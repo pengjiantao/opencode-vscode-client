@@ -38,6 +38,7 @@ describe('SessionStateStore', () => {
       model: 'config-model',
       agent: 'config-agent',
       historySize: 50,
+      serverTimeout: 15000,
     });
   });
 
@@ -177,6 +178,7 @@ describe('SessionStateStore', () => {
         model: '',
         agent: '',
         historySize: 50,
+        serverTimeout: 15000,
       });
 
       const defaults = store.getDefaults(

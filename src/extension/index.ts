@@ -29,6 +29,7 @@ import { SessionStateStore } from './session-state-store';
 import { StatusBarManager } from './status-bar';
 import type { AgentInfo, ModelInfo } from './types';
 import { handleCommandPart } from './utils/command-router';
+import { getConfiguration } from './utils/config';
 import { registerFileHandlers } from './utils/fileHandlers';
 import { OpencodeSidebarViewProvider } from './webview-provider';
 
@@ -124,7 +125,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
   try {
     const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath;
-    sdk = createSDKClient(workspaceRoot);
+    sdk = createSDKClient({
+      directory: workspaceRoot,
+      timeout: getConfiguration().serverTimeout,
+    });
     sessionManager = new SessionManager(sdk, context.workspaceState);
     ipc = new IPCBridge();
     provider = new OpencodeSidebarViewProvider(context, ipc);
