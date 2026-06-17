@@ -15,6 +15,7 @@ import {
 } from 'vscode';
 import { IPCBridge } from './ipc';
 import type { SDKClient } from './sdk-client';
+import type { ModelInfo } from './types';
 import { getConfiguration, setConfiguration } from './utils/config';
 import { OpencodeSidebarViewProvider } from './webview-provider';
 
@@ -318,12 +319,110 @@ export async function showDefaultSettingsQuickPick(sdk: SDKClient): Promise<void
 }
 
 /**
+ * Builds the list of QuickPick items for the Default Model picker.
+ *
+ * The list is grouped by provider with separators. Each model row shows:
+ *   - label: `$(check) ` (current) + `$(gift) ` (free) + model name
+ *   - description: provider name · context limit · "(current)" hint
+ *   - detail: full `model.id` (visible on hover / second line)
+ *
+ * `filter` is matched case-insensitively against the model name, id, and
+ * provider name. When the filter produces no matches, a single
+ * read-only "No models match" row is returned.
+ */
+function buildModelPickItems(
+  models: ModelInfo[],
+  currentModel: string,
+  filter: string,
+): ModelPickItem[] {
+  const q = filter.trim().toLowerCase();
+  const matches = (m: ModelInfo): boolean => {
+    if (!q) return true;
+    if (m.name.toLowerCase().includes(q)) return true;
+    if (m.id.toLowerCase().includes(q)) return true;
+    const provider = m.providerName ?? m.providerId ?? '';
+    return provider.toLowerCase().includes(q);
+  };
+
+  const filtered = models.filter(matches);
+  if (filtered.length === 0) {
+    return [
+      {
+        label: `No models match "${filter}"`,
+        id: '',
+      },
+    ];
+  }
+
+  const byProvider = new Map<string, ModelInfo[]>();
+  for (const m of filtered) {
+    const key = m.providerName ?? m.providerId ?? 'Unknown';
+    const list = byProvider.get(key);
+    if (list) {
+      list.push(m);
+    } else {
+      byProvider.set(key, [m]);
+    }
+  }
+
+  for (const list of byProvider.values()) {
+    list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  }
+
+  const items: ModelPickItem[] = [];
+  for (const [provider, providerModels] of byProvider) {
+    items.push({
+      label: provider,
+      kind: QuickPickItemKind.Separator,
+      id: '',
+    });
+    for (const m of providerModels) {
+      // Use a case-insensitive comparison so a manually-edited settings.json
+      // entry with different casing still highlights the current default.
+      // The `?? ''` is defensive: `getConfiguration()` is typed to return a
+      // string, but the workspace configuration getter can be null in tests
+      // or unusual environments.
+      const normalizedCurrent = (currentModel ?? '').toLowerCase();
+      const isCurrent = m.id.toLowerCase() === normalizedCurrent;
+      // A model is treated as "free" when its id ends with the delimited
+      // `free` segment (e.g. `opencode/deepseek-v4-flash-free`). Requiring a
+      // separator before `free` at the end avoids false positives like
+      // `freedom-model-v1`.
+      const isFree = /(?:^|[-_/.])free$/.test(m.id.toLowerCase());
+      const ctx = m.contextLimit ? `${Math.round(m.contextLimit / 1000)}k ctx` : '';
+      const description = [m.providerName, ctx, isCurrent ? 'current' : '']
+        .filter(Boolean)
+        .join(' · ');
+      const prefix = `${isCurrent ? '$(check) ' : ''}${isFree ? '$(gift) ' : ''}`;
+      items.push({
+        label: `${prefix}${m.name}`,
+        description: description || undefined,
+        detail: m.id,
+        id: m.id,
+      });
+    }
+  }
+  return items;
+}
+
+/**
+ * QuickPick item shape used by the Default Model picker.
+ * `id` is empty for separator/empty-state rows.
+ */
+interface ModelPickItem extends QuickPickItem {
+  id: string;
+}
+
+/**
  * Shows a QuickPick populated with available models grouped by provider.
  * Only shows connected providers. Marks the currently configured default.
  * Uses a title bar button to clear the default when one is set.
+ *
+ * The QuickPick search input is wired to {@link buildModelPickItems} so
+ * users can filter by model name, id, or provider name as they type.
  */
 export async function showModelQuickPick(sdk: SDKClient): Promise<void> {
-  let models;
+  let models: ModelInfo[];
   try {
     models = await sdk.getModels();
   } catch {
@@ -346,46 +445,10 @@ export async function showModelQuickPick(sdk: SDKClient): Promise<void> {
     return;
   }
 
-  const byProvider = new Map<string, typeof connected>();
-  for (const m of connected) {
-    const key = m.providerName ?? m.providerId ?? 'Unknown';
-    const list = byProvider.get(key);
-    if (list) {
-      list.push(m);
-    } else {
-      byProvider.set(key, [m]);
-    }
-  }
-
-  for (const list of byProvider.values()) {
-    list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-  }
-
-  interface ModelPickItem extends QuickPickItem {
-    id: string;
-  }
-
-  const items: ModelPickItem[] = [];
-  for (const [provider, providerModels] of byProvider) {
-    items.push({
-      label: provider,
-      kind: QuickPickItemKind.Separator,
-      id: '',
-    });
-    for (const m of providerModels) {
-      const isCurrent = m.id === currentModel;
-      items.push({
-        label: `${isCurrent ? '$(check) ' : ''}${m.name}`,
-        description: m.id,
-        id: m.id,
-      });
-    }
-  }
-
   const quickPick = window.createQuickPick<ModelPickItem>();
   quickPick.title = 'Default Model';
-  quickPick.placeholder = 'Select a default model for new sessions';
-  quickPick.items = items;
+  quickPick.placeholder = 'Type to filter by name, id, or provider';
+  quickPick.items = buildModelPickItems(connected, currentModel, '');
 
   const clearButton: QuickInputButton = {
     iconPath: new ThemeIcon('close'),
@@ -398,10 +461,19 @@ export async function showModelQuickPick(sdk: SDKClient): Promise<void> {
 
   const result = await new Promise<ModelPickItem | 'clear' | undefined>((resolve) => {
     let resolved = false;
+    quickPick.onDidChangeValue((value) => {
+      if (resolved) return;
+      quickPick.items = buildModelPickItems(connected, currentModel, value);
+    });
     quickPick.onDidAccept(() => {
       if (resolved) return;
-      resolved = true;
       const selected = quickPick.selectedItems[0];
+      // Reject the empty-state row (it has no id and would clear the model).
+      if (!selected || !selected.id) {
+        quickPick.hide();
+        return;
+      }
+      resolved = true;
       quickPick.hide();
       resolve(selected);
     });
