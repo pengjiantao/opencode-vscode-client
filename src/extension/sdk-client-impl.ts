@@ -23,6 +23,7 @@ import type {
 import { createOpencodeClient } from '@opencode-ai/sdk/v2/client';
 import type { CommandOptions, PromptOptions, SDKClient, ServerHandle } from './sdk-client';
 import type { AgentInfo, CommandInfo, ModelInfo, SkillInfo } from './types';
+import { normalizeDirectory } from './utils/path-utils';
 
 /** Options for creating an SDK client instance. */
 export interface SDKClientOptions {
@@ -34,7 +35,10 @@ export interface SDKClientOptions {
 
 /** Creates a configured SDK client. Every client instance starts its own dedicated server. */
 export function createSDKClient(options?: SDKClientOptions): SDKClient {
-  const directory = options?.directory;
+  // Normalize directory to forward slashes on Windows to match the storage
+  // format used by the opencode backend. VS Code's Uri.fsPath returns native
+  // backslash paths on Windows, but the server stores forward-slash paths.
+  const directory = options?.directory ? normalizeDirectory(options.directory) : undefined;
   const timeout = options?.timeout;
   let serverHandle: ServerHandle | null = null;
   let client = createOpencodeClient({ directory });

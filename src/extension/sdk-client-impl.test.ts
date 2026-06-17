@@ -80,4 +80,33 @@ describe('SDK Client Implementation', () => {
 
     expect(statuses).toEqual(mockStatusMap);
   });
+
+  it('normalizes Windows backslash directory to forward slashes before passing to SDK client', async () => {
+    // Regression: on Windows, VS Code's Uri.fsPath returns paths with
+    // backslashes (e.g. "C:\Users\dev\project"). The opencode backend
+    // stores directory paths with forward slashes (e.g. "C:/Users/dev/project").
+    // Without normalization, the SQL WHERE directory = ? comparison would
+    // fail and session history lookups would return empty results.
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    try {
+      const mockServerUrl = 'http://127.0.0.1:54321';
+      vi.mocked(createOpencodeServer).mockResolvedValue({
+        url: mockServerUrl,
+        close: vi.fn(),
+      });
+
+      const sdkClient = createSDKClient({ directory: 'C:\\Users\\dev\\my-project' });
+      await sdkClient.startServer();
+
+      // The client must receive the normalized (forward-slash) path so that
+      // the x-opencode-directory header / ?directory= query parameter sent
+      // to the backend matches the stored database value.
+      expect(createOpencodeClient).toHaveBeenCalledWith({
+        baseUrl: mockServerUrl,
+        directory: 'C:/Users/dev/my-project',
+      });
+    } finally {
+      platformSpy.mockRestore();
+    }
+  });
 });
