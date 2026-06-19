@@ -383,6 +383,7 @@ export function App() {
         sessionStatus={sessionStatus}
         onSwitch={handleSwitchSession}
         onClose={handleCloseSession}
+        onCreate={() => send({ type: 'session:create' } as never)}
       />
 
       {activeSessionID ? (

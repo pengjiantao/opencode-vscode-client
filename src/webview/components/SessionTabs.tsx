@@ -24,6 +24,11 @@ export interface SessionTabsProps {
   onSwitch: (sessionID: string) => void;
   /** Callback fired when the close button on a specific tab is clicked. */
   onClose: (sessionID: string) => void;
+  /**
+   * Callback fired when the user double-clicks the empty area of the tabs
+   * list. Not invoked when the double-click lands on a tab or close button.
+   */
+  onCreate?: () => void;
 }
 
 /** Returns true when a session is in a non-idle processing state. */
@@ -41,6 +46,7 @@ export function SessionTabs({
   sessionStatus,
   onSwitch,
   onClose,
+  onCreate,
 }: SessionTabsProps) {
   // Memoise the set of running session IDs so child re-renders are cheap and the
   // per-row lookup is a constant-time set check instead of a property read.
@@ -116,6 +122,18 @@ export function SessionTabs({
         onWheel={(e) => {
           // Translate vertical scroll into horizontal scroll for tab overflow
           e.currentTarget.scrollLeft += e.deltaY;
+        }}
+        onDoubleClick={(e) => {
+          // Only react to double-clicks that land on the empty area of the list
+          // itself. Clicks on a tab, its title, or its close button all have
+          // e.target pointing at a descendant element, so the strict identity
+          // check reliably excludes them. This keeps "double-click empty area
+          // to create a new session" from accidentally stealing gestures that
+          // should switch or close a tab.
+          if (e.target !== e.currentTarget) {
+            return;
+          }
+          onCreate?.();
         }}
       >
         {sessions.map((session) => {

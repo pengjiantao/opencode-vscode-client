@@ -408,4 +408,84 @@ describe('SessionTabs', () => {
     expect(busyOption.querySelector('.tab-spinner')).toBeInTheDocument();
     expect(idleOption.querySelector('.tab-spinner')).toBeNull();
   });
+
+  it('creates a new session when double-clicking the empty area of the tabs list', () => {
+    // Regression: a previous prototype attached the dblclick handler to the
+    // outer .session-tabs container, which also fired when the user clicked
+    // (twice) on a tab or its close button — both gestures the user expects
+    // to switch/close, not create. The handler must be on .tabs-list and
+    // must short-circuit unless the event target is the list itself.
+    const sessions = [createMockSession({ id: 'session-1', title: 'Session 1' })];
+    const onCreate = vi.fn();
+
+    render(
+      <SessionTabs
+        sessions={sessions}
+        activeSessionID="session-1"
+        sessionStatus={{}}
+        onSwitch={() => {}}
+        onClose={() => {}}
+        onCreate={onCreate}
+      />,
+    );
+
+    const tabsList = document.querySelector('.tabs-list') as HTMLElement;
+    expect(tabsList).not.toBeNull();
+    fireEvent.doubleClick(tabsList);
+
+    expect(onCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT create a new session when double-clicking a tab', () => {
+    // Regression: ensures the empty-area-only guard does not regress; the
+    // event target of a double-click on a tab is the .tab element (or one of
+    // its children), which is a descendant of .tabs-list, so the handler must
+    // not invoke onCreate.
+    const sessions = [
+      createMockSession({ id: 'session-1', title: 'Session 1' }),
+      createMockSession({ id: 'session-2', title: 'Session 2' }),
+    ];
+    const onCreate = vi.fn();
+
+    render(
+      <SessionTabs
+        sessions={sessions}
+        activeSessionID="session-1"
+        sessionStatus={{}}
+        onSwitch={() => {}}
+        onClose={() => {}}
+        onCreate={onCreate}
+      />,
+    );
+
+    const tab = screen.getByText('Session 2').closest('.tab') as HTMLElement;
+    fireEvent.doubleClick(tab);
+
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it('does NOT create a new session when double-clicking a tab close button', () => {
+    // Regression: the close button uses stopPropagation on click to avoid
+    // activating the tab, but dblclick is a distinct event family. The
+    // empty-area guard (e.target === e.currentTarget) must still keep the
+    // close button from accidentally triggering session creation.
+    const sessions = [createMockSession({ id: 'session-1', title: 'Session 1' })];
+    const onCreate = vi.fn();
+
+    render(
+      <SessionTabs
+        sessions={sessions}
+        activeSessionID="session-1"
+        sessionStatus={{}}
+        onSwitch={() => {}}
+        onClose={() => {}}
+        onCreate={onCreate}
+      />,
+    );
+
+    const closeButton = screen.getByRole('button', { name: 'Close Session' });
+    fireEvent.doubleClick(closeButton);
+
+    expect(onCreate).not.toHaveBeenCalled();
+  });
 });
