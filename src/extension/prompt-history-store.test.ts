@@ -103,6 +103,7 @@ describe('PromptHistoryStore', () => {
       agent: '',
       historySize: 50,
       serverTimeout: 15000,
+      executablePath: '',
     });
   });
 
@@ -160,6 +161,7 @@ describe('PromptHistoryStore', () => {
       agent: '',
       historySize: 3,
       serverTimeout: 15000,
+      executablePath: '',
     });
     const store = new PromptHistoryStore(mockMemento);
 
@@ -177,6 +179,7 @@ describe('PromptHistoryStore', () => {
       agent: '',
       historySize: 0,
       serverTimeout: 15000,
+      executablePath: '',
     });
     const store = new PromptHistoryStore(mockMemento);
 

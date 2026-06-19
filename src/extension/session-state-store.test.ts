@@ -39,6 +39,7 @@ describe('SessionStateStore', () => {
       agent: 'config-agent',
       historySize: 50,
       serverTimeout: 15000,
+      executablePath: '',
     });
   });
 
@@ -179,6 +180,7 @@ describe('SessionStateStore', () => {
         agent: '',
         historySize: 50,
         serverTimeout: 15000,
+        executablePath: '',
       });
 
       const defaults = store.getDefaults(

@@ -35,6 +35,13 @@ export interface ExtensionConfig {
    * Clamped to `[5000, 120000]`. Defaults to {@link DEFAULT_SERVER_TIMEOUT}.
    */
   serverTimeout: number;
+  /**
+   * Absolute path to the opencode executable. Empty string (default) means
+   * resolve `opencode` from PATH. When set, the directory of this path is
+   * prepended to PATH so the SDK's hard-coded binary lookup succeeds. The
+   * binary must be named `opencode` (or `opencode.exe` on Windows).
+   */
+  executablePath: string;
 }
 
 /** Supported configuration keys that can be written. */
@@ -85,6 +92,7 @@ export function getConfiguration(): ExtensionConfig {
     agent: config.get<string>('agent', ''),
     historySize: clampHistorySize(config.get<number>('historySize', DEFAULT_HISTORY_SIZE)),
     serverTimeout: clampServerTimeout(config.get<number>('serverTimeout', DEFAULT_SERVER_TIMEOUT)),
+    executablePath: config.get<string>('executablePath', ''),
   };
 }
 

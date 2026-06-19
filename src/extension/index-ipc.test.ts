@@ -92,6 +92,32 @@ vi.mock('./webview-provider', () => {
   };
 });
 
+// opencode binary pre-flight + recovery prompt: mocked at the test-suite
+// level so existing IPC tests (which assume a happy path) get a successful
+// resolution. The activation flow introduced a pre-flight check that calls
+// resolveOpencodeBinary before creating the SDK client, so we have to mock
+// it to keep the existing tests exercising the IPC handlers, not the
+// resolution flow.
+const mockResolveOpencodeBinary = vi.fn(
+  (): {
+    path: string | null;
+    source: 'config' | 'path' | 'none';
+    reason?: 'not-in-path' | 'config-invalid' | 'config-not-executable';
+    configuredPath?: string;
+  } => ({ path: '/mock/opencode', source: 'path' }),
+);
+const mockShowOpencodeNotFoundPrompt = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('./utils/opencode-path', () => ({
+  resolveOpencodeBinary: (...args: unknown[]) =>
+    (mockResolveOpencodeBinary as (...a: unknown[]) => unknown)(...args),
+}));
+
+vi.mock('./utils/opencode-prompt', () => ({
+  showOpencodeNotFoundPrompt: (...args: unknown[]) =>
+    (mockShowOpencodeNotFoundPrompt as (...a: unknown[]) => unknown)(...args),
+}));
+
 describe('Extension IPC & Permission Event Handlers', () => {
   let mockContext: ExtensionContext;
 

@@ -4,6 +4,7 @@
  * and wraps the @opencode-ai/sdk library operations.
  */
 
+import * as path from 'node:path';
 import type { ServerOptions } from '@opencode-ai/sdk';
 import { createOpencodeServer } from '@opencode-ai/sdk';
 import type {
@@ -23,6 +24,7 @@ import type {
 import { createOpencodeClient } from '@opencode-ai/sdk/v2/client';
 import type { CommandOptions, PromptOptions, SDKClient, ServerHandle } from './sdk-client';
 import type { AgentInfo, CommandInfo, ModelInfo, SkillInfo } from './types';
+import { joinPath } from './utils/opencode-path';
 import { normalizeDirectory } from './utils/path-utils';
 
 /** Options for creating an SDK client instance. */
@@ -31,6 +33,14 @@ export interface SDKClientOptions {
   directory?: string;
   /** Server start timeout in milliseconds. */
   timeout?: number;
+  /**
+   * Absolute path to the opencode executable. When provided, the directory
+   * of this path is prepended to `process.env.PATH` for the duration of
+   * `startServer()` so the SDK's hard-coded `launch('opencode', ...)` resolves
+   * the configured binary. Defaults to the bare name `'opencode'`, which leaves
+   * `PATH` untouched.
+   */
+  opencodeBinaryPath?: string;
 }
 
 /** Creates a configured SDK client. Every client instance starts its own dedicated server. */
@@ -40,19 +50,37 @@ export function createSDKClient(options?: SDKClientOptions): SDKClient {
   // backslash paths on Windows, but the server stores forward-slash paths.
   const directory = options?.directory ? normalizeDirectory(options.directory) : undefined;
   const timeout = options?.timeout;
+  const opencodeBinaryPath = options?.opencodeBinaryPath;
   let serverHandle: ServerHandle | null = null;
   let client = createOpencodeClient({ directory });
 
   /** Starts a new dedicated server for this client instance. */
   const startServer = async (): Promise<ServerHandle> => {
     const serverOpts: ServerOptions = { port: 0, timeout };
-    const server = await createOpencodeServer(serverOpts);
-    serverHandle = {
-      url: server.url,
-      close: () => server.close(),
-    };
-    client = createOpencodeClient({ baseUrl: server.url, directory });
-    return serverHandle;
+    // Prepend the directory of the configured binary to PATH so the SDK's
+    // hard-coded `launch('opencode', ...)` resolves the configured file.
+    // Skipped when the user did not set `opencode.executablePath` (default).
+    let originalPath: string | undefined;
+    if (opencodeBinaryPath && opencodeBinaryPath !== 'opencode') {
+      const dir = path.dirname(opencodeBinaryPath);
+      if (dir && dir !== '.') {
+        originalPath = process.env.PATH;
+        process.env.PATH = joinPath(dir);
+      }
+    }
+    try {
+      const server = await createOpencodeServer(serverOpts);
+      serverHandle = {
+        url: server.url,
+        close: () => server.close(),
+      };
+      client = createOpencodeClient({ baseUrl: server.url, directory });
+      return serverHandle;
+    } finally {
+      if (originalPath !== undefined) {
+        process.env.PATH = originalPath;
+      }
+    }
   };
 
   return {

@@ -267,13 +267,14 @@ async function copyTerminalSelectionSafely(): Promise<string | undefined> {
 }
 
 /**
- * Shows a QuickPick to choose which default setting to configure (model or agent).
+ * Shows a QuickPick to choose which default setting to configure
+ * (model, agent, or opencode executable path).
  */
 export async function showDefaultSettingsQuickPick(sdk: SDKClient): Promise<void> {
   const config = getConfiguration();
 
   interface SettingPickItem extends QuickPickItem {
-    setting: 'model' | 'agent';
+    setting: 'model' | 'agent' | 'executablePath';
   }
 
   const items: SettingPickItem[] = [
@@ -286,6 +287,11 @@ export async function showDefaultSettingsQuickPick(sdk: SDKClient): Promise<void
       label: '$(terminal) Default Agent',
       description: config.agent || '(not set)',
       setting: 'agent',
+    },
+    {
+      label: '$(file-binary) OpenCode Executable',
+      description: config.executablePath || '(use PATH)',
+      setting: 'executablePath',
     },
   ];
 
@@ -313,9 +319,115 @@ export async function showDefaultSettingsQuickPick(sdk: SDKClient): Promise<void
 
   if (result.setting === 'model') {
     await showModelQuickPick(sdk);
-  } else {
+  } else if (result.setting === 'agent') {
     await showAgentQuickPick(sdk);
+  } else {
+    await showExecutablePathQuickPick();
   }
+}
+
+/**
+ * Shows a native open dialog so the user can pick the opencode executable
+ * file. Filters the dialog to executables (`.exe`, `.bat`, `.cmd`, etc. on
+ * Windows; any file on POSIX). Includes a "Clear" title-bar button that
+ * resets `opencode.executablePath` to empty (the default PATH-based lookup).
+ */
+export async function showExecutablePathQuickPick(): Promise<void> {
+  const { executablePath: currentPath } = getConfiguration();
+
+  const clearButton: QuickInputButton = {
+    iconPath: new ThemeIcon('close'),
+    tooltip: currentPath ? `Clear Path (${currentPath})` : 'Clear Path',
+  };
+
+  // QuickPick is used purely as a confirmation/info surface here. The actual
+  // file selection happens via a native open dialog opened from the "Browse..."
+  // button on the title bar. This keeps the entry-point consistent with the
+  // other settings (Model/Agent) which all live inside the Settings QuickPick.
+  const quickPick = window.createQuickPick<QuickPickItem>();
+  quickPick.title = 'OpenCode Executable';
+  quickPick.placeholder = 'Pick the absolute path to the opencode executable';
+  quickPick.buttons = [clearButton];
+  quickPick.items = [
+    {
+      label: '$(folder-opened) Browse...',
+      description: 'Open a file picker to choose the opencode executable',
+    },
+    {
+      label: 'Current value',
+      description: currentPath || '(use PATH)',
+    },
+  ];
+
+  const result = await new Promise<'browse' | 'clear' | undefined>((resolve) => {
+    let resolved = false;
+    const finish = (value: 'browse' | 'clear' | undefined): void => {
+      if (resolved) return;
+      resolved = true;
+      quickPick.hide();
+      resolve(value);
+    };
+    quickPick.onDidAccept(() => {
+      // Selecting "Browse..." is the only accept-driven action; the second
+      // item is informational.
+      const selected = quickPick.selectedItems[0];
+      if (selected && selected.label.startsWith('$(folder-opened)')) {
+        finish('browse');
+      }
+    });
+    quickPick.onDidTriggerButton((button) => {
+      if (button === clearButton) {
+        finish('clear');
+      }
+    });
+    quickPick.onDidHide(() => {
+      if (!resolved) finish(undefined);
+      quickPick.dispose();
+    });
+    quickPick.show();
+  });
+
+  if (result === 'clear') {
+    setConfiguration('executablePath', '');
+    void window.showInformationMessage(
+      'OpenCode executable cleared. Reload the window to use the default PATH lookup.',
+    );
+    return;
+  }
+
+  if (result !== 'browse') return;
+
+  // Platform-specific file filter. The dialog still allows "All files" so a
+  // user on a non-Windows platform can pick an un-extensioned binary like
+  // `/home/user/bin/opencode` without renaming.
+  const filters: { [name: string]: string[] } =
+    process.platform === 'win32'
+      ? {
+          Executables: ['exe', 'bat', 'cmd', 'ps1'],
+          'All files': ['*'],
+        }
+      : { 'All files': ['*'] };
+
+  const picked = await window.showOpenDialog({
+    title: 'Select OpenCode Executable',
+    openLabel: 'Use this executable',
+    canSelectMany: false,
+    canSelectFiles: true,
+    canSelectFolders: false,
+    filters,
+  });
+
+  if (!picked || picked.length === 0) return;
+
+  const selected = picked[0];
+  // `Uri.fsPath` returns a native path (backslashes on Windows). Persist that
+  // as-is — the path is only ever consumed inside the extension host where
+  // Node's `fs` APIs accept either separator.
+  const fsPath = selected.fsPath;
+  setConfiguration('executablePath', fsPath);
+  void window.showInformationMessage(
+    `OpenCode executable set to ${fsPath}. Reload the window for the change to take effect.`,
+  );
 }
 
 /**

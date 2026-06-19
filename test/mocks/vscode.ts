@@ -196,6 +196,8 @@ export const mockVscode = {
     },
     machineId: 'test-machine-id',
     sessionId: 'test-session-id',
+    openExternal: vi.fn().mockResolvedValue(true),
+    isTelemetryEnabled: false,
   },
   extensions: {
     getExtension: vi.fn(() => ({

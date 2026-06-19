@@ -31,6 +31,8 @@ import type { AgentInfo, ModelInfo } from './types';
 import { handleCommandPart } from './utils/command-router';
 import { getConfiguration } from './utils/config';
 import { registerFileHandlers } from './utils/fileHandlers';
+import { resolveOpencodeBinary, deriveReasonFromError } from './utils/opencode-path';
+import { showOpencodeNotFoundPrompt } from './utils/opencode-prompt';
 import { OpencodeSidebarViewProvider } from './webview-provider';
 
 let sdk: SDKClient;
@@ -123,11 +125,23 @@ export async function activate(context: ExtensionContext): Promise<void> {
     ipc.send({ type: 'fork:confirm', sessionID: activeID });
   };
 
+  // Pre-flight: resolve the opencode binary path from configuration or PATH
+  // BEFORE we attempt to spawn a server. This lets us surface a friendly
+  // recovery prompt (opencode.executablePath / install docs / reload) instead
+  // of failing activation with a raw `spawn opencode ENOENT` error.
+  const extensionConfig = getConfiguration();
+  const resolvedBinary = resolveOpencodeBinary(extensionConfig.executablePath);
+  if (resolvedBinary.source === 'none') {
+    await showOpencodeNotFoundPrompt(resolvedBinary);
+    return;
+  }
+
   try {
     const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath;
     sdk = createSDKClient({
       directory: workspaceRoot,
-      timeout: getConfiguration().serverTimeout,
+      timeout: extensionConfig.serverTimeout,
+      opencodeBinaryPath: resolvedBinary.path,
     });
     sessionManager = new SessionManager(sdk, context.workspaceState);
     ipc = new IPCBridge();
@@ -583,7 +597,37 @@ export async function activate(context: ExtensionContext): Promise<void> {
       sdk,
     );
   } catch (err) {
+    // Spawn-time failures from the opencode server binary are translated into
+    // the same friendly recovery flow as the pre-flight check. Other errors
+    // (programming bugs, network errors to an already-running server) still
+    // surface as a generic activation-failed toast.
     const message = err instanceof Error ? err.message : String(err);
-    window.showErrorMessage(`OpenCode Sidebar activation failed: ${message}`);
+    const looksLikeBinaryProblem =
+      /\b(ENOENT|EACCES|spawn opencode|executable)\b/i.test(message) ||
+      /Timeout waiting for server to start/i.test(message);
+    if (looksLikeBinaryProblem) {
+      // The pre-flight check already established whether the binary is sourced
+      // from the user's configured path or from PATH. Reuse that source so we
+      // can derive an accurate {config-invalid, config-not-executable,
+      // not-in-path} reason from the spawn error, rather than blindly
+      // synthesising "not-in-path" (which would mislead the user when the real
+      // cause is e.g. EACCES on a configured file). The configuredPath is
+      // threaded through so config-* messages can quote the exact path the
+      // user typed into settings.
+      const source: 'config' | 'path' =
+        resolvedBinary.source === 'config' ? 'config' : 'path';
+      const configuredPath =
+        resolvedBinary.source === 'config' ? resolvedBinary.path : undefined;
+      const reason = deriveReasonFromError(err, source);
+      const noneResult = {
+        path: null,
+        source: 'none' as const,
+        reason,
+        ...(configuredPath ? { configuredPath } : {}),
+      };
+      await showOpencodeNotFoundPrompt(noneResult, err);
+    } else {
+      window.showErrorMessage(`OpenCode Sidebar activation failed: ${message}`);
+    }
   }
 }

@@ -35,6 +35,8 @@ describe('config', () => {
     expect(config.model).toBe('');
     expect(config.agent).toBe('');
     expect(config.historySize).toBe(DEFAULT_HISTORY_SIZE);
+    expect(config.serverTimeout).toBe(DEFAULT_SERVER_TIMEOUT);
+    expect(config.executablePath).toBe('');
   });
 
   it('should return configured values when set in workspace properties', () => {
@@ -43,6 +45,8 @@ describe('config', () => {
       if (key === 'model') return 'provider/model-x';
       if (key === 'agent') return 'agent-y';
       if (key === 'historySize') return 25;
+      if (key === 'serverTimeout') return 30000;
+      if (key === 'executablePath') return '/custom/path/opencode';
       return defaultValue;
     });
     workspaceMock.mockReturnValueOnce({
@@ -54,6 +58,8 @@ describe('config', () => {
     expect(config.model).toBe('provider/model-x');
     expect(config.agent).toBe('agent-y');
     expect(config.historySize).toBe(25);
+    expect(config.serverTimeout).toBe(30000);
+    expect(config.executablePath).toBe('/custom/path/opencode');
   });
 
   it('should call config.update with correct arguments for setConfiguration', () => {
@@ -64,6 +70,11 @@ describe('config', () => {
   it('should clear a configuration value when set to empty string', () => {
     setConfiguration('agent', '');
     expect(updateMock).toHaveBeenCalledWith('agent', '', true);
+  });
+
+  it('should clear executablePath when set to empty string', () => {
+    setConfiguration('executablePath', '');
+    expect(updateMock).toHaveBeenCalledWith('executablePath', '', true);
   });
 });
 

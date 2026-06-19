@@ -8,6 +8,7 @@ import {
   pasteClipboardTextAsPlainText,
   showAgentQuickPick,
   showDefaultSettingsQuickPick,
+  showExecutablePathQuickPick,
   showModelQuickPick,
 } from './commands';
 import type { IPCBridge } from './ipc';
@@ -113,7 +114,7 @@ function createMockSdk(overrides?: { models?: ModelInfo[]; agents?: AgentInfo[] 
 }
 
 describe('showDefaultSettingsQuickPick', () => {
-  it('creates a QuickPick with model and agent options', async () => {
+  it('creates a QuickPick with model, agent, and executable-path options', async () => {
     const mock = createMockQuickPick();
     vi.mocked(window.createQuickPick).mockReturnValue(
       mock.qp as unknown as ReturnType<typeof window.createQuickPick>,
@@ -130,9 +131,13 @@ describe('showDefaultSettingsQuickPick', () => {
 
     expect(window.createQuickPick).toHaveBeenCalled();
     expect(mock.qp.title).toBe('OpenCode Settings');
-    expect(mock.qp.items).toHaveLength(2);
+    // Regression: the QuickPick grew from 2 to 3 entries when the opencode
+    // executable-path setting was introduced. Asserting the exact count and
+    // order catches accidental reordering and forgotten entries.
+    expect(mock.qp.items).toHaveLength(3);
     expect(mock.qp.items[0].label).toContain('Default Model');
     expect(mock.qp.items[1].label).toContain('Default Agent');
+    expect(mock.qp.items[2].label).toContain('OpenCode Executable');
     expect(mock.qp.show).toHaveBeenCalled();
   });
 
@@ -864,5 +869,140 @@ describe('showAgentQuickPick', () => {
     await showAgentQuickPick(sdk);
 
     expect(window.showInformationMessage).toHaveBeenCalledWith('No agents available.');
+  });
+});
+
+describe('showExecutablePathQuickPick', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('clears executablePath when the user clicks the Clear button', async () => {
+    // Regression: the QuickPick exposes a title-bar "Clear" button so the
+    // user can reset the path back to "use PATH" without having to reopen
+    // the file dialog and pick nothing.
+    const mock = createMockQuickPick();
+    vi.mocked(window.createQuickPick).mockReturnValue(
+      mock.qp as unknown as ReturnType<typeof window.createQuickPick>,
+    );
+    const workspaceMock = vi.mocked(workspace.getConfiguration);
+    workspaceMock.mockReturnValueOnce({
+      get: vi.fn((key: string, defaultValue: unknown) =>
+        key === 'executablePath' ? '/usr/local/bin/opencode' : defaultValue,
+      ),
+      update: vi.fn(),
+    } as unknown as ReturnType<typeof workspace.getConfiguration>);
+
+    // Find the clear button that was registered
+    let registeredButtons: unknown[] = [];
+    const originalShow = mock.qp.show;
+    void originalShow;
+    mock.qp.buttons = [];
+    // Capture the clear button registered when the QuickPick is created
+    vi.mocked(window.createQuickPick).mockImplementationOnce(
+      () =>
+        ({
+          ...mock.qp,
+          set buttons(value: unknown[]) {
+            registeredButtons = value;
+            mock.qp.buttons = value;
+          },
+        }) as unknown as ReturnType<typeof window.createQuickPick>,
+    );
+
+    // Resolve the QuickPick via the clear button
+    mock.qp.onDidTriggerButton.mockImplementation((cb: (btn: unknown) => void) => {
+      // Invoke the clear callback immediately
+      const clearButton = registeredButtons[0];
+      if (clearButton) cb(clearButton);
+      return { dispose: vi.fn() };
+    });
+    mock.qp.onDidHide.mockImplementation((cb: () => void) => {
+      // The flow's `finish` resolves the promise; no further hide needed.
+      void cb;
+      return { dispose: vi.fn() };
+    });
+
+    await showExecutablePathQuickPick();
+
+    expect(window.showInformationMessage).toHaveBeenCalledWith(
+      expect.stringContaining('OpenCode executable cleared'),
+    );
+  });
+
+  it('persists the chosen file path via setConfiguration when the user picks one', async () => {
+    // Regression: when the user picks a file from the open dialog, the
+    // selection must be persisted to opencode.executablePath so the next
+    // activation uses the new value. The persisted value is the native
+    // fsPath (no URI conversion), preserving backslashes on Windows.
+    const mock = createMockQuickPick();
+    vi.mocked(window.createQuickPick).mockReturnValue(
+      mock.qp as unknown as ReturnType<typeof window.createQuickPick>,
+    );
+
+    // Simulate the user selecting "Browse..." then picking a file
+    mock.qp.onDidAccept.mockImplementation((cb: () => void) => {
+      // Mock the user having selected the first item ("Browse...")
+      mock.qp.selectedItems = [mock.qp.items[0]] as never;
+      cb();
+      return { dispose: vi.fn() };
+    });
+    mock.qp.onDidHide.mockImplementation((cb: () => void) => {
+      void cb;
+      return { dispose: vi.fn() };
+    });
+    mock.qp.onDidTriggerButton.mockReturnValue({ dispose: vi.fn() });
+
+    const pickedUri = {
+      scheme: 'file',
+      fsPath: '/custom/bin/opencode',
+    } as never;
+    vi.mocked(window.showOpenDialog).mockResolvedValueOnce([pickedUri]);
+
+    const workspaceMock = vi.mocked(workspace.getConfiguration);
+    const updateMock = vi.fn();
+    workspaceMock.mockReturnValue({
+      get: vi.fn((key: string, defaultValue: unknown) =>
+        key === 'executablePath' ? '' : defaultValue,
+      ),
+      update: updateMock,
+    } as unknown as ReturnType<typeof workspace.getConfiguration>);
+
+    await showExecutablePathQuickPick();
+
+    expect(window.showOpenDialog).toHaveBeenCalledTimes(1);
+    expect(updateMock).toHaveBeenCalledWith('executablePath', '/custom/bin/opencode', true);
+  });
+
+  it('does not call setConfiguration when the user cancels the file dialog', async () => {
+    // Regression: dismissing the open dialog (returning undefined) must not
+    // accidentally clear or overwrite the configured path.
+    const mock = createMockQuickPick();
+    vi.mocked(window.createQuickPick).mockReturnValue(
+      mock.qp as unknown as ReturnType<typeof window.createQuickPick>,
+    );
+    mock.qp.onDidAccept.mockImplementation((cb: () => void) => {
+      mock.qp.selectedItems = [mock.qp.items[0]] as never;
+      cb();
+      return { dispose: vi.fn() };
+    });
+    mock.qp.onDidHide.mockImplementation((cb: () => void) => {
+      void cb;
+      return { dispose: vi.fn() };
+    });
+    mock.qp.onDidTriggerButton.mockReturnValue({ dispose: vi.fn() });
+
+    vi.mocked(window.showOpenDialog).mockResolvedValueOnce(undefined);
+
+    const workspaceMock = vi.mocked(workspace.getConfiguration);
+    const updateMock = vi.fn();
+    workspaceMock.mockReturnValue({
+      get: vi.fn().mockReturnValue(''),
+      update: updateMock,
+    } as unknown as ReturnType<typeof workspace.getConfiguration>);
+
+    await showExecutablePathQuickPick();
+
+    expect(updateMock).not.toHaveBeenCalled();
   });
 });

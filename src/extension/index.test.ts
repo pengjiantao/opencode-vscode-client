@@ -79,6 +79,39 @@ vi.mock('./webview-provider', () => {
   };
 });
 
+// opencodeBinary pre-flight + recovery prompt: mocked at the test-suite level
+// so existing tests (which assume a happy path) get a successful resolution.
+// Tests that need to exercise the not-found / spawn-failure paths override
+// the per-test mock implementations below.
+type ResolvedBinary = {
+  path: string | null;
+  source: 'config' | 'path' | 'none';
+  reason?: 'not-in-path' | 'config-invalid' | 'config-not-executable';
+  configuredPath?: string;
+};
+const mockResolveOpencodeBinary = vi.fn(
+  (): ResolvedBinary => ({ path: '/mock/opencode', source: 'path' }),
+);
+const mockShowOpencodeNotFoundPrompt = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('./utils/opencode-path', async (importOriginal) => {
+  // Preserve the real `deriveReasonFromError` (pure, side-effect free) so the
+  // activation catch block can use it to map spawn errors to NotFoundReason.
+  // We only mock `resolveOpencodeBinary` because that's what the pre-flight
+  // check calls, and individual tests override it per-case.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const result: Record<string, unknown> = { ...actual };
+  result['resolveOpencodeBinary'] = (...args: unknown[]) =>
+    (mockResolveOpencodeBinary as (...a: unknown[]) => unknown)(...args);
+  return result;
+});
+
+vi.mock('./utils/opencode-prompt', () => ({
+  showOpencodeNotFoundPrompt: (...args: unknown[]) =>
+    (mockShowOpencodeNotFoundPrompt as (...a: unknown[]) => unknown)(...args),
+}));
+
 describe('Extension Status Bar Activation', () => {
   let mockContext: ExtensionContext;
   let mockStatusBarItem: StatusBarItem;
@@ -642,6 +675,174 @@ describe('Extension Status Bar Activation', () => {
 
       // The new session should be persisted as active.
       expect(mockWorkspaceStateStore.get('activeSessionID')).toBe('new-session');
+    });
+  });
+
+  describe('opencode binary resolution', () => {
+    // Most of the suite uses the default happy-path mock for the binary
+    // resolver; these tests need to control its return value per-test, so we
+    // re-apply the mock before each run.
+    beforeEach(() => {
+      mockResolveOpencodeBinary.mockReset();
+      mockShowOpencodeNotFoundPrompt.mockClear();
+    });
+
+    it('aborts activation with a friendly prompt when the opencode binary cannot be found', async () => {
+      // Regression: previously the outer try/catch surfaced the raw
+      // "spawn opencode ENOENT" error from the SDK, leaving the user with a
+      // cryptic toast and no recovery path. The fix is a pre-flight check
+      // that resolves the binary BEFORE creating the SDK client and shows a
+      // user-friendly notification with actionable buttons.
+      mockResolveOpencodeBinary.mockReturnValueOnce({
+        path: null,
+        source: 'none',
+        reason: 'not-in-path',
+      });
+
+      await activate(mockContext);
+
+      expect(mockShowOpencodeNotFoundPrompt).toHaveBeenCalledTimes(1);
+      const [resolvedArg] = mockShowOpencodeNotFoundPrompt.mock.calls[0] as [
+        { source: string; reason: string },
+      ];
+      expect(resolvedArg.source).toBe('none');
+      expect(resolvedArg.reason).toBe('not-in-path');
+
+      // The SDK client must never be created when the binary is missing —
+      // otherwise the next code path would still try to spawn and crash with
+      // the original raw error.
+      expect(mockSdk.startServer).not.toHaveBeenCalled();
+    });
+
+    it('aborts activation with the configured path when opencode.executablePath is invalid', async () => {
+      // Regression: a user who sets opencode.executablePath to a non-existent
+      // file should see a prompt tailored to that scenario (not the generic
+      // "not in PATH" message).
+      mockResolveOpencodeBinary.mockReturnValueOnce({
+        path: null,
+        source: 'none',
+        reason: 'config-invalid',
+        configuredPath: '/wrong/path/opencode',
+      });
+
+      await activate(mockContext);
+
+      expect(mockShowOpencodeNotFoundPrompt).toHaveBeenCalledTimes(1);
+      const [resolvedArg] = mockShowOpencodeNotFoundPrompt.mock.calls[0] as [
+        { reason: string; configuredPath: string },
+      ];
+      expect(resolvedArg.reason).toBe('config-invalid');
+      expect(resolvedArg.configuredPath).toBe('/wrong/path/opencode');
+    });
+
+    it('translates a runtime spawn failure into the friendly prompt', async () => {
+      // Regression: even when the pre-flight check passes, the SDK can still
+      // fail to spawn the server (race condition, the binary on PATH was
+      // removed between pre-flight and connect, EACCES, etc.). The activation
+      // catch block must distinguish spawn-time failures from generic errors
+      // and route them through the same recovery flow.
+      mockResolveOpencodeBinary.mockReturnValueOnce({
+        path: '/mock/opencode',
+        source: 'path',
+      });
+      const spawnError = new Error('spawn opencode ENOENT');
+      vi.mocked(mockSdk.startServer).mockRejectedValueOnce(spawnError);
+
+      await activate(mockContext);
+
+      expect(mockShowOpencodeNotFoundPrompt).toHaveBeenCalledTimes(1);
+      const [resolvedArg, errArg] = mockShowOpencodeNotFoundPrompt.mock.calls[0] as [
+        { source: string; reason: string },
+        unknown,
+      ];
+      expect(resolvedArg.source).toBe('none');
+      // PATH-sourced binary + ENOENT → user genuinely has no opencode on PATH.
+      expect(resolvedArg.reason).toBe('not-in-path');
+      expect(errArg).toBe(spawnError);
+    });
+
+    it('derives config-not-executable when EACCES hits a configured path', async () => {
+      // Regression: previously the activation catch block synthesised a
+      // not-in-path reason regardless of the spawn error, which made the
+      // recovery prompt misleading for users with a valid-but-unexecutable
+      // configured path. Now the reason is derived from the error message
+      // AND the pre-flight source, so an EACCES on a configured file tells
+      // the user "is not executable" instead of "not in PATH".
+      mockResolveOpencodeBinary.mockReturnValueOnce({
+        path: '/home/user/bin/opencode',
+        source: 'config',
+      });
+      const eaccesError = new Error('spawn /home/user/bin/opencode EACCES');
+      vi.mocked(mockSdk.startServer).mockRejectedValueOnce(eaccesError);
+
+      await activate(mockContext);
+
+      const [resolvedArg] = mockShowOpencodeNotFoundPrompt.mock.calls[0] as [
+        { source: string; reason: string; configuredPath?: string },
+      ];
+      expect(resolvedArg.source).toBe('none');
+      expect(resolvedArg.reason).toBe('config-not-executable');
+      // The configured path is threaded through so the message can quote it.
+      expect(resolvedArg.configuredPath).toBe('/home/user/bin/opencode');
+    });
+
+    it('derives config-invalid when ENOENT hits a configured path', async () => {
+      // Regression: the file existed at pre-flight but disappeared before
+      // the spawn (e.g. a sync tool removed it). Saying "not in PATH" would
+      // be wrong — the file was configured, not PATH-sourced.
+      mockResolveOpencodeBinary.mockReturnValueOnce({
+        path: '/home/user/bin/opencode',
+        source: 'config',
+      });
+      const enoentError = new Error('spawn /home/user/bin/opencode ENOENT');
+      vi.mocked(mockSdk.startServer).mockRejectedValueOnce(enoentError);
+
+      await activate(mockContext);
+
+      const [resolvedArg] = mockShowOpencodeNotFoundPrompt.mock.calls[0] as [
+        { source: string; reason: string; configuredPath?: string },
+      ];
+      expect(resolvedArg.source).toBe('none');
+      expect(resolvedArg.reason).toBe('config-invalid');
+      expect(resolvedArg.configuredPath).toBe('/home/user/bin/opencode');
+    });
+
+    it('falls back to the generic activation-failed toast for non-spawn errors', async () => {
+      // Regression: not every activation failure is a binary issue. A
+      // programming error (e.g. an SDK method throwing an unexpected error)
+      // must still surface as the original "OpenCode Sidebar activation
+      // failed" notification so users can see the underlying message.
+      mockResolveOpencodeBinary.mockReturnValueOnce({
+        path: '/mock/opencode',
+        source: 'path',
+      });
+      const genericError = new Error('Something else went wrong');
+      vi.mocked(mockSdk.startServer).mockRejectedValueOnce(genericError);
+
+      await activate(mockContext);
+
+      expect(mockShowOpencodeNotFoundPrompt).not.toHaveBeenCalled();
+      expect(window.showErrorMessage).toHaveBeenCalledWith(
+        expect.stringContaining('OpenCode Sidebar activation failed'),
+      );
+    });
+
+    it('passes the resolved binary path through to createSDKClient', async () => {
+      // Regression: when the binary resolves from configuration (non-default
+      // path), the resolved path must propagate to the SDK client so it can
+      // adjust PATH for the spawn. Otherwise the SDK would try to launch the
+      // bare 'opencode' name and fail to find the configured file.
+      const { createSDKClient } = await import('./sdk-client-impl');
+      mockResolveOpencodeBinary.mockReturnValueOnce({
+        path: '/custom/bin/opencode',
+        source: 'config',
+      });
+
+      await activate(mockContext);
+
+      expect(createSDKClient).toHaveBeenCalledWith(
+        expect.objectContaining({ opencodeBinaryPath: '/custom/bin/opencode' }),
+      );
     });
   });
 });

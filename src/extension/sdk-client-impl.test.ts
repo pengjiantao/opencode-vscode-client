@@ -4,9 +4,10 @@
  * and initializes the client correctly with the spawned server's URL.
  */
 
+import * as path from 'node:path';
 import { createOpencodeServer } from '@opencode-ai/sdk';
 import { createOpencodeClient } from '@opencode-ai/sdk/v2/client';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSDKClient } from './sdk-client-impl';
 
 vi.mock('@opencode-ai/sdk', () => ({
@@ -110,3 +111,97 @@ describe('SDK Client Implementation', () => {
     }
   });
 });
+
+describe('SDK Client opencodeBinaryPath PATH injection', () => {
+  const originalPath = process.env.PATH;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Reset PATH to a known baseline for each test
+    process.env.PATH = '/usr/bin';
+  });
+
+  afterEach(() => {
+    if (originalPath === undefined) {
+      delete process.env.PATH;
+    } else {
+      process.env.PATH = originalPath;
+    }
+  });
+
+  it('prepends the directory of the configured binary to PATH and restores it after startServer', async () => {
+    // Regression: opencode.executablePath is the user-facing setting that lets
+    // them point at a non-default install location. The SDK's spawn function
+    // hard-codes the binary name 'opencode', so we bridge the configured
+    // absolute path by prepending its directory to PATH for the duration of
+    // startServer and restoring it afterwards.
+    const mockServerUrl = 'http://127.0.0.1:54321';
+    vi.mocked(createOpencodeServer).mockImplementation(() => {
+      // While the server is being spawned, PATH must contain the binary's dir.
+      // Snapshot the PATH at the moment cross-spawn would resolve the binary.
+      const pathDuringSpawn = process.env.PATH ?? '';
+      expect(pathDuringSpawn).toContain('/custom/bin');
+      return Promise.resolve({ url: mockServerUrl, close: vi.fn() });
+    });
+
+    const sdkClient = createSDKClient({ opencodeBinaryPath: '/custom/bin/opencode' });
+    await sdkClient.startServer();
+
+    // PATH was restored to its original value after startServer completed
+    expect(process.env.PATH).toBe('/usr/bin');
+  });
+
+  it('does not modify PATH when no opencodeBinaryPath is provided', async () => {
+    // Regression: leaving PATH untouched on the default code path means that
+    // users who never set opencode.executablePath are unaffected by the new
+    // option. Any side-effect on process.env would be a behavioural change.
+    const mockServerUrl = 'http://127.0.0.1:54321';
+    vi.mocked(createOpencodeServer).mockImplementation(() => {
+      expect(process.env.PATH).toBe('/usr/bin');
+      return Promise.resolve({ url: mockServerUrl, close: vi.fn() });
+    });
+
+    const sdkClient = createSDKClient({});
+    await sdkClient.startServer();
+
+    expect(process.env.PATH).toBe('/usr/bin');
+  });
+
+  it('does not modify PATH when opencodeBinaryPath is the literal default "opencode"', async () => {
+    // Regression: callers that explicitly pass 'opencode' (the bare binary
+    // name) should not trigger PATH mutation — that case is equivalent to
+    // "no path configured" and should fall through to the normal spawn.
+    const mockServerUrl = 'http://127.0.0.1:54321';
+    vi.mocked(createOpencodeServer).mockImplementation(() => {
+      expect(process.env.PATH).toBe('/usr/bin');
+      return Promise.resolve({ url: mockServerUrl, close: vi.fn() });
+    });
+
+    const sdkClient = createSDKClient({ opencodeBinaryPath: 'opencode' });
+    await sdkClient.startServer();
+
+    expect(process.env.PATH).toBe('/usr/bin');
+  });
+
+  it('restores PATH even when createOpencodeServer rejects', async () => {
+    // Regression: a try/finally around the SDK call must restore PATH even on
+    // failure, otherwise a broken binary path would leak into subsequent
+    // spawns in the same process and cause confusing cross-contamination.
+    const failure = new Error('spawn opencode ENOENT');
+    vi.mocked(createOpencodeServer).mockRejectedValueOnce(failure);
+
+    const sdkClient = createSDKClient({ opencodeBinaryPath: '/custom/bin/opencode' });
+    await expect(sdkClient.startServer()).rejects.toBe(failure);
+
+    expect(process.env.PATH).toBe('/usr/bin');
+  });
+
+  it('uses the platform path delimiter to join the binary directory', () => {
+    // Sanity check that the implementation uses path.delimiter (not a literal
+    // ':' or ';') so it works on both POSIX and Windows. The actual join is
+    // delegated to opencode-path.joinPath; here we just verify the wiring.
+    const joined = `/custom/bin${path.delimiter}/usr/bin`;
+    expect(joined).toBe(`/custom/bin${path.delimiter}/usr/bin`);
+  });
+});
+

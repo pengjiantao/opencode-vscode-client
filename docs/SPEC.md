@@ -447,6 +447,15 @@ sdks/vscode-sidebar/
 - [x] 快捷键支持
 - [x] 设置面板
 
+#### 5.1 OpenCode 可执行文件解析与恢复
+
+- 新增配置 `opencode.executablePath`（字符串，默认 `""`），用于指定 opencode 可执行文件的绝对路径。空值时回退到通过 PATH 查找 `opencode`。
+- 解析顺序：`executablePath` → 文件存在性 + 可执行性校验 → `which('opencode')`。
+- 在 `activate()` 中先做 pre-flight 解析：若解析失败，跳过激活并展示一个 `window.showErrorMessage`，提供 "Open Settings / Copy install command / Open install docs / Retry" 四个动作按钮。"Retry" 触发 `workbench.action.reloadWindow`。
+- `createSDKClient` 在调用 `createOpencodeServer` 时，若传入了非默认的 `opencodeBinaryPath`，会临时把其所在目录注入 `process.env.PATH`，让 SDK 的 `launch('opencode', ...)` 能解析到配置的文件；调用结束后在 `finally` 中恢复 PATH。
+- `startServer` 抛错时，激活的 catch 分支会通过错误消息（`ENOENT` / `EACCES` / `spawn opencode` / `Timeout waiting for server to start`）判定是否为二进制问题，并复用同一个友好的恢复提示。
+- 设置面板 `showDefaultSettingsQuickPick` 新增 "OpenCode Executable" 条目，调用 `showExecutablePathQuickPick` 通过 `window.showOpenDialog` 选择可执行文件（Windows 过滤 `.exe/.bat/.cmd/.ps1`），并提供 "Clear" 按钮重置为 PATH 查找。
+
 ---
 
 ## 关键设计决策
