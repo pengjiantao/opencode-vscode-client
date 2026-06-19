@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.32](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.31...v0.1.32) (2026-06-19)
+
+### Features
+
+- **SessionTabs:** double-click empty area to create session ([794224e](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/794224e904ac3da434e9f95baa52ddb46f2b98e5))
+
 ### [0.1.31](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.30...v0.1.31) (2026-06-19)
 
 ### Features
