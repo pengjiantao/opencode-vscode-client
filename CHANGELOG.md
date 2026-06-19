@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.31](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.30...v0.1.31) (2026-06-19)
+
+### Features
+
+- **commands:** search and declutter Default Model QuickPick ([6e20ad9](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/6e20ad95d998c893cc670f74093be1ef9cbe6820))
+- **extension:** add configurable opencode server start timeout ([0d3be9f](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/0d3be9f3c6d28832af3179203fe940495f616edb))
+- **extension:** add opencode.executablePath config and recovery prompt ([7c4ad11](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/7c4ad11ead0d33c1a28a414b736151b77e791a6e))
+
+### Bug Fixes
+
+- normalize Windows directory paths to fix session history lookups ([25da473](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/25da4731a8b420b47c1921128c7a2fcc3931a76a))
+- reset stale activeSessionID to enable auto-create on init ([0b3604e](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/0b3604e1506618c2142161d4441f3fe0b7d8c6f0))
+
 ### [0.1.30](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.29...v0.1.30) (2026-06-16)
 
 ### Features
