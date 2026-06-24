@@ -11,7 +11,10 @@
   overflow-y: auto;
 }
 
-/* Gradient shadows/fades at the top and bottom of the scroll container */
+/* Gradient shadows/fades at the top and bottom of the scroll container.
+   The > direct-child combinator is required to prevent the shadow visibility
+   from leaking into nested ScrollFadeContainer instances (e.g. DiffPart or
+   BashOutput rendered inside the chat message list). */
 .scroll-fade-layer {
   position: absolute;
   left: 0;
@@ -41,10 +44,10 @@
   );
 }
 
-.scroll-fade-container.has-top-shadow .scroll-fade-top {
+.scroll-fade-container.has-top-shadow > .scroll-fade-top {
   opacity: 1;
 }
 
-.scroll-fade-container.has-bottom-shadow .scroll-fade-bottom {
+.scroll-fade-container.has-bottom-shadow > .scroll-fade-bottom {
   opacity: 1;
 }

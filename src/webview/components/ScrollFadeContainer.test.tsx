@@ -265,4 +265,139 @@ describe('ScrollFadeContainer', () => {
       expect(inner.scrollTop).toBe(100);
     });
   });
+
+  describe('nested instance isolation', () => {
+    it('regression: inner wrapper shadow class is based on inner scroll state, not outer', () => {
+      // Regression: nested ScrollFadeContainer instances (e.g. DiffPart / BashOutput
+      // inside ChatView) must compute their own shadow classes from their own
+      // scroll position. Previously the CSS descendant selector leaked the
+      // outer's shadow state into the inner; the JS-side isolation is verified here.
+      const { container } = render(
+        <ScrollFadeContainer autoScroll={true}>
+          <ScrollFadeContainer>
+            <div>Tall inner content</div>
+          </ScrollFadeContainer>
+        </ScrollFadeContainer>,
+      );
+
+      const innerWrapper = container.querySelector(
+        '.scroll-fade-container .scroll-fade-container',
+      ) as HTMLDivElement;
+      const innerScroll = innerWrapper.querySelector('.scroll-fade-content') as HTMLDivElement;
+      const outerScroll = container.querySelector('.scroll-fade-content') as HTMLDivElement;
+      const outerWrapper = outerScroll.parentElement as HTMLDivElement;
+
+      // Both containers are independently scrollable
+      Object.defineProperty(outerScroll, 'scrollHeight', { configurable: true, value: 1000 });
+      Object.defineProperty(outerScroll, 'clientHeight', { configurable: true, value: 200 });
+      Object.defineProperty(outerScroll, 'scrollTop', {
+        configurable: true,
+        writable: true,
+        value: 0,
+      });
+      Object.defineProperty(innerScroll, 'scrollHeight', { configurable: true, value: 1000 });
+      Object.defineProperty(innerScroll, 'clientHeight', { configurable: true, value: 200 });
+      Object.defineProperty(innerScroll, 'scrollTop', {
+        configurable: true,
+        writable: true,
+        value: 0,
+      });
+
+      // Prime both wrappers by dispatching a scroll event on each so the
+      // mocked dimensions are observed by their own updateShadows handlers.
+      act(() => {
+        outerScroll.dispatchEvent(new Event('scroll'));
+        innerScroll.dispatchEvent(new Event('scroll'));
+      });
+
+      // Sanity: both wrappers are at the top, so both have bottom-shadow only.
+      expect(outerWrapper).not.toHaveClass('has-top-shadow');
+      expect(outerWrapper).toHaveClass('has-bottom-shadow');
+      expect(innerWrapper).not.toHaveClass('has-top-shadow');
+      expect(innerWrapper).toHaveClass('has-bottom-shadow');
+
+      // Scroll the outer to the bottom — outer wrapper should get has-top-shadow.
+      act(() => {
+        outerScroll.scrollTop = 800;
+        outerScroll.dispatchEvent(new Event('scroll'));
+      });
+
+      expect(outerWrapper).toHaveClass('has-top-shadow');
+      expect(outerWrapper).not.toHaveClass('has-bottom-shadow');
+
+      // Inner scroll state is unchanged (still at scrollTop=0) — its wrapper
+      // must still be in the "at top" configuration. This catches the
+      // per-instance class isolation requirement: the inner must not pick up
+      // has-top-shadow just because the outer was scrolled.
+      expect(innerWrapper).not.toHaveClass('has-top-shadow');
+      expect(innerWrapper).toHaveClass('has-bottom-shadow');
+
+      // Scroll the outer back to the top — outer wrapper should get has-bottom-shadow.
+      act(() => {
+        outerScroll.scrollTop = 0;
+        outerScroll.dispatchEvent(new Event('scroll'));
+      });
+
+      expect(outerWrapper).not.toHaveClass('has-top-shadow');
+      expect(outerWrapper).toHaveClass('has-bottom-shadow');
+
+      // Inner state is unchanged — still at top, so still has-bottom-shadow only.
+      expect(innerWrapper).not.toHaveClass('has-top-shadow');
+      expect(innerWrapper).toHaveClass('has-bottom-shadow');
+    });
+
+    it('regression: CSS shadow visibility must not leak from outer to inner via descendant selector', () => {
+      // Regression for the descendant-selector leak that caused inner
+      // ScrollFadeContainer instances (e.g. DiffPart inside ChatView) to
+      // show top/bottom shadows whenever the outer (chat) wrapper had the
+      // matching class. The fix uses the direct-child combinator (>) in CSS;
+      // this test asserts the resulting selector behaviour via Element.matches.
+      const { container } = render(
+        <ScrollFadeContainer className="outer-instance">
+          <ScrollFadeContainer className="inner-instance">
+            <div>Inner</div>
+          </ScrollFadeContainer>
+        </ScrollFadeContainer>,
+      );
+
+      const innerWrapper = container.querySelector('.inner-instance') as HTMLDivElement;
+      const innerTop = innerWrapper.querySelector('.scroll-fade-top') as HTMLDivElement;
+      const innerBottom = innerWrapper.querySelector('.scroll-fade-bottom') as HTMLDivElement;
+      const outerWrapper = container.querySelector('.outer-instance') as HTMLDivElement;
+
+      // Simulate the outer being scrolled away from the top.
+      outerWrapper.classList.add('has-top-shadow');
+      // Simulate the inner still being at the top (its shadow is OFF).
+      expect(innerWrapper).not.toHaveClass('has-top-shadow');
+
+      // The descendant selector (old behaviour) WOULD match the inner's
+      // .scroll-fade-top because it is a descendant of the outer wrapper.
+      // The fixed direct-child selector MUST NOT match — the inner's
+      // .scroll-fade-top is nested deeper, not a direct child of the outer.
+      const leakedDescendantMatch = innerTop.matches(
+        '.scroll-fade-container.has-top-shadow .scroll-fade-top',
+      );
+      const scopedDirectChildMatch = innerTop.matches(
+        '.scroll-fade-container.has-top-shadow > .scroll-fade-top',
+      );
+
+      expect(leakedDescendantMatch).toBe(true);
+      expect(scopedDirectChildMatch).toBe(false);
+
+      // Repeat for the bottom-shadow side.
+      outerWrapper.classList.remove('has-top-shadow');
+      outerWrapper.classList.add('has-bottom-shadow');
+      expect(innerWrapper).not.toHaveClass('has-bottom-shadow');
+
+      const leakedBottomMatch = innerBottom.matches(
+        '.scroll-fade-container.has-bottom-shadow .scroll-fade-bottom',
+      );
+      const scopedBottomMatch = innerBottom.matches(
+        '.scroll-fade-container.has-bottom-shadow > .scroll-fade-bottom',
+      );
+
+      expect(leakedBottomMatch).toBe(true);
+      expect(scopedBottomMatch).toBe(false);
+    });
+  });
 });
