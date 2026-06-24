@@ -422,4 +422,161 @@ ${contextLines}
     const collapsedRows = container.querySelectorAll('.diff-collapsed-row');
     expect(collapsedRows.length).toBeGreaterThan(0);
   });
+
+  it('regression: line number gutter is shown by default (review page)', () => {
+    const diff = `
+--- a/file.ts
++++ b/file.ts
+@@ -1,3 +1,3 @@
+ const x = 10;
+-const y = 20;
++const y = 30;
+`;
+
+    const { container } = render(<DiffPart diff={diff.trim()} filePath="file.ts" />);
+
+    // Gutter cells are present.
+    expect(container.querySelectorAll('.diff-line-num').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.old-num').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.new-num').length).toBeGreaterThan(0);
+
+    // Each non-hunk line row carries all four cells (old-num, new-num,
+    // sign, code).
+    const codeRow = screen.getByText('const y = 30;').closest('tr');
+    expect(codeRow).not.toBeNull();
+    expect(codeRow!.querySelectorAll('td')).toHaveLength(4);
+    expect(codeRow!.querySelector('.old-num')).not.toBeNull();
+    expect(codeRow!.querySelector('.new-num')).not.toBeNull();
+    expect(codeRow!.querySelector('.diff-sign')).not.toBeNull();
+    expect(codeRow!.querySelector('.diff-code')).not.toBeNull();
+
+    // The table gets the with-gutter marker so the collapsed indicator
+    // can keep its original 40px left padding.
+    const table = container.querySelector('.diff-table');
+    expect(table).not.toBeNull();
+    expect(table!.classList.contains('diff-table-with-gutter')).toBe(true);
+  });
+
+  it('regression: hunk header cell spans the full four-column table when gutter is shown', () => {
+    const diff = `
+--- a/file.ts
++++ b/file.ts
+@@ -1,3 +1,3 @@
+-const y = 20;
++const y = 30;
+`;
+
+    const { container } = render(<DiffPart diff={diff.trim()} filePath="file.ts" />);
+
+    const hunkCell = container.querySelector('.diff-hunk-header');
+    expect(hunkCell).not.toBeNull();
+    expect(hunkCell!.getAttribute('colspan')).toBe('4');
+  });
+
+  it('regression: showLineNumbers={false} hides the gutter (tool rendering)', () => {
+    const diff = `
+--- a/file.ts
++++ b/file.ts
+@@ -1,3 +1,3 @@
+ const x = 10;
+-const y = 20;
++const y = 30;
+`;
+
+    const { container } = render(
+      <DiffPart diff={diff.trim()} filePath="file.ts" showLineNumbers={false} />,
+    );
+
+    // No gutter cells of any kind.
+    expect(container.querySelectorAll('.diff-line-num').length).toBe(0);
+    expect(container.querySelectorAll('.old-num').length).toBe(0);
+    expect(container.querySelectorAll('.new-num').length).toBe(0);
+
+    // Each non-hunk line row only has two cells (sign + code).
+    const codeRow = screen.getByText('const y = 30;').closest('tr');
+    expect(codeRow).not.toBeNull();
+    expect(codeRow!.querySelectorAll('td')).toHaveLength(2);
+    expect(codeRow!.querySelector('.diff-sign')).not.toBeNull();
+    expect(codeRow!.querySelector('.diff-code')).not.toBeNull();
+
+    // The with-gutter marker is absent, so the collapsed indicator uses
+    // the compact 8px left padding.
+    const table = container.querySelector('.diff-table');
+    expect(table).not.toBeNull();
+    expect(table!.classList.contains('diff-table-with-gutter')).toBe(false);
+
+    // Hunk header colspan drops to 2 to match the trimmed column count.
+    const hunkCell = container.querySelector('.diff-hunk-header');
+    expect(hunkCell).not.toBeNull();
+    expect(hunkCell!.getAttribute('colspan')).toBe('2');
+  });
+
+  it('regression: long lines do not wrap and a horizontal-scroll wrapper is present', () => {
+    const longLine = `const huge = ${"'x'".repeat(150)};`;
+    const diff = `
+--- a/file.ts
++++ b/file.ts
+@@ -1,1 +1,1 @@
+-old
++${longLine}
+`;
+
+    // This applies regardless of whether the gutter is shown.
+    const { container } = render(
+      <DiffPart diff={diff.trim()} filePath="file.ts" showLineNumbers={false} />,
+    );
+
+    // Horizontal-scroll wrapper must exist around the table.
+    const xscroll = container.querySelector('.diff-table-xscroll');
+    expect(xscroll).not.toBeNull();
+    // The table should be inside the wrapper.
+    expect(xscroll!.querySelector('.diff-table')).not.toBeNull();
+
+    // The .diff-code cell must keep `white-space: pre` so the long line
+    // never wraps. We assert the CSS source directly because the test
+    // environment does not load parts.css (it is only imported from
+    // main.tsx / ReviewPage.tsx, which tests do not import).
+    const css = readDiffStyles();
+    expect(extractRuleBody(css, '.diff-code')).toMatch(/white-space:\s*pre\b/);
+    expect(extractRuleBody(css, '.diff-code')).not.toMatch(/word-break/);
+
+    // The .diff-table should declare width: max-content; so long lines
+    // extend the table instead of forcing a wrap, and min-width: 100% to
+    // keep short diffs full-width.
+    const tableRule = extractRuleBody(css, '.diff-table');
+    expect(tableRule).toMatch(/width:\s*max-content/);
+    expect(tableRule).toMatch(/min-width:\s*100%/);
+
+    // The horizontal-scroll wrapper itself must declare overflow-x: auto.
+    expect(extractRuleBody(css, '.diff-table-xscroll')).toMatch(/overflow-x:\s*auto/);
+  });
 });
+
+/**
+ * Reads the diff-related portion of parts.css. The file is large and only
+ * a small section contains diff rules, but reading the whole file is cheap
+ * and keeps the test resilient to line shifts.
+ */
+function readDiffStyles(): string {
+  // The build resolves this relative to the project root in the same way
+  // as the source files; vitest shares the same resolution.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require('fs') as typeof import('fs');
+  // Path is resolved relative to the test file's location, which vitest
+  // runs from the project root for `*.test.tsx` files.
+  const cssPath = 'src/webview/styles/parts.css';
+  return fs.readFileSync(cssPath, 'utf8');
+}
+
+/**
+ * Returns the body of the first CSS rule whose selector exactly matches
+ * `selector`. Whitespace inside the body is preserved so the caller can
+ * use regex assertions like `white-space:\s*pre\b`.
+ */
+function extractRuleBody(css: string, selector: string): string {
+  // Escape regex metacharacters in the selector (`.` -> `\.`).
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, 'm');
+  const match = css.match(re);
+  return match ? match[1] : '';
+}

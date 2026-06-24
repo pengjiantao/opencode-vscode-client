@@ -8,6 +8,13 @@
 export interface CollapsedBlockProps {
   /** Number of collapsed context lines. */
   count: number;
+  /**
+   * Number of columns the row should span. The diff table is 4 columns
+   * wide when the line-number gutter is shown, and 2 columns wide when
+   * the gutter is hidden (tool-rendered diffs). The collapsed row must
+   * match the table's column count so the layout stays aligned.
+   */
+  colSpan: number;
   /** Callback to expand the first N lines from the start. */
   onExpandStart: (n: number) => void;
   /** Callback to expand the last N lines from the end. */
@@ -25,6 +32,7 @@ const EXPAND_STEP = 10;
  */
 export function CollapsedBlock({
   count,
+  colSpan,
   onExpandStart,
   onExpandEnd,
   onExpandAll,
@@ -34,7 +42,7 @@ export function CollapsedBlock({
 
   return (
     <tr className="diff-collapsed-row">
-      <td colSpan={4} className="diff-collapsed-cell">
+      <td colSpan={colSpan} className="diff-collapsed-cell">
         <div className="diff-collapsed-indicator">
           <button
             className="diff-collapsed-count-btn"

@@ -631,10 +631,23 @@ pre.code-block code {
 
 .diff-table {
   border-collapse: collapse;
-  width: 100%;
+  /* width: max-content makes the table grow to its widest row, so long
+     lines never wrap and instead trigger horizontal scrolling on the
+     .diff-table-xscroll wrapper. min-width: 100% keeps short diffs from
+     collapsing into a narrow column. */
+  width: max-content;
+  min-width: 100%;
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 12px;
   line-height: 1.4;
+}
+
+.diff-table-xscroll {
+  /* Inner wrapper that owns horizontal scrolling. Vertical scrolling is
+     handled by the surrounding ScrollFadeContainer, which keeps its
+     top/bottom fade gradients. */
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .diff-hunk-header {
@@ -673,8 +686,9 @@ pre.code-block code {
 }
 
 .diff-code {
-  white-space: pre-wrap;
-  word-break: break-word;
+  /* Long lines must never wrap; they extend the table's intrinsic width
+     and are revealed via horizontal scrolling on .diff-table-xscroll. */
+  white-space: pre;
   padding: 1px 8px;
 }
 
@@ -770,7 +784,7 @@ pre.code-block code {
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  padding: 2px 0 2px 40px;
+  padding: 2px 0 2px 8px;
   pointer-events: auto;
   background-color: color-mix(
     in srgb,
@@ -779,6 +793,12 @@ pre.code-block code {
   );
   border-top: 1px dashed color-mix(in srgb, var(--vscode-border-color, #454545) 40%, transparent);
   border-bottom: 1px dashed color-mix(in srgb, var(--vscode-border-color, #454545) 40%, transparent);
+}
+
+/* When the line-number gutter is present, give the +N button extra
+   breathing room from the gutter column on the left. */
+.diff-table-with-gutter .diff-collapsed-indicator {
+  padding-left: 40px;
 }
 
 .diff-collapsed-count-btn {
