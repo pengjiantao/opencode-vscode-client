@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { Codicon } from '../Codicon';
 import { BashOutput } from './BashOutput';
 import { DiffPart } from './DiffPart';
+import { TodoItem, TodoWriteOutput } from './TodoWriteOutput';
 
 interface ToolPartProps {
   tool: string;
@@ -59,6 +60,13 @@ export function getToolIcon(tool: string): string {
   // Map list_dir / folder operations to folder icon
   if (name.includes('list_dir') || name.includes('list_directory') || name.includes('folder')) {
     return '$(folder)';
+  }
+  // Map todo list / todowrite tool to tasklist icon.
+  // MUST be checked before the "write" branch below because "todowrite"
+  // contains the substring "write" and would otherwise be mis-routed to
+  // the edit/write icon.
+  if (name.includes('todo')) {
+    return '$(tasklist)';
   }
   // Map edit / write / save operations to edit icon
   if (
@@ -191,6 +199,7 @@ export function ToolPart({
   const isBash = isBashTool(tool);
 
   // File modifying, question, and bash tools should be default expanded (collapsed = false).
+  // The todowrite tool defaults to expanded so the live checklist is always visible.
   // Other tools (e.g., grep_search, glob) default to collapsed with lazy content mounting.
   const isDefaultExpanded =
     toolName === 'edit' ||
@@ -198,6 +207,7 @@ export function ToolPart({
     toolName === 'write_to_file' ||
     toolName === 'apply_patch' ||
     toolName === 'question' ||
+    toolName === 'todowrite' ||
     isBash;
 
   const [collapsed, setCollapsed] = useState(!isDefaultExpanded);
@@ -251,13 +261,25 @@ export function ToolPart({
 
   // Omit "Tool:" prefix to keep the sidebar presentation compact and developer-centric
   const summaryText = useMemo(() => {
+    // todowrite shows a live "X of Y completed" counter based on the input list.
+    if (toolName === 'todowrite') {
+      if (state.status === 'error') {
+        return 'TODOS';
+      }
+      const todosInput = state.input?.todos;
+      const total = Array.isArray(todosInput) ? todosInput.length : 0;
+      const done = Array.isArray(todosInput)
+        ? todosInput.filter((t) => (t as TodoItem).status === 'completed').length
+        : 0;
+      return `TODOS - ${done} of ${total} completed`;
+    }
     const desc = getToolDescription(tool, state.input, state.title);
     const prefix = isBash ? 'BASH' : tool.toUpperCase();
     if (desc === prefix || desc === tool) {
       return prefix;
     }
     return `${prefix} - ${desc}`;
-  }, [tool, state.input, state.title, isBash]);
+  }, [tool, state.input, state.title, isBash, state.status, toolName]);
 
   const dotClassName = `timeline-dot tool-dot status-${state.status}`;
   const showLine = hasPredecessor || hasSuccessor;
@@ -271,6 +293,17 @@ export function ToolPart({
     if (isBash) {
       const command = (state.input?.command || state.title || '') as string;
       return <BashOutput command={command} output={state.output || ''} status={state.status} />;
+    }
+
+    // todowrite renders a structured checklist via the dedicated subcomponent.
+    if (toolName === 'todowrite') {
+      const todosInput = state.input?.todos;
+      const todos: TodoItem[] = Array.isArray(todosInput) ? (todosInput as TodoItem[]) : [];
+      const rendered = <TodoWriteOutput todos={todos} status={state.status} />;
+      // If the payload was unusable, fall through to the generic output below.
+      if (rendered !== null) {
+        return rendered;
+      }
     }
 
     // Check if the tool modifies files and has a diff (either real or synthetic)
@@ -393,10 +426,11 @@ export function ToolPart({
           }}
         >
           <div className="tool-content">
-            {/* Hide tool input if a diff is being rendered, it is a question tool, or a bash tool to keep layout clean */}
+            {/* Hide tool input if a diff is being rendered, it is a question tool, a bash tool, or a todowrite tool to keep layout clean */}
             {!hasDiff &&
               toolName !== 'question' &&
               !isBash &&
+              toolName !== 'todowrite' &&
               state.input &&
               Object.keys(state.input).length > 0 && (
                 <div className="tool-input">

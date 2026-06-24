@@ -606,6 +606,17 @@ describe('PartRenderer', () => {
       expect(getToolIcon('web_search')).toBe('$(browser)');
     });
 
+    it('maps todowrite to the tasklist codicon (and avoids the "write" substring trap)', () => {
+      // Regression: "todowrite" contains the substring "write" which would
+      // otherwise route it to the edit icon. The todowrite check must take
+      // precedence over the generic write/edit pattern.
+      expect(getToolIcon('todowrite')).toBe('$(tasklist)');
+      expect(getToolIcon('TodoWrite')).toBe('$(tasklist)');
+      // Sanity check: real write tools still resolve to the edit icon.
+      expect(getToolIcon('write')).toBe('$(edit)');
+      expect(getToolIcon('write_to_file')).toBe('$(edit)');
+    });
+
     it('falls back to toolbox icon for unknown tools', () => {
       expect(getToolIcon('unknown_custom_tool')).toBe('$(tools)');
       expect(getToolIcon('')).toBe('$(tools)');

@@ -3,7 +3,7 @@
  * Verifies default collapsed/expanded behavior and lazy content mounting.
  */
 
-import { fireEvent, render } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ToolPart } from './ToolPart';
 
@@ -138,6 +138,110 @@ describe('ToolPart', () => {
       // Content should be mounted from the start for edit tools
       expect(container.querySelector('.collapsible-wrapper')).toBeInTheDocument();
       expect(container.querySelector('.diff-part-container')).toBeInTheDocument();
+    });
+  });
+
+  describe('todowrite tool', () => {
+    const todoInput = {
+      todos: [
+        { content: 'Read spec', status: 'completed', priority: 'high' },
+        { content: 'Implement parser', status: 'in_progress', priority: 'medium' },
+        { content: 'Write tests', status: 'pending', priority: 'low' },
+        { content: 'Cancelled idea', status: 'cancelled', priority: 'low' },
+      ],
+    };
+
+    it('renders with the tasklist codicon', () => {
+      const state = { ...baseState, input: todoInput, metadata: undefined };
+      const { container } = render(<ToolPart tool="todowrite" state={state} />);
+      expect(container.querySelector('.codicon-tasklist')).toBeInTheDocument();
+    });
+
+    it('defaults to expanded and mounts the collapsible wrapper eagerly', () => {
+      const state = { ...baseState, input: todoInput, metadata: undefined };
+      const { container } = render(<ToolPart tool="todowrite" state={state} />);
+      const toolPartEl = container.querySelector('.tool-part');
+      expect(toolPartEl).toHaveClass('expanded');
+      expect(toolPartEl).not.toHaveClass('collapsed');
+      expect(container.querySelector('.collapsible-wrapper')).toBeInTheDocument();
+    });
+
+    it('summary shows "TODOS - X of Y completed" using the input list', () => {
+      const state = { ...baseState, input: todoInput, metadata: undefined };
+      render(<ToolPart tool="todowrite" state={state} />);
+      expect(screen.getByText('TODOS - 1 of 4 completed')).toBeInTheDocument();
+    });
+
+    it('summary shows "0 of 0 completed" when todos input is missing', () => {
+      const state = { ...baseState, input: {}, metadata: undefined };
+      render(<ToolPart tool="todowrite" state={state} />);
+      expect(screen.getByText('TODOS - 0 of 0 completed')).toBeInTheDocument();
+    });
+
+    it('summary falls back to "TODOS" when status is error', () => {
+      const state = {
+        ...baseState,
+        status: 'error' as const,
+        input: todoInput,
+        metadata: undefined,
+      };
+      render(<ToolPart tool="todowrite" state={state} />);
+      expect(screen.getByText('TODOS')).toBeInTheDocument();
+    });
+
+    it('summary counts "completed" items and ignores in_progress / pending / cancelled', () => {
+      const state = {
+        ...baseState,
+        input: {
+          todos: [
+            { content: 'a', status: 'completed', priority: 'low' },
+            { content: 'b', status: 'completed', priority: 'low' },
+            { content: 'c', status: 'in_progress', priority: 'low' },
+          ],
+        },
+        metadata: undefined,
+      };
+      render(<ToolPart tool="todowrite" state={state} />);
+      expect(screen.getByText('TODOS - 2 of 3 completed')).toBeInTheDocument();
+    });
+
+    it('renders the structured checklist with one <li> per todo', () => {
+      const state = { ...baseState, input: todoInput, metadata: undefined };
+      const { container } = render(<ToolPart tool="todowrite" state={state} />);
+      expect(container.querySelector('.todo-write-output')).toBeInTheDocument();
+      const items = container.querySelectorAll('.todo-item');
+      expect(items).toHaveLength(4);
+    });
+
+    it('does NOT render the generic tool-input JSON block', () => {
+      const state = { ...baseState, input: todoInput, metadata: undefined };
+      const { container } = render(<ToolPart tool="todowrite" state={state} />);
+      expect(container.querySelector('.tool-input')).not.toBeInTheDocument();
+    });
+
+    it('applies status- and priority- class hooks to each item for styling', () => {
+      const state = { ...baseState, input: todoInput, metadata: undefined };
+      const { container } = render(<ToolPart tool="todowrite" state={state} />);
+      expect(
+        container.querySelector('.todo-item.status-completed.priority-high'),
+      ).toBeInTheDocument();
+      expect(
+        container.querySelector('.todo-item.status-in_progress.priority-medium'),
+      ).toBeInTheDocument();
+      expect(container.querySelector('.todo-item.status-pending')).toBeInTheDocument();
+      expect(container.querySelector('.todo-item.status-cancelled')).toBeInTheDocument();
+    });
+
+    it('regression: gracefully handles non-array todos input without crashing', () => {
+      const state = {
+        ...baseState,
+        input: { todos: 'oops' as unknown as never[] },
+        metadata: undefined,
+      };
+      const { container } = render(<ToolPart tool="todowrite" state={state} />);
+      // Component still renders the header and falls back to the generic pre output
+      expect(container.querySelector('.tool-header')).toBeInTheDocument();
+      expect(container.querySelector('.todo-write-output')).not.toBeInTheDocument();
     });
   });
 });

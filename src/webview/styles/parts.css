@@ -197,6 +197,136 @@
   overflow: auto;
 }
 
+/* todowrite tool: structured checklist rendering */
+.tool-part .todo-write-output {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background-color: var(
+    --vscode-textCodeBlock-background,
+    color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background))
+  );
+}
+
+.tool-part .todo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tool-part .todo-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 8px 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  font-family: var(--vscode-editor-font-family, monospace);
+  color: var(--vscode-editor-foreground, var(--webview-foreground));
+  transition: background-color 0.15s ease;
+}
+
+/* Sharp priority indicator bar rendered via a pseudo-element so the top and
+   bottom edges are perfectly rectangular (avoiding the rounded look that an
+   inset box-shadow would inherit from the parent's border-radius). */
+.tool-part .todo-item::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 0;
+  background-color: transparent;
+}
+
+/* Hover effect: subtle background lift on every item, regardless of state. */
+.tool-part .todo-item:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--vscode-list-hoverBackground, var(--webview-foreground)) 25%,
+    transparent
+  );
+}
+
+.tool-part .todo-status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(
+    --vscode-descriptionForeground,
+    color-mix(in srgb, var(--webview-foreground) 70%, transparent)
+  );
+}
+
+.tool-part .todo-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* Completed and cancelled items: dimmed only (no strikethrough) so the
+   checklist reads cleanly even when many items are checked off. */
+.tool-part .todo-item.status-completed .todo-content,
+.tool-part .todo-item.status-cancelled .todo-content {
+  opacity: 0.55;
+}
+
+.tool-part .todo-item.status-completed .todo-status-icon,
+.tool-part .todo-item.status-cancelled .todo-status-icon {
+  color: var(--vscode-charts-green, var(--vscode-terminal-ansiGreen, #0dbc79));
+}
+
+.tool-part .todo-item.status-cancelled .todo-status-icon {
+  color: var(
+    --vscode-descriptionForeground,
+    color-mix(in srgb, var(--webview-foreground) 60%, transparent)
+  );
+}
+
+/* In-progress item: emphasized via link color and bold weight. The
+   pseudo-element bar is suppressed for the in-progress state so the row's
+   highlighted background is the sole visual emphasis. */
+.tool-part .todo-item.status-in_progress {
+  background-color: color-mix(in srgb, var(--vscode-textLink-foreground) 10%, transparent);
+}
+
+.tool-part .todo-item.status-in_progress::before {
+  background-color: transparent;
+}
+
+.tool-part .todo-item.status-in_progress .todo-content {
+  color: var(--vscode-textLink-foreground, var(--webview-foreground));
+  font-weight: 600;
+}
+
+.tool-part .todo-item.status-in_progress .todo-status-icon {
+  color: var(--vscode-textLink-foreground, var(--vscode-terminal-ansiCyan, #11a8cd));
+}
+
+/* Pending items: default look, no decoration */
+
+/* Priority modifiers: tint the leading bar. The bar is rendered as a
+   pseudo-element above so the corners stay rectangular. */
+.tool-part .todo-item.priority-high::before {
+  background-color: var(--vscode-error-foreground, #f48771);
+}
+
+.tool-part .todo-item.priority-medium::before {
+  background-color: var(--vscode-editorWarning-foreground, var(--vscode-descriptionForeground));
+}
+
 /* Borderless interactive Reasoning block */
 .reasoning-part {
   border: none;
