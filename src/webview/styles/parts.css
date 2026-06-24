@@ -237,7 +237,7 @@
 .tool-part .todo-item::before {
   content: '';
   position: absolute;
-  left: 4px;
+  left: 0;
   top: 4px;
   bottom: 4px;
   width: 3px;
