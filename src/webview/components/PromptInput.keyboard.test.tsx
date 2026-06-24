@@ -32,6 +32,8 @@ vi.mock('../store/sessionStore', () => ({
       activeSessionID: 'session-123',
       commands: [],
       extensionVersion: '0.1.7',
+      publisher: 'fiyqkrc',
+      opencodeVersion: '1.0.0',
       fileInfos: {},
       lspServers: [],
       messages: {},

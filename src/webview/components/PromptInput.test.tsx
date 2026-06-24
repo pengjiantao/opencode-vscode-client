@@ -61,6 +61,8 @@ const defaultMockState = {
   commands: [],
   plugins: ['plugin-1'],
   extensionVersion: '0.1.2',
+  publisher: 'fiyqkrc',
+  opencodeVersion: '1.0.0',
   activeSessionID: 'session-123',
   fileInfos: {},
   sessionDiffs: {},
@@ -408,6 +410,8 @@ describe('PromptInput', () => {
         commands: [],
         plugins: [],
         extensionVersion: '0.1.2',
+        publisher: 'fiyqkrc',
+        opencodeVersion: '1.0.0',
         activeSessionID: 'session-123',
         fileInfos: {},
         sessionDiffs: {},
@@ -442,6 +446,8 @@ describe('PromptInput', () => {
         commands: [],
         plugins: [],
         extensionVersion: '0.1.2',
+        publisher: 'fiyqkrc',
+        opencodeVersion: '1.0.0',
         activeSessionID: 'session-123',
         fileInfos: {},
         sessionDiffs: {},
@@ -711,5 +717,27 @@ describe('PromptInputHeader', () => {
     expect(lspTooltip).toContain('var(--vscode-charts-green)');
     expect(mcpTooltip).toContain('var(--vscode-charts-red)');
     expect(mcpTooltip).toContain('Port bind error');
+  });
+
+  /**
+   * Regression: the version tooltip must surface the real publisher id from
+   * package.json and the opencode server version, instead of the hard-coded
+   * "Google DeepMind" placeholder that previously existed in the tooltip.
+   */
+  it('regression: version tooltip shows real publisher and opencode version (no hard-coded DeepMind string)', () => {
+    render(
+      <PromptInputHeader extensionVersion="0.1.32" publisher="fiyqkrc" opencodeVersion="1.16.2" />,
+    );
+
+    const versionEl = screen.getByTestId('header-version');
+    const tooltip = versionEl.getAttribute('data-custom-title') || '';
+
+    // Real values coming from package.json + /global/health
+    expect(tooltip).toContain('v0.1.32');
+    expect(tooltip).toContain('fiyqkrc');
+    expect(tooltip).toContain('v1.16.2');
+
+    // The previous hard-coded placeholder must be gone
+    expect(tooltip).not.toContain('Google DeepMind');
   });
 });

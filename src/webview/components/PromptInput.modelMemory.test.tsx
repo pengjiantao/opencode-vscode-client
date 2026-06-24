@@ -26,6 +26,8 @@ describe('PromptInput model memory', () => {
       mcpServers: [],
       plugins: [],
       extensionVersion: 'test',
+      publisher: 'fiyqkrc',
+      opencodeVersion: '1.0.0',
     });
   });
 

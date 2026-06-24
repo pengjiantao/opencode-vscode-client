@@ -96,15 +96,23 @@ export async function syncMetadata(
       console.error('Failed to fetch commands from SDK:', err);
     }
 
-    // 6. Query Active Extension version from VS Code
-    const extensionVersion =
-      ((
-        extensions.getExtension('fiyqkrc.opencode-vscode-client')?.packageJSON as
-          | Record<string, unknown>
-          | undefined
-      )?.version as string) || 'unknown';
+    // 6. Query Active Extension publisher and version from VS Code
+    const extensionPackageJSON = extensions.getExtension('fiyqkrc.opencode-vscode-client')
+      ?.packageJSON as Record<string, unknown> | undefined;
+    const extensionVersion = (extensionPackageJSON?.version as string) || 'unknown';
+    const publisher = (extensionPackageJSON?.publisher as string) || 'unknown';
 
-    // 7. Push synchronized metadata payload to Webview
+    // 7. Fetch OpenCode server version via the health endpoint. Degraded to 'unknown' on failure
+    // so a missing health response never blocks the rest of the metadata payload.
+    let opencodeVersion = 'unknown';
+    try {
+      const serverHealth = await sdk.getServerVersion();
+      opencodeVersion = serverHealth.version || 'unknown';
+    } catch (err) {
+      console.error('Failed to fetch opencode server version:', err);
+    }
+
+    // 8. Push synchronized metadata payload to Webview
     sendIpc({
       type: 'metadata:sync',
       workspaceName,
@@ -115,6 +123,8 @@ export async function syncMetadata(
       commands,
       plugins,
       extensionVersion,
+      publisher,
+      opencodeVersion,
     });
   } catch (err) {
     console.error('Error during metadata sync:', err);

@@ -62,6 +62,8 @@ vi.mock('../store/sessionStore', () => ({
       commands: [],
       plugins: ['plugin-1'],
       extensionVersion: '0.1.2',
+      publisher: 'fiyqkrc',
+      opencodeVersion: '1.0.0',
       activeSessionID: 'session-123',
       fileInfos: {},
       sessionDiffs: {},

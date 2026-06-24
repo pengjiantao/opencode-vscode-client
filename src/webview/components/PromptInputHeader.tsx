@@ -23,6 +23,10 @@ export interface PromptInputHeaderProps {
   skills?: SkillInfo[];
   /** Optional extension version string. Falls back to session store. */
   extensionVersion?: string;
+  /** Optional extension publisher id (e.g. 'fiyqkrc'). Falls back to session store. */
+  publisher?: string;
+  /** Optional opencode server version string. Falls back to session store. */
+  opencodeVersion?: string;
   /** Callback when the user clicks the Redo button. */
   onRedo?: () => void;
 }
@@ -37,6 +41,8 @@ export function PromptInputHeader({
   mcpServers: customMcpServers,
   skills: customSkills,
   extensionVersion: customExtensionVersion,
+  publisher: customPublisher,
+  opencodeVersion: customOpencodeVersion,
   onRedo,
 }: PromptInputHeaderProps = {}) {
   // Retrieve session state details directly from Zustand store
@@ -44,6 +50,8 @@ export function PromptInputHeader({
   const storeMcpServers = useSessionStore((s) => s.mcpServers);
   const storeSkills = useSessionStore((s) => s.skills);
   const storeExtensionVersion = useSessionStore((s) => s.extensionVersion);
+  const storePublisher = useSessionStore((s) => s.publisher);
+  const storeOpencodeVersion = useSessionStore((s) => s.opencodeVersion);
   const activeSessionID = useSessionStore((s) => s.activeSessionID);
   const sessions = useSessionStore((s) => s.sessions);
   const sessionDiffs = useSessionStore((s) => s.sessionDiffs);
@@ -53,6 +61,8 @@ export function PromptInputHeader({
   const mcpServers = customMcpServers ?? storeMcpServers;
   const skills = customSkills ?? storeSkills;
   const extensionVersion = customExtensionVersion ?? storeExtensionVersion;
+  const publisher = customPublisher ?? storePublisher;
+  const opencodeVersion = customOpencodeVersion ?? storeOpencodeVersion;
 
   const activeSession = activeSessionID
     ? (sessions ?? []).find((s) => s.id === activeSessionID)
@@ -144,11 +154,12 @@ export function PromptInputHeader({
       <strong>OpenCode Extension</strong><br/>
       <table>
         <tr><td>Version:</td><td>v${escapeHtml(extensionVersion)}</td></tr>
-        <tr><td>Publisher:</td><td>Google DeepMind</td></tr>
+        <tr><td>Publisher:</td><td>${escapeHtml(publisher)}</td></tr>
+        <tr><td>OpenCode Version:</td><td>v${escapeHtml(opencodeVersion)}</td></tr>
         <tr><td>Core SDK:</td><td>@opencode-ai/sdk</td></tr>
       </table>
     `;
-  }, [extensionVersion]);
+  }, [extensionVersion, publisher, opencodeVersion]);
 
   return (
     <div className="prompt-input-header">

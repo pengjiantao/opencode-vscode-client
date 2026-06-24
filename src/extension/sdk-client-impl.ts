@@ -4,7 +4,6 @@
  * and wraps the @opencode-ai/sdk library operations.
  */
 
-import * as path from 'node:path';
 import type { ServerOptions } from '@opencode-ai/sdk';
 import { createOpencodeServer } from '@opencode-ai/sdk';
 import type {
@@ -22,6 +21,7 @@ import type {
   TextPartInput,
 } from '@opencode-ai/sdk/v2/client';
 import { createOpencodeClient } from '@opencode-ai/sdk/v2/client';
+import * as path from 'node:path';
 import type { CommandOptions, PromptOptions, SDKClient, ServerHandle } from './sdk-client';
 import type { AgentInfo, CommandInfo, ModelInfo, SkillInfo } from './types';
 import { joinPath } from './utils/opencode-path';
@@ -376,6 +376,13 @@ export function createSDKClient(options?: SDKClientOptions): SDKClient {
         if (!result.data) return [];
         return result.data;
       },
+    },
+    /** Fetches opencode server health info (version) for the about tooltip. */
+    getServerVersion: async () => {
+      const result = await client.global.health();
+      const data = result.data;
+      if (!data) throw new Error('Failed to get opencode server version');
+      return { version: data.version, healthy: data.healthy };
     },
   };
 }

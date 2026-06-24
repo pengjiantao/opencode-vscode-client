@@ -46,6 +46,10 @@ export interface SessionStore {
   commands: CommandInfo[];
   plugins: string[];
   extensionVersion: string;
+  /** VS Code marketplace publisher id (e.g. 'fiyqkrc'). */
+  publisher: string;
+  /** Opencode server version reported by /global/health. 'unknown' until first sync. */
+  opencodeVersion: string;
 
   setActiveSession: (id: string) => void;
   setSessions: (sessions: Session[]) => void;
@@ -114,6 +118,8 @@ export interface SessionStore {
   setCommands: (commands: CommandInfo[]) => void;
   setPlugins: (plugins: string[]) => void;
   setExtensionVersion: (version: string) => void;
+  setPublisher: (publisher: string) => void;
+  setOpencodeVersion: (version: string) => void;
 
   fileInfos: Record<
     string,
@@ -436,6 +442,8 @@ export const useSessionStore = create<SessionStore>((set) => ({
   commands: [],
   plugins: [],
   extensionVersion: 'unknown',
+  publisher: 'unknown',
+  opencodeVersion: 'unknown',
 
   setWorkspaceName: (workspaceName) => set({ workspaceName }),
   setWorkspaceRoot: (workspaceRoot) => set({ workspaceRoot }),
@@ -477,6 +485,8 @@ export const useSessionStore = create<SessionStore>((set) => ({
   setCommands: (commands) => set({ commands }),
   setPlugins: (plugins) => set({ plugins }),
   setExtensionVersion: (extensionVersion) => set({ extensionVersion }),
+  setPublisher: (publisher) => set({ publisher }),
+  setOpencodeVersion: (opencodeVersion) => set({ opencodeVersion }),
 
   fileInfos: {},
   setFileInfo: (path, info) =>

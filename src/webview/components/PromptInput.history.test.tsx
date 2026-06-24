@@ -133,6 +133,8 @@ const defaultMockState = {
   commands: [],
   plugins: [],
   extensionVersion: '0.0.0',
+  publisher: 'fiyqkrc',
+  opencodeVersion: '1.0.0',
   activeSessionID: 'session-1',
   fileInfos: {},
   sessionDiffs: {},

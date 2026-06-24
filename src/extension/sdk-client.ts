@@ -106,6 +106,11 @@ export interface SDKClient {
   };
   /** Subscribes to SSE events from the server. Returns an unsubscribe function. */
   subscribeEvents(handler: (event: unknown) => void): () => void;
+  /**
+   * Retrieves the opencode server health information including the running version.
+   * Used by the metadata sync to surface the opencode version in the about tooltip.
+   */
+  getServerVersion(): Promise<{ version: string; healthy: boolean }>;
   /** Retrieves the list of available models from connected providers. */
   getModels(): Promise<ModelInfo[]>;
   /** Retrieves the list of available agent configurations. */

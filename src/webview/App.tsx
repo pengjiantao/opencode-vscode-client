@@ -77,6 +77,8 @@ export function App() {
   const setCommands = useSessionStore((s) => s.setCommands);
   const setPlugins = useSessionStore((s) => s.setPlugins);
   const setExtensionVersion = useSessionStore((s) => s.setExtensionVersion);
+  const setPublisher = useSessionStore((s) => s.setPublisher);
+  const setOpencodeVersion = useSessionStore((s) => s.setOpencodeVersion);
   const setFileInfo = useSessionStore((s) => s.setFileInfo);
 
   const { send } = useIPC(() => {});
@@ -158,6 +160,8 @@ export function App() {
           setCommands(message.commands || []);
           setPlugins(message.plugins);
           setExtensionVersion(message.extensionVersion);
+          setPublisher(message.publisher);
+          setOpencodeVersion(message.opencodeVersion);
           break;
         case 'error':
           console.error('Server error:', message.message);
@@ -202,6 +206,8 @@ export function App() {
     setCommands,
     setPlugins,
     setExtensionVersion,
+    setPublisher,
+    setOpencodeVersion,
     setFileInfo,
     setPendingRequests,
     setSessionDiffs,

@@ -239,6 +239,10 @@ export type ExtToWebview =
       commands: CommandInfo[];
       plugins: string[];
       extensionVersion: string;
+      /** VS Code marketplace publisher id (e.g. 'fiyqkrc'). 'unknown' when not resolvable. */
+      publisher: string;
+      /** Opencode server version reported by GET /global/health. 'unknown' on failure. */
+      opencodeVersion: string;
     }
   | {
       type: 'editor:selection';
