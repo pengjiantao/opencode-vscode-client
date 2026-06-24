@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.33](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.32...v0.1.33) (2026-06-24)
+
+### Features
+
+- **commands:** add VS Code Settings shortcut to settings QuickPick title bar ([27bcee6](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/27bcee6d9d90f4e7cfdc8a66e7cf099c8da2bb92))
+- **DiffPart:** hide line-number gutter and use horizontal scroll in tool rendering ([9e126fd](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/9e126fd5a04a7b5ca37b7fca3fb2532f43121b2f))
+- **metadata:** surface real publisher and opencode server version in about tooltip ([862980d](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/862980d4e234eb1034eacfb6e3ca9d1848a7f630))
+- **todowrite:** render structured checklist in tool output ([01958b0](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/01958b05758a9a47dad74a495f4d584a6d095fab))
+
+### Bug Fixes
+
+- **ScrollFadeContainer:** scope shadow visibility to direct child only ([65928dd](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/65928dd2b2e4894b4d1a9975a936c12ff0ff8aea))
+
 ### [0.1.32](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.31...v0.1.32) (2026-06-19)
 
 ### Features
