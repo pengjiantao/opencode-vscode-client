@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.34](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.33...v0.1.34) (2026-06-24)
+
 ### [0.1.33](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.32...v0.1.33) (2026-06-24)
 
 ### Features
