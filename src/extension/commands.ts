@@ -295,16 +295,39 @@ export async function showDefaultSettingsQuickPick(sdk: SDKClient): Promise<void
     },
   ];
 
+  // Title-bar button that opens the native VS Code Settings page filtered to
+  // this extension's settings. Mirrors the title-bar button pattern used in
+  // the Session History QuickPick (see history-handlers.ts).
+  const openVSSettingsButton: QuickInputButton = {
+    iconPath: new ThemeIcon('settings-gear'),
+    tooltip: 'Open in VS Code Settings',
+  };
+
   const quickPick = window.createQuickPick<SettingPickItem>();
   quickPick.title = 'OpenCode Settings';
   quickPick.placeholder = 'Select a setting to configure';
   quickPick.items = items;
+  quickPick.buttons = [openVSSettingsButton];
 
   const result = await new Promise<SettingPickItem | undefined>((resolve) => {
     quickPick.onDidAccept(() => {
       const selected = quickPick.selectedItems[0];
       quickPick.hide();
       resolve(selected);
+    });
+    quickPick.onDidTriggerButton((button) => {
+      // Identity-compare the button reference (same pattern as the Clear
+      // button in showExecutablePathQuickPick) so future title-bar buttons
+      // can be added without accidentally triggering this branch.
+      if (button === openVSSettingsButton) {
+        // Dismiss the QuickPick first so the Settings page replaces it
+        // cleanly instead of stacking on top.
+        quickPick.hide();
+        void commands.executeCommand(
+          'workbench.action.openSettings',
+          '@ext:fiyqkrc.opencode-vscode-client',
+        );
+      }
     });
     quickPick.onDidHide(() => {
       if (quickPick.selectedItems.length === 0) {

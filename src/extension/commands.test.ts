@@ -3,7 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { env, window, workspace } from 'vscode';
+import { commands, env, window, workspace } from 'vscode';
 import {
   pasteClipboardTextAsPlainText,
   showAgentQuickPick,
@@ -180,6 +180,73 @@ describe('showDefaultSettingsQuickPick', () => {
     await showDefaultSettingsQuickPick(sdk);
 
     // SDK should not be called (model/agent QuickPick not opened)
+    expect(getModelsFn).not.toHaveBeenCalled();
+    expect(getAgentsFn).not.toHaveBeenCalled();
+  });
+
+  it('places an "Open in VS Code Settings" button in the QuickPick title bar', async () => {
+    // Regression: the settings QuickPick title bar must expose a quick-action
+    // button that opens the native VS Code Settings page filtered to this
+    // extension's settings (mirrors the title-bar button pattern used in the
+    // Session History QuickPick).
+    const mock = createMockQuickPick();
+    vi.mocked(window.createQuickPick).mockReturnValue(
+      mock.qp as unknown as ReturnType<typeof window.createQuickPick>,
+    );
+    const sdk = createMockSdk();
+
+    // Trigger hide immediately to resolve the promise
+    mock.qp.onDidHide.mockImplementation((cb: () => void) => {
+      cb();
+      return { dispose: vi.fn() };
+    });
+
+    await showDefaultSettingsQuickPick(sdk);
+
+    expect(mock.qp.buttons).toHaveLength(1);
+    const button = mock.qp.buttons[0] as { iconPath: { id?: string }; tooltip?: string };
+    expect(button.tooltip).toBe('Open in VS Code Settings');
+    // ThemeIcon instances expose `.id`; ensure the correct glyph is wired.
+    expect(button.iconPath.id).toBe('settings-gear');
+  });
+
+  it('regression: clicking the title-bar settings button opens VS Code settings filtered to this extension', async () => {
+    // Regression: clicking the new title-bar button must:
+    //   1. Hide the QuickPick (so the Settings page replaces it cleanly)
+    //   2. Execute `workbench.action.openSettings` with the @ext: filter
+    //   3. NOT enter the Model/Agent/Executable secondary flow
+    const mock = createMockQuickPick();
+    vi.mocked(window.createQuickPick).mockReturnValue(
+      mock.qp as unknown as ReturnType<typeof window.createQuickPick>,
+    );
+
+    const getModelsFn = vi.fn().mockResolvedValue([]);
+    const getAgentsFn = vi.fn().mockResolvedValue([]);
+    const sdk = { getModels: getModelsFn, getAgents: getAgentsFn } as unknown as SDKClient;
+
+    // Use the QuickPick mock's built-in `pendingButton` mechanism to
+    // simulate the user clicking the first title-bar button on show()
+    // (see createMockQuickPick in commands.test.ts).
+    mock.qp.pendingButton = true;
+
+    // The `hide` call from the button click flows through onDidHide, which
+    // resolves the inner Promise. No further setup is required.
+
+    // Reset the executeCommand mock so the assertion only counts the
+    // invocation that originates from the title-bar button click.
+    vi.mocked(commands.executeCommand).mockClear();
+
+    await showDefaultSettingsQuickPick(sdk);
+
+    // The QuickPick must be dismissed so the Settings page replaces it.
+    expect(mock.qp.hide).toHaveBeenCalled();
+    // The native VS Code settings command is dispatched with the @ext:
+    // filter so the page opens already scoped to this extension.
+    expect(commands.executeCommand).toHaveBeenCalledWith(
+      'workbench.action.openSettings',
+      '@ext:fiyqkrc.opencode-vscode-client',
+    );
+    // The Model/Agent secondary flow must not have been triggered.
     expect(getModelsFn).not.toHaveBeenCalled();
     expect(getAgentsFn).not.toHaveBeenCalled();
   });
