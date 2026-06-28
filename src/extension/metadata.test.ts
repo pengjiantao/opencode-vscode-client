@@ -95,16 +95,25 @@ describe('syncMetadata', () => {
     const failingSdk = makeMockSdk({
       getServerVersion: vi.fn().mockRejectedValue(new Error('network down')),
     });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const sendIpc = vi.fn<(msg: ExtToWebview) => void>();
-    await syncMetadata(failingSdk, sendIpc);
+    try {
+      await syncMetadata(failingSdk, sendIpc);
 
-    expect(sendIpc).toHaveBeenCalledTimes(1);
-    const payload = sendIpc.mock.calls[0][0];
-    if (payload.type !== 'metadata:sync') throw new Error('unreachable');
+      expect(sendIpc).toHaveBeenCalledTimes(1);
+      const payload = sendIpc.mock.calls[0][0];
+      if (payload.type !== 'metadata:sync') throw new Error('unreachable');
 
-    expect(payload.extensionVersion).toBe('0.1.32');
-    expect(payload.publisher).toBe('fiyqkrc');
-    expect(payload.opencodeVersion).toBe('unknown');
+      expect(payload.extensionVersion).toBe('0.1.32');
+      expect(payload.publisher).toBe('fiyqkrc');
+      expect(payload.opencodeVersion).toBe('unknown');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to fetch opencode server version:',
+        expect.any(Error),
+      );
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 
   it('falls back to "unknown" for publisher and version when the extension is not registered', async () => {

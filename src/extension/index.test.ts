@@ -46,6 +46,7 @@ const mockSdk = {
   },
   getSkills: vi.fn().mockResolvedValue([]),
   getCommands: vi.fn().mockResolvedValue([]),
+  getServerVersion: vi.fn().mockResolvedValue({ version: '1.16.2', healthy: true }),
   getModels: vi.fn().mockResolvedValue([]),
   getAgents: vi.fn().mockResolvedValue([]),
 };
