@@ -140,19 +140,26 @@ pre.code-block code {
   font-weight: 600;
 }
 
-.token.string {
+.token.string,
+.token.char,
+.token.attr-value {
   color: var(--vscode-debugConsole-stringForeground, var(--vscode-terminal-ansiGreen));
 }
 
-.token.number {
+.token.number,
+.token.constant,
+.token.symbol {
   color: var(--vscode-editor-number-foreground, var(--vscode-terminal-ansiYellow));
 }
 
-.token.boolean {
+.token.boolean,
+.token.builtin,
+.token.important {
   color: var(--vscode-symbolIcon-keywordForeground, var(--vscode-textLink-foreground));
 }
 
-.token.function {
+.token.function,
+.token.method {
   color: var(--vscode-editor-function-foreground, var(--vscode-textLink-foreground));
 }
 
@@ -166,37 +173,57 @@ pre.code-block code {
   opacity: 0.8;
 }
 
-.token.property {
+.token.property,
+.token.key,
+.token.parameter {
   color: var(--vscode-symbolIcon-propertyForeground, var(--vscode-editor-foreground));
 }
 
 .token.class-name,
-.token.type {
+.token.type,
+.token.namespace,
+.token.annotation,
+.token.decorator {
   color: var(--vscode-symbolIcon-classForeground, var(--vscode-textLink-foreground));
 }
 
-.token.regex {
+.token.regex,
+.token.entity {
   color: var(--vscode-debugConsole-stringForeground, var(--vscode-terminal-ansiRed));
 }
 
-.token.variable {
+.token.variable,
+.token.interpolation {
   color: var(--vscode-symbolIcon-variableForeground, var(--vscode-editor-foreground));
 }
 
-.token.tag {
+.token.tag,
+.token.selector {
   color: var(--vscode-symbolIcon-elementForeground, var(--vscode-textLink-foreground));
 }
 
-.token.attr-name {
+.token.attr-name,
+.token.atrule {
   color: var(--vscode-symbolIcon-fieldForeground, var(--vscode-editor-foreground));
 }
 
-.token.attr-value {
-  color: var(--vscode-debugConsole-stringForeground, var(--vscode-terminal-ansiGreen));
+.token.url {
+  color: var(--vscode-textLink-foreground);
+  text-decoration: underline;
 }
 
-.token.selector {
-  color: var(--vscode-symbolIcon-classForeground, var(--vscode-textLink-foreground));
+.token.inserted {
+  color: var(--vscode-gitDecoration-addedResourceForeground, var(--vscode-terminal-ansiGreen));
+}
+
+.token.deleted {
+  color: var(--vscode-gitDecoration-deletedResourceForeground, var(--vscode-terminal-ansiRed));
+}
+
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: var(--vscode-descriptionForeground);
 }
 
 /* Responsive themed Markdown table styling */

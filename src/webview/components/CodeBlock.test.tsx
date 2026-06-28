@@ -13,7 +13,7 @@ describe('CodeBlock Component', () => {
 
     const { container } = render(<CodeBlock code={code} lang={lang} />);
 
-    // Check language label is rendered uppercase
+    // The header keeps the author-provided fence label while syntax uses Prism grammar aliases.
     expect(screen.getByText('typescript')).toBeInTheDocument();
 
     // Check pre.code-block is rendered
@@ -49,5 +49,43 @@ describe('CodeBlock Component', () => {
       configurable: true,
       writable: true,
     });
+  });
+
+  it.each([
+    ['tsx', 'const View = () => <Button disabled>Save</Button>;', 'language-tsx'],
+    ['sql', 'SELECT * FROM users WHERE id = 1;', 'language-sql'],
+    ['yaml', 'name: app\nversion: 1', 'language-yaml'],
+    ['dockerfile', 'FROM node:20\nRUN npm ci', 'language-docker'],
+    ['tf', 'resource "aws_s3_bucket" "bucket" {}', 'language-hcl'],
+  ])(
+    'regression: highlights common Prism language fence "%s"',
+    (lang: string, code: string, expectedLanguageClass: string) => {
+      const { container } = render(<CodeBlock code={code} lang={lang} />);
+      const codeElement = container.querySelector('pre.code-block code');
+
+      expect(codeElement).toHaveClass(expectedLanguageClass);
+      expect(codeElement?.querySelector('.token')).toBeInTheDocument();
+    },
+  );
+
+  it('regression: parses markdown attribute-style fence language labels', () => {
+    const { container } = render(
+      <CodeBlock code={'const value: string = "ok";'} lang="{.ts .numberLines}" />,
+    );
+    const codeElement = container.querySelector('pre.code-block code');
+
+    expect(screen.getByText('ts')).toBeInTheDocument();
+    expect(codeElement).toHaveClass('language-typescript');
+    expect(codeElement?.querySelector('.token.keyword')).toBeInTheDocument();
+  });
+
+  it('regression: renders unknown code fences as plaintext instead of misleading fallback syntax', () => {
+    const code = 'alpha beta gamma';
+    const { container } = render(<CodeBlock code={code} lang="not-a-real-language" />);
+    const codeElement = container.querySelector('pre.code-block code');
+
+    expect(codeElement).toHaveClass('language-plaintext');
+    expect(codeElement?.querySelector('.token')).not.toBeInTheDocument();
+    expect(codeElement).toHaveTextContent(code);
   });
 });

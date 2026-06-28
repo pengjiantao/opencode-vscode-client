@@ -3,16 +3,8 @@
  */
 
 import Prism from 'prismjs';
-import 'prismjs/components/prism-bash';
-import 'prismjs/components/prism-css';
-import 'prismjs/components/prism-go';
-import 'prismjs/components/prism-javascript';
-import 'prismjs/components/prism-json';
-import 'prismjs/components/prism-markdown';
-import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-rust';
-import 'prismjs/components/prism-typescript';
 import React from 'react';
+import { resolvePrismLanguage, type PrismLanguageResolution } from '../utils/prismLanguageRegistry';
 import { IconButton } from './IconButton';
 
 /** Recursively renders a PrismJS token or string to React nodes. */
@@ -42,31 +34,12 @@ function renderToken(token: string | Prism.Token, key: string): React.ReactNode 
 }
 
 /** Generates React nodes with syntax highlight classes for the provided code block using PrismJS. */
-function highlightCode(code: string, lang = ''): React.ReactNode {
-  const language = lang.toLowerCase();
-  let grammar = Prism.languages.clike; // default fallback
-
-  if (language === 'typescript' || language === 'ts') {
-    grammar = Prism.languages.typescript || Prism.languages.javascript;
-  } else if (language === 'javascript' || language === 'js') {
-    grammar = Prism.languages.javascript;
-  } else if (language === 'python' || language === 'py') {
-    grammar = Prism.languages.python;
-  } else if (language === 'bash' || language === 'sh' || language === 'shell') {
-    grammar = Prism.languages.bash;
-  } else if (language === 'json') {
-    grammar = Prism.languages.json;
-  } else if (language === 'css') {
-    grammar = Prism.languages.css;
-  } else if (language === 'go') {
-    grammar = Prism.languages.go;
-  } else if (language === 'rust') {
-    grammar = Prism.languages.rust;
-  } else if (language === 'html' || language === 'xml' || language === 'svg') {
-    grammar = Prism.languages.markup;
+function highlightCode(code: string, language: PrismLanguageResolution): React.ReactNode {
+  if (!language.grammar) {
+    return code;
   }
 
-  const tokens = Prism.tokenize(code, grammar);
+  const tokens = Prism.tokenize(code, language.grammar);
   return tokens.map((token, idx) => renderToken(token, `prism-${idx}`));
 }
 
@@ -96,7 +69,8 @@ export function CodeBlock({ lang, code }: CodeBlockProps): React.JSX.Element {
     }
   }, [copied]);
 
-  const highlighted = React.useMemo(() => highlightCode(code, lang), [code, lang]);
+  const language = React.useMemo(() => resolvePrismLanguage(lang), [lang]);
+  const highlighted = React.useMemo(() => highlightCode(code, language), [code, language]);
 
   const handleCopy = () => {
     void navigator.clipboard.writeText(code);
@@ -106,7 +80,7 @@ export function CodeBlock({ lang, code }: CodeBlockProps): React.JSX.Element {
   return (
     <div className="code-block-container">
       <div className="code-block-header">
-        <span className="code-lang">{lang || 'code'}</span>
+        <span className="code-lang">{language.displayName}</span>
         <IconButton
           name={copied ? '$(check)' : '$(copy)'}
           onClick={handleCopy}
@@ -116,7 +90,7 @@ export function CodeBlock({ lang, code }: CodeBlockProps): React.JSX.Element {
         />
       </div>
       <pre className="code-block">
-        <code>{highlighted}</code>
+        <code className={`language-${language.languageId}`}>{highlighted}</code>
       </pre>
     </div>
   );
