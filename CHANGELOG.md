@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.36](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.35...v0.1.36) (2026-06-28)
+
+### Features
+
+- **webview:** centralize Prism language resolution and expand grammar support ([ecc82a2](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/ecc82a2329f3b3f8718680c21452e32d36ccc25c))
+
+### Bug Fixes
+
+- **webview:** replace unavailable VS Code editor CSS variables with theme-aware token colors ([c5a4bcb](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c5a4bcb834ccc175584b0a1b91a93b4e239a3680))
+
 ### [0.1.35](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.34...v0.1.35) (2026-06-28)
 
 ### Features
