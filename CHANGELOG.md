@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.38](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.37...v0.1.38) (2026-06-28)
+
+### Features
+
+- **webview:** add numbered Q/A prefixes to completed question tool display ([1867659](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/1867659127ba1c97926a6ee51aebc71b3bd7f8eb))
+
 ### [0.1.37](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.36...v0.1.37) (2026-06-28)
 
 ### Bug Fixes
