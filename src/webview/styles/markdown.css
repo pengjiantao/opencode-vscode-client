@@ -82,6 +82,49 @@
     --vscode-textCodeBlock-background,
     color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background))
   );
+
+  /* Fallback color variables (default to Dark theme colors, which align with Dark+ theme) */
+  --code-token-comment-foreground: #6a9955;
+  --code-token-keyword-foreground: #c586c0;
+  --code-token-string-foreground: #ce9178;
+  --code-token-number-foreground: #b5cea8;
+  --code-token-function-foreground: #dcdcaa;
+  --code-token-type-foreground: #4ec9b0;
+  --code-token-property-foreground: #9cdcfe;
+  --code-token-variable-foreground: #9cdcfe;
+  --code-token-regex-foreground: #d16969;
+  --code-token-operator-foreground: #d4d4d4;
+  --code-token-punctuation-foreground: #d4d4d4;
+  --code-token-boolean-foreground: #569cd6;
+  --code-token-constant-foreground: #4fc1ff;
+  --code-token-tag-foreground: #569cd6;
+  --code-token-attr-name-foreground: #9cdcfe;
+}
+
+/* Light theme overrides */
+body.vscode-light .code-block-container {
+  --code-token-comment-foreground: #008000;
+  --code-token-keyword-foreground: #af00db;
+  --code-token-string-foreground: #a31515;
+  --code-token-number-foreground: #098658;
+  --code-token-function-foreground: #795e26;
+  --code-token-type-foreground: #267f99;
+  --code-token-property-foreground: #001080;
+  --code-token-variable-foreground: #001080;
+  --code-token-regex-foreground: #811f3f;
+  --code-token-operator-foreground: #000000;
+  --code-token-punctuation-foreground: #3b3b3b;
+  --code-token-boolean-foreground: #0000ff;
+  --code-token-constant-foreground: #0070c1;
+  --code-token-tag-foreground: #800000;
+  --code-token-attr-name-foreground: #e50000;
+}
+
+/* High contrast overrides */
+body.vscode-high-contrast .code-block-container {
+  --code-token-comment-foreground: #7ca668; /* Brighter green for better high-contrast readability */
+  --code-token-operator-foreground: #ffffff; /* High contrast operator foreground */
+  --code-token-punctuation-foreground: #ffffff; /* High contrast punctuation foreground */
 }
 
 .code-block-header {
@@ -115,7 +158,7 @@ pre.code-block {
   padding: 12px;
   overflow-x: auto;
   font-family: var(--vscode-editor-font-family, monospace);
-  font-size: 12px;
+  font-size: calc(var(--vscode-editor-font-size, 12px) * 0.9);
   background-color: transparent;
   line-height: 1.5;
 }
@@ -131,52 +174,55 @@ pre.code-block code {
 
 /* VS Code dynamic theme syntax highlighting tokens */
 .token.comment {
-  color: var(--vscode-editor-comment-foreground, var(--vscode-descriptionForeground));
+  color: var(--code-token-comment-foreground);
   font-style: italic;
 }
 
 .token.keyword {
-  color: var(--vscode-symbolIcon-keywordForeground, var(--vscode-textLink-foreground));
-  font-weight: 600;
+  color: var(--code-token-keyword-foreground);
 }
 
 .token.string,
 .token.char,
 .token.attr-value {
-  color: var(--vscode-debugConsole-stringForeground, var(--vscode-terminal-ansiGreen));
+  color: var(--code-token-string-foreground);
 }
 
-.token.number,
+.token.number {
+  color: var(--code-token-number-foreground);
+}
+
 .token.constant,
 .token.symbol {
-  color: var(--vscode-editor-number-foreground, var(--vscode-terminal-ansiYellow));
+  color: var(--code-token-constant-foreground);
 }
 
-.token.boolean,
+.token.boolean {
+  color: var(--code-token-boolean-foreground);
+}
+
 .token.builtin,
 .token.important {
-  color: var(--vscode-symbolIcon-keywordForeground, var(--vscode-textLink-foreground));
+  color: var(--code-token-keyword-foreground);
 }
 
 .token.function,
 .token.method {
-  color: var(--vscode-editor-function-foreground, var(--vscode-textLink-foreground));
+  color: var(--code-token-function-foreground);
 }
 
 .token.operator {
-  color: var(--webview-foreground);
-  opacity: 0.9;
+  color: var(--code-token-operator-foreground);
 }
 
 .token.punctuation {
-  color: var(--webview-foreground);
-  opacity: 0.8;
+  color: var(--code-token-punctuation-foreground);
 }
 
 .token.property,
 .token.key,
 .token.parameter {
-  color: var(--vscode-symbolIcon-propertyForeground, var(--vscode-editor-foreground));
+  color: var(--code-token-property-foreground);
 }
 
 .token.class-name,
@@ -184,27 +230,27 @@ pre.code-block code {
 .token.namespace,
 .token.annotation,
 .token.decorator {
-  color: var(--vscode-symbolIcon-classForeground, var(--vscode-textLink-foreground));
+  color: var(--code-token-type-foreground);
 }
 
 .token.regex,
 .token.entity {
-  color: var(--vscode-debugConsole-stringForeground, var(--vscode-terminal-ansiRed));
+  color: var(--code-token-regex-foreground);
 }
 
 .token.variable,
 .token.interpolation {
-  color: var(--vscode-symbolIcon-variableForeground, var(--vscode-editor-foreground));
+  color: var(--code-token-variable-foreground);
 }
 
 .token.tag,
 .token.selector {
-  color: var(--vscode-symbolIcon-elementForeground, var(--vscode-textLink-foreground));
+  color: var(--code-token-tag-foreground);
 }
 
 .token.attr-name,
 .token.atrule {
-  color: var(--vscode-symbolIcon-fieldForeground, var(--vscode-editor-foreground));
+  color: var(--code-token-attr-name-foreground);
 }
 
 .token.url {

@@ -203,3 +203,29 @@ function extractDisplayLanguage(rawLanguage: string): string {
 function normalizeLanguageId(language: string): string {
   return language.trim().replace(/^\./, '').replace(/,$/, '').toLowerCase();
 }
+
+// Extend JS/TS and other grammars to highlight remaining identifiers as variables
+const languagesToExtend = [
+  'javascript',
+  'typescript',
+  'jsx',
+  'tsx',
+  'go',
+  'python',
+  'rust',
+  'java',
+  'c',
+  'cpp',
+  'csharp',
+  'php',
+  'ruby',
+  'swift',
+  'dart',
+];
+
+for (const lang of languagesToExtend) {
+  const grammar = Prism.languages[lang] as Record<string, unknown> | undefined;
+  if (grammar && !grammar['variable']) {
+    grammar['variable'] = /\b[a-zA-Z_$][\w$]*\b/;
+  }
+}
