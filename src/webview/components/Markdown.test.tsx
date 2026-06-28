@@ -3,8 +3,8 @@
  */
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { Markdown } from './Markdown';
 
 describe('Markdown Component', () => {
@@ -211,6 +211,40 @@ describe('Markdown Component', () => {
     expect(cell?.querySelector('strong')?.textContent).toBe('bold');
     expect(cell?.querySelector('em')?.textContent).toBe('italic');
     expect(cell?.querySelector('a')?.getAttribute('href')).toBe('http://test');
+  });
+
+  it('regression: renders plain markdown file references as clickable editor links', () => {
+    vi.mocked(window.vscode.postMessage).mockClear();
+    render(<Markdown text="Open src/extension/index.ts:42 and README.md:1." />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'src/extension/index.ts:42' }));
+
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: 'src/extension/index.ts',
+      startLine: 42,
+    });
+    expect(screen.getByRole('button', { name: 'README.md:1' })).toBeInTheDocument();
+  });
+
+  it('regression: opens markdown links that target local files without breaking external links', () => {
+    vi.mocked(window.vscode.postMessage).mockClear();
+    render(
+      <Markdown text="See [selection](src/app.ts:10-12) and [docs](https://example.com/a.ts:10)." />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'selection' }));
+
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: 'src/app.ts',
+      startLine: 10,
+      endLine: 12,
+    });
+    expect(screen.getByRole('link', { name: 'docs' })).toHaveAttribute(
+      'href',
+      'https://example.com/a.ts:10',
+    );
   });
 
   it('renders ordered lists separated by empty lines in a single list (loose lists)', () => {

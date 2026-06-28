@@ -1,12 +1,18 @@
 /**
  * @file Robust, lightweight, streaming-safe Markdown component with professional PrismJS code syntax highlighting.
  * Renders bold, italic, code blocks, lists, headings, and inline code natively.
- * Also parses and renders custom inline attachment chips.
+ * Also parses and renders custom inline attachment chips and clickable file references.
  */
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
 import React from 'react';
+import type { WebviewToExt } from '../../shared/types';
 import { parseAndRenderInlineChip } from '../utils/markdownChipRenderer';
+import {
+  INLINE_FILE_REFERENCE_PATTERN,
+  type MarkdownFileReference,
+  parseMarkdownFileReference,
+} from '../utils/markdownFileReferences';
 import { isSeparatorLine, parseAlignments, parseTableRow } from '../utils/markdownTableParser';
 import { CodeBlock } from './CodeBlock';
 
@@ -28,7 +34,74 @@ interface InlineTextMetadata {
   command?: string;
 }
 
-/** Parses inline markdown markup (bold, italic, inline code, links, and inline chips). */
+function openFileReference(ref: MarkdownFileReference): void {
+  const message: WebviewToExt = {
+    type: 'file:open',
+    path: ref.path,
+    ...(ref.startLine ? { startLine: ref.startLine } : {}),
+    ...(ref.endLine ? { endLine: ref.endLine } : {}),
+  };
+  window.vscode.postMessage(message);
+}
+
+function renderFileReferenceLink(
+  label: string,
+  ref: MarkdownFileReference,
+  key: string,
+): React.ReactNode {
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openFileReference(ref);
+  };
+
+  return (
+    <button
+      key={key}
+      type="button"
+      className="markdown-link markdown-file-reference"
+      onClick={handleClick}
+      data-custom-title={`Open ${ref.path}`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function renderTextWithFileReferences(text: string, keyPrefix: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const regex = new RegExp(INLINE_FILE_REFERENCE_PATTERN);
+  let match: RegExpExecArray | null;
+  let lastIndex = 0;
+  let keyIdx = 0;
+
+  while ((match = regex.exec(text)) !== null) {
+    const prefix = match[1] ?? '';
+    const label = match[2];
+    const ref = parseMarkdownFileReference(label, { requireLine: true });
+
+    if (!ref) {
+      continue;
+    }
+
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    if (prefix) {
+      parts.push(prefix);
+    }
+    parts.push(renderFileReferenceLink(label, ref, `${keyPrefix}-file-ref-${keyIdx++}`));
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : [text];
+}
+
+/** Parses inline markdown markup (bold, italic, inline code, links, file references, and chips). */
 function renderInline(text: string, allParts?: Part[]): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   const regex =
@@ -75,7 +148,9 @@ function renderInline(text: string, allParts?: Part[]): React.ReactNode[] {
 
   while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) {
-      parts.push(text.substring(lastIndex, match.index));
+      parts.push(
+        ...renderTextWithFileReferences(text.substring(lastIndex, match.index), `text-${keyIdx++}`),
+      );
     }
 
     const [
@@ -104,17 +179,22 @@ function renderInline(text: string, allParts?: Part[]): React.ReactNode[] {
     } else if (codeFull) {
       parts.push(<code key={`code-${keyIdx++}`}>{codeInner}</code>);
     } else if (linkFull) {
-      parts.push(
-        <a
-          key={`link-${keyIdx++}`}
-          href={linkUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="markdown-link"
-        >
-          {linkText}
-        </a>,
-      );
+      const fileReference = parseMarkdownFileReference(linkUrl, { requireLine: false });
+      if (fileReference) {
+        parts.push(renderFileReferenceLink(linkText, fileReference, `link-file-ref-${keyIdx++}`));
+      } else {
+        parts.push(
+          <a
+            key={`link-${keyIdx++}`}
+            href={linkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="markdown-link"
+          >
+            {linkText}
+          </a>,
+        );
+      }
     } else {
       let chipFull: string | undefined;
       let chipType: string | undefined;
@@ -155,7 +235,7 @@ function renderInline(text: string, allParts?: Part[]): React.ReactNode[] {
   }
 
   if (lastIndex < text.length) {
-    parts.push(text.substring(lastIndex));
+    parts.push(...renderTextWithFileReferences(text.substring(lastIndex), `tail-${keyIdx}`));
   }
 
   return parts;

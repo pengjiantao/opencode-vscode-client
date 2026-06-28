@@ -6,6 +6,7 @@
 @import './styles/chat-view.css';
 @import './styles/scroll-fade-container.css';
 @import './styles/parts.css';
+@import './styles/markdown.css';
 @import './styles/permission-bar.css';
 @import './styles/prompt-input.css';
 @import './styles/icon-button.css';
