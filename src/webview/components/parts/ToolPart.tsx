@@ -374,10 +374,21 @@ export function ToolPart({
               const ansList = answers[idx] || [];
               return (
                 <div key={idx} data-slot="question-answer-item" className="question-answer-item">
-                  <div data-slot="question-text" className="question-text">
+                  <div className="q-number" data-slot="q-number">
+                    {idx + 1}.
+                  </div>
+                  <div className="q-prefix" data-slot="q-prefix">
+                    Q:
+                  </div>
+                  <div className="question-text" data-slot="question-text">
                     {qItem.question}
                   </div>
-                  <div data-slot="answer-text" className="answer-text">
+                  {/* Empty element acts as a spacer for the 3-column CSS Grid to align A: under Q: */}
+                  <div className="a-number" data-slot="a-number"></div>
+                  <div className="a-prefix" data-slot="a-prefix">
+                    A:
+                  </div>
+                  <div className="answer-text" data-slot="answer-text">
                     {ansList.join(', ') || '(no answer)'}
                   </div>
                 </div>

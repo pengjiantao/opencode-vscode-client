@@ -266,22 +266,27 @@
 .question-answers-completed {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
   padding: 4px 8px;
 }
 
 .question-answer-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  row-gap: 8px;
+  column-gap: 8px;
+  align-items: start;
 }
 
+.q-number,
+.q-prefix,
 .question-text {
   font-size: var(--vscode-font-size, 13px);
   font-weight: 500;
   color: var(--vscode-descriptionForeground, #8c8c8c);
 }
 
+.a-prefix,
 .answer-text {
   font-size: var(--vscode-font-size, 13px);
   font-weight: 600;

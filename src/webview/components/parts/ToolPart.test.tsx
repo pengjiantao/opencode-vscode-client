@@ -244,4 +244,80 @@ describe('ToolPart', () => {
       expect(container.querySelector('.todo-write-output')).not.toBeInTheDocument();
     });
   });
+
+  describe('question tool', () => {
+    const questionInput = {
+      questions: [{ question: 'What is your name?' }, { question: 'What is your quest?' }],
+    };
+    const questionMetadata = {
+      answers: [['Sir Lancelot'], ['To seek the Holy Grail']],
+    };
+
+    it('renders completed questions and answers with numbers and Q/A prefixes', () => {
+      const state = {
+        ...baseState,
+        input: questionInput,
+        metadata: questionMetadata,
+      };
+      const { container } = render(<ToolPart tool="question" state={state} />);
+
+      const items = container.querySelectorAll('.question-answer-item');
+      expect(items).toHaveLength(2);
+
+      // Verify the first Q&A item
+      const item1 = items[0];
+      expect(item1.querySelector('.q-number')).toHaveTextContent('1.');
+      expect(item1.querySelector('.q-prefix')).toHaveTextContent('Q:');
+      expect(item1.querySelector('.question-text')).toHaveTextContent('What is your name?');
+      expect(item1.querySelector('.a-number')).toBeInTheDocument();
+      expect(item1.querySelector('.a-prefix')).toHaveTextContent('A:');
+      expect(item1.querySelector('.answer-text')).toHaveTextContent('Sir Lancelot');
+
+      // Verify the second Q&A item
+      const item2 = items[1];
+      expect(item2.querySelector('.q-number')).toHaveTextContent('2.');
+      expect(item2.querySelector('.q-prefix')).toHaveTextContent('Q:');
+      expect(item2.querySelector('.question-text')).toHaveTextContent('What is your quest?');
+      expect(item2.querySelector('.a-number')).toBeInTheDocument();
+      expect(item2.querySelector('.a-prefix')).toHaveTextContent('A:');
+      expect(item2.querySelector('.answer-text')).toHaveTextContent('To seek the Holy Grail');
+    });
+
+    it('renders single question and answer correctly', () => {
+      const state = {
+        ...baseState,
+        input: { questions: [{ question: 'Single?' }] },
+        metadata: { answers: [['Yes']] },
+      };
+      const { container } = render(<ToolPart tool="question" state={state} />);
+      const items = container.querySelectorAll('.question-answer-item');
+      expect(items).toHaveLength(1);
+      expect(items[0].querySelector('.q-number')).toHaveTextContent('1.');
+      expect(items[0].querySelector('.question-text')).toHaveTextContent('Single?');
+      expect(items[0].querySelector('.answer-text')).toHaveTextContent('Yes');
+    });
+
+    it('renders empty list when questions array is empty', () => {
+      const state = {
+        ...baseState,
+        input: { questions: [] },
+        metadata: { answers: [] },
+      };
+      const { container } = render(<ToolPart tool="question" state={state} />);
+      expect(container.querySelector('.question-answers-completed')).toBeInTheDocument();
+      expect(container.querySelectorAll('.question-answer-item')).toHaveLength(0);
+    });
+
+    it('renders default fallback text when answer is missing', () => {
+      const state = {
+        ...baseState,
+        input: { questions: [{ question: 'No answer here?' }] },
+        metadata: { answers: [] },
+      };
+      const { container } = render(<ToolPart tool="question" state={state} />);
+      const items = container.querySelectorAll('.question-answer-item');
+      expect(items).toHaveLength(1);
+      expect(items[0].querySelector('.answer-text')).toHaveTextContent('(no answer)');
+    });
+  });
 });
