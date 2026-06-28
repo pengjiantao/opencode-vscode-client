@@ -252,9 +252,11 @@ export function TaskToolPart({
           {isFinished && !isAutoCollapsing && (
             <div className="subagent-finished-details">
               {promptInput && (
-                <div className="tool-input">
+                <div className="tool-input tool-input-scroll-fade">
                   <span className="section-label section-label-themed">Prompt Input</span>
-                  <Markdown text={promptInput} />
+                  <ScrollFadeContainer maxHeight={250}>
+                    <Markdown text={promptInput} />
+                  </ScrollFadeContainer>
                 </div>
               )}
               {finalOutput && (

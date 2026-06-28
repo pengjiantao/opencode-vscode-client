@@ -108,11 +108,17 @@ describe('TaskToolPart', () => {
     // Should display duration text containing 1m 15s (75 seconds)
     expect(screen.getByText(/\(took 1m 15s\)/)).toBeInTheDocument();
 
-    // Check prompt and output are wrapped and displayed as Markdown
+    // Check prompt and output are wrapped and displayed as Markdown inside ScrollFadeContainer
     expect(screen.getByText('Prompt Input')).toBeInTheDocument();
+    expect(
+      container.querySelector('.tool-input.tool-input-scroll-fade .scroll-fade-container'),
+    ).toBeInTheDocument();
     expect(container.querySelector('.tool-input .markdown-body')).toBeInTheDocument();
     expect(screen.getByText('Run tests in directory')).toBeInTheDocument();
     expect(screen.getByText('Sub-agent Output')).toBeInTheDocument();
+    expect(
+      container.querySelector('.tool-output.tool-output-scroll-fade .scroll-fade-container'),
+    ).toBeInTheDocument();
     expect(container.querySelector('.tool-output .markdown-body')).toBeInTheDocument();
     expect(screen.getByText('Tests passed successfully.')).toBeInTheDocument();
 

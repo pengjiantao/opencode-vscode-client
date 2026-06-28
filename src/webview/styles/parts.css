@@ -142,9 +142,25 @@
   max-height: 250px;
 }
 
-/* When a ScrollFadeContainer is used inside tool-output, let the fade container handle
+/* When a ScrollFadeContainer is used inside tool-input or tool-output, let the fade container handle
    scrolling so the inner markdown-body must not create its own scroll box. */
-.tool-part .tool-output-scroll-fade .markdown-body {
+.tool-part .tool-input-scroll-fade .scroll-fade-container,
+.tool-part .tool-output-scroll-fade .scroll-fade-container {
+  background-color: var(
+    --vscode-textCodeBlock-background,
+    color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background))
+  );
+  border-radius: 4px;
+  overflow: hidden;
+  --scroll-fade-color: var(
+    --vscode-textCodeBlock-background,
+    color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background))
+  );
+}
+
+.tool-part .subagent-finished-details .tool-input.tool-input-scroll-fade .markdown-body,
+.tool-part .subagent-finished-details .tool-output.tool-output-scroll-fade .markdown-body {
+  background-color: transparent;
   max-height: none;
   overflow: visible;
 }
