@@ -97,7 +97,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   opacity: 0.6;
-  margin-bottom: 4px;
+  margin-bottom: 12px;
 }
 
 .tool-part .section-label-themed {
@@ -146,16 +146,11 @@
    scrolling so the inner markdown-body must not create its own scroll box. */
 .tool-part .tool-input-scroll-fade .scroll-fade-container,
 .tool-part .tool-output-scroll-fade .scroll-fade-container {
-  background-color: var(
-    --vscode-textCodeBlock-background,
-    color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background))
-  );
-  border-radius: 4px;
+  background-color: transparent;
+  border-left: 1px solid var(--vscode-textLink-foreground, var(--vscode-button-background, #0e639c));
+  border-radius: 0;
   overflow: hidden;
-  --scroll-fade-color: var(
-    --vscode-textCodeBlock-background,
-    color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background))
-  );
+  --scroll-fade-color: var(--webview-background);
 }
 
 .tool-part .subagent-finished-details .tool-input.tool-input-scroll-fade .markdown-body,
