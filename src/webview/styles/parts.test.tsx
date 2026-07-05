@@ -29,4 +29,38 @@ describe('Part styles', () => {
     expect(reasoningDotRule).not.toMatch(/background-color:\s*(?:#fff(?:fff)?|white)\b/i);
     expect(runningReasoningDotRule).not.toMatch(/background-color:\s*(?:#fff(?:fff)?|white)\b/i);
   });
+
+  it('regression: bash output details use light-theme-safe VS Code color tokens', () => {
+    const css = readPartsStyles();
+    const containerRule = getCssRuleBody(css, '.tool-bash-output');
+    const headerRule = getCssRuleBody(css, '.bash-output-header');
+    const promptRule = getCssRuleBody(css, '.bash-output-prompt');
+    const scrollContainerRule = getCssRuleBody(css, '.bash-output-scroll-container');
+    const outputRule = getCssRuleBody(css, '.bash-output-scroll pre');
+
+    expect(containerRule).toContain('--bash-output-background: var(');
+    expect(containerRule).toContain('--vscode-terminal-background');
+    expect(containerRule).toContain('--vscode-textCodeBlock-background');
+    expect(containerRule).toContain('--webview-background');
+    expect(containerRule).toMatch(/background-color:\s*var\(\s*--bash-output-background\s*\)/);
+    expect(containerRule).toMatch(/color:\s*var\(\s*--bash-output-foreground\s*\)/);
+
+    expect(headerRule).toContain('var(--bash-output-background)');
+    expect(headerRule).toContain('--webview-foreground');
+    expect(promptRule).toMatch(
+      /color:\s*var\(\s*--vscode-terminal-ansiGreen,\s*var\(\s*--vscode-textLink-foreground\s*\)\s*\)/,
+    );
+    expect(scrollContainerRule).toMatch(
+      /--scroll-fade-color:\s*var\(\s*--bash-output-background\s*\)/,
+    );
+    expect(scrollContainerRule).toMatch(
+      /background-color:\s*var\(\s*--bash-output-background\s*\)/,
+    );
+    expect(outputRule).toMatch(/color:\s*var\(\s*--bash-output-foreground\s*\)/);
+    expect(outputRule).not.toContain('opacity');
+
+    expect(containerRule + headerRule + promptRule + scrollContainerRule + outputRule).not.toMatch(
+      /#121212|#000(?:000)?|#ccc(?:ccc)?|\bblack\b/i,
+    );
+  });
 });

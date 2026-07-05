@@ -818,10 +818,25 @@
 
 /* Custom Bash output rendering style block */
 .tool-bash-output {
-  border: 1px solid var(--vscode-border-color, #454545);
+  --bash-output-background: var(
+    --vscode-terminal-background,
+    var(
+      --vscode-textCodeBlock-background,
+      color-mix(in srgb, var(--webview-foreground) 6%, var(--webview-background))
+    )
+  );
+  --bash-output-foreground: var(--vscode-terminal-foreground, var(--webview-foreground));
+  --bash-output-muted-foreground: var(
+    --vscode-descriptionForeground,
+    var(--bash-output-foreground)
+  );
+  --bash-output-border: var(--vscode-panel-border, var(--vscode-border-color));
+
+  border: 1px solid var(--bash-output-border);
   border-radius: 6px;
   overflow: hidden;
-  background-color: var(--vscode-terminal-background, #121212);
+  background-color: var(--bash-output-background);
+  color: var(--bash-output-foreground);
   margin-top: 8px;
 }
 
@@ -830,15 +845,15 @@
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background-color: color-mix(in srgb, var(--vscode-terminal-background, #121212) 90%, black);
-  border-bottom: 1px solid var(--vscode-border-color, #454545);
+  background-color: color-mix(in srgb, var(--webview-foreground) 5%, var(--bash-output-background));
+  border-bottom: 1px solid var(--bash-output-border);
 }
 
 .bash-output-prompt {
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 11px;
   font-weight: bold;
-  color: var(--vscode-terminal-ansiGreen, #0dbc79);
+  color: var(--vscode-terminal-ansiGreen, var(--vscode-textLink-foreground));
   flex-shrink: 0;
   user-select: none;
   line-height: 1.2;
@@ -848,7 +863,7 @@
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 11px;
   font-weight: 600;
-  color: var(--vscode-descriptionForeground, var(--webview-foreground));
+  color: var(--bash-output-muted-foreground);
   flex: 1;
   min-width: 0;
   white-space: nowrap;
@@ -858,8 +873,8 @@
 }
 
 .bash-output-scroll-container {
-  --scroll-fade-color: color-mix(in srgb, var(--vscode-terminal-background, #121212) 95%, black);
-  background-color: color-mix(in srgb, var(--vscode-terminal-background, #121212) 95%, black);
+  --scroll-fade-color: var(--bash-output-background);
+  background-color: var(--bash-output-background);
   max-height: 200px;
 }
 
@@ -872,8 +887,7 @@
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 12px;
   white-space: pre-wrap;
-  color: var(--vscode-terminal-foreground, var(--webview-foreground, #cccccc));
-  opacity: 0.85;
+  color: var(--bash-output-foreground);
 }
 
 /* Specialized styling for TaskToolPart (sub-agent observation) */
