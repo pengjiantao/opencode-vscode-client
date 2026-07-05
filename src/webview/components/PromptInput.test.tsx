@@ -398,6 +398,26 @@ describe('PromptInput', () => {
     expect(screen.getByTestId('footer-cost')).toHaveTextContent('$0.050');
   });
 
+  /** Regression: the metrics tooltip cost value must inherit tooltip foreground for light themes. */
+  it('regression: metrics tooltip cost does not use status bar warning foreground color', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[{ id: 'openai/gpt-4', name: 'GPT-4', contextLimit: 100000 }]}
+        agents={[{ id: 'agent-1', name: 'Agent 1' }]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const tooltip = screen.getByTestId('footer-cost').getAttribute('data-custom-title') || '';
+
+    expect(tooltip).toContain('Cumulative Cost:');
+    expect(tooltip).toContain('$0.0500');
+    expect(tooltip).not.toContain('--vscode-statusBarItem-warningForeground');
+    expect(tooltip).not.toContain('#e2c08d');
+  });
+
   /** Regression: footer token and cost statistics are always rendered, showing initial/fallback states correctly. */
   it('regression: footer token and cost statistics are always rendered, showing initial/fallback states correctly', () => {
     // 1. Test new session (no messages)

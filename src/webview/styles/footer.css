@@ -1,4 +1,7 @@
-/* Custom status metadata footer component styles */
+/**
+ * @file Styles for prompt input metadata footer and header status controls.
+ */
+
 .prompt-input-sub-footer {
   display: flex;
   justify-content: space-between;
@@ -73,12 +76,12 @@
 }
 
 .metadata-item.cost {
-  color: var(--vscode-statusBarItem-warningForeground, #e2c08d);
+  color: var(--vscode-descriptionForeground, var(--webview-foreground));
   font-weight: 500;
 }
 
 .metadata-item.cost:hover {
-  color: var(--vscode-statusBarItem-warningBackground, #d79e39);
+  color: var(--vscode-textLink-foreground, var(--webview-foreground));
 }
 
 .metadata-item.percentage {

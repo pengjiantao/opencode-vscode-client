@@ -118,7 +118,7 @@ export function PromptInputFooter({ models, activeModel }: PromptInputFooterProp
           <tr><td>Window Usage:</td><td>${contextPercentage}%</td></tr>
           <tr style="border-top: 1px dashed var(--vscode-editor-widget-border)">
             <td><strong>Cumulative Cost:</strong></td>
-            <td><strong style="color: var(--vscode-statusBarItem-warningForeground, #e2c08d)">$${totalCost.toFixed(4)}</strong></td>
+            <td><strong>$${totalCost.toFixed(4)}</strong></td>
           </tr>
         </table>
       `
