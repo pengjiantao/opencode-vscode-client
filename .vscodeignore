@@ -7,7 +7,6 @@
 .prettierrc
 .zed/**
 AGENTS.md
-CHANGELOG.md
 commitlint.config.mjs
 DESIGN.md
 docs/**
@@ -27,4 +26,3 @@ node_modules
 .opencode/
 .mimocode/
 .claude/
-

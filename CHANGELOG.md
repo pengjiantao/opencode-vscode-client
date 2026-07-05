@@ -2,356 +2,356 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-### [0.1.38](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.37...v0.1.38) (2026-06-28)
+### [0.1.38](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.37...v0.1.38) (2026-06-28)
 
 ### Features
 
-- **webview:** add numbered Q/A prefixes to completed question tool display ([1867659](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/1867659127ba1c97926a6ee51aebc71b3bd7f8eb))
+- **webview:** add numbered Q/A prefixes to completed question tool display ([1867659](https://github.com/pengjiantao/opencode-vscode-client/commit/1867659127ba1c97926a6ee51aebc71b3bd7f8eb))
 
-### [0.1.37](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.36...v0.1.37) (2026-06-28)
+### [0.1.37](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.36...v0.1.37) (2026-06-28)
 
 ### Bug Fixes
 
-- **webview:** wrap TaskToolPart prompt input in ScrollFadeContainer ([38c96f7](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/38c96f72004add02d7a2dd2e54461a551c5982dd))
+- **webview:** wrap TaskToolPart prompt input in ScrollFadeContainer ([38c96f7](https://github.com/pengjiantao/opencode-vscode-client/commit/38c96f72004add02d7a2dd2e54461a551c5982dd))
 
-### [0.1.36](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.35...v0.1.36) (2026-06-28)
+### [0.1.36](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.35...v0.1.36) (2026-06-28)
 
 ### Features
 
-- **webview:** centralize Prism language resolution and expand grammar support ([ecc82a2](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/ecc82a2329f3b3f8718680c21452e32d36ccc25c))
+- **webview:** centralize Prism language resolution and expand grammar support ([ecc82a2](https://github.com/pengjiantao/opencode-vscode-client/commit/ecc82a2329f3b3f8718680c21452e32d36ccc25c))
 
 ### Bug Fixes
 
-- **webview:** replace unavailable VS Code editor CSS variables with theme-aware token colors ([c5a4bcb](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c5a4bcb834ccc175584b0a1b91a93b4e239a3680))
+- **webview:** replace unavailable VS Code editor CSS variables with theme-aware token colors ([c5a4bcb](https://github.com/pengjiantao/opencode-vscode-client/commit/c5a4bcb834ccc175584b0a1b91a93b4e239a3680))
 
-### [0.1.35](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.34...v0.1.35) (2026-06-28)
+### [0.1.35](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.34...v0.1.35) (2026-06-28)
 
 ### Features
 
-- render clickable file references in markdown and extract markdown CSS ([c6fc5d0](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c6fc5d0578851257d3c3522a59cfd80b181a9a02)), closes [#L10](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/issues/L10)
+- render clickable file references in markdown and extract markdown CSS ([c6fc5d0](https://github.com/pengjiantao/opencode-vscode-client/commit/c6fc5d0578851257d3c3522a59cfd80b181a9a02)), closes [#L10](https://github.com/pengjiantao/opencode-vscode-client/issues/L10)
 
 ### Bug Fixes
 
-- add getServerVersion mock to extension tests and fix console spy in metadata test ([0926d7f](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/0926d7f82a9353d420c255313bb9152dfd64924a))
+- add getServerVersion mock to extension tests and fix console spy in metadata test ([0926d7f](https://github.com/pengjiantao/opencode-vscode-client/commit/0926d7f82a9353d420c255313bb9152dfd64924a))
 
-### [0.1.34](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.33...v0.1.34) (2026-06-24)
+### [0.1.34](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.33...v0.1.34) (2026-06-24)
 
-### [0.1.33](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.32...v0.1.33) (2026-06-24)
+### [0.1.33](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.32...v0.1.33) (2026-06-24)
 
 ### Features
 
-- **commands:** add VS Code Settings shortcut to settings QuickPick title bar ([27bcee6](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/27bcee6d9d90f4e7cfdc8a66e7cf099c8da2bb92))
-- **DiffPart:** hide line-number gutter and use horizontal scroll in tool rendering ([9e126fd](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/9e126fd5a04a7b5ca37b7fca3fb2532f43121b2f))
-- **metadata:** surface real publisher and opencode server version in about tooltip ([862980d](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/862980d4e234eb1034eacfb6e3ca9d1848a7f630))
-- **todowrite:** render structured checklist in tool output ([01958b0](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/01958b05758a9a47dad74a495f4d584a6d095fab))
+- **commands:** add VS Code Settings shortcut to settings QuickPick title bar ([27bcee6](https://github.com/pengjiantao/opencode-vscode-client/commit/27bcee6d9d90f4e7cfdc8a66e7cf099c8da2bb92))
+- **DiffPart:** hide line-number gutter and use horizontal scroll in tool rendering ([9e126fd](https://github.com/pengjiantao/opencode-vscode-client/commit/9e126fd5a04a7b5ca37b7fca3fb2532f43121b2f))
+- **metadata:** surface real publisher and opencode server version in about tooltip ([862980d](https://github.com/pengjiantao/opencode-vscode-client/commit/862980d4e234eb1034eacfb6e3ca9d1848a7f630))
+- **todowrite:** render structured checklist in tool output ([01958b0](https://github.com/pengjiantao/opencode-vscode-client/commit/01958b05758a9a47dad74a495f4d584a6d095fab))
 
 ### Bug Fixes
 
-- **ScrollFadeContainer:** scope shadow visibility to direct child only ([65928dd](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/65928dd2b2e4894b4d1a9975a936c12ff0ff8aea))
+- **ScrollFadeContainer:** scope shadow visibility to direct child only ([65928dd](https://github.com/pengjiantao/opencode-vscode-client/commit/65928dd2b2e4894b4d1a9975a936c12ff0ff8aea))
 
-### [0.1.32](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.31...v0.1.32) (2026-06-19)
-
-### Features
-
-- **SessionTabs:** double-click empty area to create session ([794224e](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/794224e904ac3da434e9f95baa52ddb46f2b98e5))
-
-### [0.1.31](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.30...v0.1.31) (2026-06-19)
+### [0.1.32](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.31...v0.1.32) (2026-06-19)
 
 ### Features
 
-- **commands:** search and declutter Default Model QuickPick ([6e20ad9](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/6e20ad95d998c893cc670f74093be1ef9cbe6820))
-- **extension:** add configurable opencode server start timeout ([0d3be9f](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/0d3be9f3c6d28832af3179203fe940495f616edb))
-- **extension:** add opencode.executablePath config and recovery prompt ([7c4ad11](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/7c4ad11ead0d33c1a28a414b736151b77e791a6e))
+- **SessionTabs:** double-click empty area to create session ([794224e](https://github.com/pengjiantao/opencode-vscode-client/commit/794224e904ac3da434e9f95baa52ddb46f2b98e5))
+
+### [0.1.31](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.30...v0.1.31) (2026-06-19)
+
+### Features
+
+- **commands:** search and declutter Default Model QuickPick ([6e20ad9](https://github.com/pengjiantao/opencode-vscode-client/commit/6e20ad95d998c893cc670f74093be1ef9cbe6820))
+- **extension:** add configurable opencode server start timeout ([0d3be9f](https://github.com/pengjiantao/opencode-vscode-client/commit/0d3be9f3c6d28832af3179203fe940495f616edb))
+- **extension:** add opencode.executablePath config and recovery prompt ([7c4ad11](https://github.com/pengjiantao/opencode-vscode-client/commit/7c4ad11ead0d33c1a28a414b736151b77e791a6e))
 
 ### Bug Fixes
 
-- normalize Windows directory paths to fix session history lookups ([25da473](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/25da4731a8b420b47c1921128c7a2fcc3931a76a))
-- reset stale activeSessionID to enable auto-create on init ([0b3604e](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/0b3604e1506618c2142161d4441f3fe0b7d8c6f0))
+- normalize Windows directory paths to fix session history lookups ([25da473](https://github.com/pengjiantao/opencode-vscode-client/commit/25da4731a8b420b47c1921128c7a2fcc3931a76a))
+- reset stale activeSessionID to enable auto-create on init ([0b3604e](https://github.com/pengjiantao/opencode-vscode-client/commit/0b3604e1506618c2142161d4441f3fe0b7d8c6f0))
 
-### [0.1.30](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.29...v0.1.30) (2026-06-16)
-
-### Features
-
-- **prompt:** add Up/Down prompt history recall ([ec708b3](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/ec708b3f9b4afbdc5f9f5658ff0ad079c25d1a5e))
-
-### [0.1.29](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.28...v0.1.29) (2026-06-16)
+### [0.1.30](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.29...v0.1.30) (2026-06-16)
 
 ### Features
 
-- **Select:** add combobox keyboard navigation with scroll-centering ([de979a4](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/de979a4a85f6baa1231c9e0351d8ebcd303fd379))
-- **SessionTabs:** show running spinner on tabs and More menu for busy sessions ([b1b9e54](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/b1b9e541b413073edfa504ea272ee2c75f22bd61))
+- **prompt:** add Up/Down prompt history recall ([ec708b3](https://github.com/pengjiantao/opencode-vscode-client/commit/ec708b3f9b4afbdc5f9f5658ff0ad079c25d1a5e))
 
-### Bug Fixes
-
-- **review:** dedupe repeated clicks on the same summary button ([a5d726e](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/a5d726ebf0a078f0b0933972e3e485c9fb3ae474))
-
-### [0.1.28](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.27...v0.1.28) (2026-06-12)
-
-### Bug Fixes
-
-- eliminate visual flash when TaskToolPart auto-collapses on completion ([4fa7659](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/4fa765920039aa77620d27a9f92a88c373ab6bd3))
-- preserve locally accumulated streaming content when merging server snapshots in sessionStore ([1589648](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/158964890897a3bb0395aa889c6f1be3232e31c9))
-
-### [0.1.27](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.26...v0.1.27) (2026-06-11)
+### [0.1.29](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.28...v0.1.29) (2026-06-16)
 
 ### Features
 
-- add copy user message button to chat actions bar ([039d806](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/039d806654720d8a4e76b60d64d6260b06dd6699))
+- **Select:** add combobox keyboard navigation with scroll-centering ([de979a4](https://github.com/pengjiantao/opencode-vscode-client/commit/de979a4a85f6baa1231c9e0351d8ebcd303fd379))
+- **SessionTabs:** show running spinner on tabs and More menu for busy sessions ([b1b9e54](https://github.com/pengjiantao/opencode-vscode-client/commit/b1b9e541b413073edfa504ea272ee2c75f22bd61))
 
 ### Bug Fixes
 
-- decouple user message bubble width from revert/fork button row ([8292044](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/829204440b9508452bba1a175e06e9f8fa1a9806))
-- replace scrollIntoView with scrollTo in scrollToUserMessage to prevent webview layout shift ([34c07be](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/34c07be626f9712075b9ac98a6b70b3de4010e93))
+- **review:** dedupe repeated clicks on the same summary button ([a5d726e](https://github.com/pengjiantao/opencode-vscode-client/commit/a5d726ebf0a078f0b0933972e3e485c9fb3ae474))
 
-### [0.1.26](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.25...v0.1.26) (2026-06-11)
+### [0.1.28](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.27...v0.1.28) (2026-06-12)
+
+### Bug Fixes
+
+- eliminate visual flash when TaskToolPart auto-collapses on completion ([4fa7659](https://github.com/pengjiantao/opencode-vscode-client/commit/4fa765920039aa77620d27a9f92a88c373ab6bd3))
+- preserve locally accumulated streaming content when merging server snapshots in sessionStore ([1589648](https://github.com/pengjiantao/opencode-vscode-client/commit/158964890897a3bb0395aa889c6f1be3232e31c9))
+
+### [0.1.27](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.26...v0.1.27) (2026-06-11)
 
 ### Features
 
-- add per-extension file-type icons via Material Icon Theme SVGs ([62b49ae](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/62b49ae64e9a501015ffc16ca0a763c9a412e1d9))
-- **bash-output:** add ANSI code 22/24 support for resetting bold/dim and underline styles ([aee9c96](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/aee9c963554fa7dda764b1333240df11f8aa2be0))
-- **bash-output:** add ANSI color parsing and replace status icons with prompt ([bcc2e74](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/bcc2e7413e9176423e2493898e4b2057abbf30d1))
-- **ChatView:** force scroll to bottom when user sends a message ([de2d55a](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/de2d55adf2e8e20f90a102cdf5f8303fa014e2ec))
-- **DiffPart:** add expandAll prop to disable context line folding ([cc475d8](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/cc475d838ae11338d161ac8b1fbbab64fef228ee))
-- **DiffPart:** add file type icon to file header ([aab63df](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/aab63df8ded8e1dc6abdef63b1596f762ad8f8d2))
-- display workspace-relative paths in diff file headers ([d2a5ea3](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/d2a5ea374103e418d847ba8ad46a83a613f08ca8))
-- sort models alphabetically within provider groups in dropdown and QuickPick ([109e57e](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/109e57ea4373cc790f10e7487d42ee4f9c6a78f4))
+- add copy user message button to chat actions bar ([039d806](https://github.com/pengjiantao/opencode-vscode-client/commit/039d806654720d8a4e76b60d64d6260b06dd6699))
 
 ### Bug Fixes
 
-- **editorRestore:** fall back to parseFileUrl for file chip path when source is missing ([fa0ede3](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/fa0ede3e1d63c5b780199d4b942b25724736bcdb))
-- increase spacing between actions button and next user message ([4cc466a](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/4cc466a0934bff0cd6b33aa54837d61b6b97120d))
-- **ScrollFadeContainer:** add flex layout to inner content wrapper for vertical centering ([dbc66d2](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/dbc66d2f43a01362464f5f72356bab9d0c27651a))
-- **SessionTabs:** prevent auto-scroll when closing non-active tabs ([47bfa45](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/47bfa45fed3388ff11bb761e5a3caff34c203aa4))
-- suppress phantom scroll shadows when content does not overflow or container is hidden ([4935fdf](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/4935fdf6dd59a23ad269c05678a34c633784d116))
+- decouple user message bubble width from revert/fork button row ([8292044](https://github.com/pengjiantao/opencode-vscode-client/commit/829204440b9508452bba1a175e06e9f8fa1a9806))
+- replace scrollIntoView with scrollTo in scrollToUserMessage to prevent webview layout shift ([34c07be](https://github.com/pengjiantao/opencode-vscode-client/commit/34c07be626f9712075b9ac98a6b70b3de4010e93))
 
-### [0.1.25](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.24...v0.1.25) (2026-05-31)
+### [0.1.26](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.25...v0.1.26) (2026-06-11)
 
 ### Features
 
-- fold context lines in diff view with directional expand ([9a7cde2](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/9a7cde24889a30b736de5b01ab6629fec450a749))
+- add per-extension file-type icons via Material Icon Theme SVGs ([62b49ae](https://github.com/pengjiantao/opencode-vscode-client/commit/62b49ae64e9a501015ffc16ca0a763c9a412e1d9))
+- **bash-output:** add ANSI code 22/24 support for resetting bold/dim and underline styles ([aee9c96](https://github.com/pengjiantao/opencode-vscode-client/commit/aee9c963554fa7dda764b1333240df11f8aa2be0))
+- **bash-output:** add ANSI color parsing and replace status icons with prompt ([bcc2e74](https://github.com/pengjiantao/opencode-vscode-client/commit/bcc2e7413e9176423e2493898e4b2057abbf30d1))
+- **ChatView:** force scroll to bottom when user sends a message ([de2d55a](https://github.com/pengjiantao/opencode-vscode-client/commit/de2d55adf2e8e20f90a102cdf5f8303fa014e2ec))
+- **DiffPart:** add expandAll prop to disable context line folding ([cc475d8](https://github.com/pengjiantao/opencode-vscode-client/commit/cc475d838ae11338d161ac8b1fbbab64fef228ee))
+- **DiffPart:** add file type icon to file header ([aab63df](https://github.com/pengjiantao/opencode-vscode-client/commit/aab63df8ded8e1dc6abdef63b1596f762ad8f8d2))
+- display workspace-relative paths in diff file headers ([d2a5ea3](https://github.com/pengjiantao/opencode-vscode-client/commit/d2a5ea374103e418d847ba8ad46a83a613f08ca8))
+- sort models alphabetically within provider groups in dropdown and QuickPick ([109e57e](https://github.com/pengjiantao/opencode-vscode-client/commit/109e57ea4373cc790f10e7487d42ee4f9c6a78f4))
 
-### [0.1.24](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.23...v0.1.24) (2026-05-29)
+### Bug Fixes
+
+- **editorRestore:** fall back to parseFileUrl for file chip path when source is missing ([fa0ede3](https://github.com/pengjiantao/opencode-vscode-client/commit/fa0ede3e1d63c5b780199d4b942b25724736bcdb))
+- increase spacing between actions button and next user message ([4cc466a](https://github.com/pengjiantao/opencode-vscode-client/commit/4cc466a0934bff0cd6b33aa54837d61b6b97120d))
+- **ScrollFadeContainer:** add flex layout to inner content wrapper for vertical centering ([dbc66d2](https://github.com/pengjiantao/opencode-vscode-client/commit/dbc66d2f43a01362464f5f72356bab9d0c27651a))
+- **SessionTabs:** prevent auto-scroll when closing non-active tabs ([47bfa45](https://github.com/pengjiantao/opencode-vscode-client/commit/47bfa45fed3388ff11bb761e5a3caff34c203aa4))
+- suppress phantom scroll shadows when content does not overflow or container is hidden ([4935fdf](https://github.com/pengjiantao/opencode-vscode-client/commit/4935fdf6dd59a23ad269c05678a34c633784d116))
+
+### [0.1.25](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.24...v0.1.25) (2026-05-31)
 
 ### Features
 
-- add diff viewing via virtual document provider and DiffButton ([5af3ce2](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/5af3ce2aa601f15098f572f0a9a52a2c5ec75b85))
-- replace native vscode.diff with custom Review Panel ([250ab92](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/250ab921796774c0eb1aee372e779efd5f1ae070))
+- fold context lines in diff view with directional expand ([9a7cde2](https://github.com/pengjiantao/opencode-vscode-client/commit/9a7cde24889a30b736de5b01ab6629fec450a749))
 
-### Bug Fixes
-
-- **review:** register file:open handler on review panel IPC bridge ([d2d44f4](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/d2d44f46a6c14725414d2afbddfb0df2db0ba3ce))
-
-### [0.1.23](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.22...v0.1.23) (2026-05-28)
+### [0.1.24](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.23...v0.1.24) (2026-05-29)
 
 ### Features
 
-- add session fork feature (toolbar and per-message) ([35f6aee](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/35f6aee6300b508fef82d8e818ee6e6caea45e2e))
+- add diff viewing via virtual document provider and DiffButton ([5af3ce2](https://github.com/pengjiantao/opencode-vscode-client/commit/5af3ce2aa601f15098f572f0a9a52a2c5ec75b85))
+- replace native vscode.diff with custom Review Panel ([250ab92](https://github.com/pengjiantao/opencode-vscode-client/commit/250ab921796774c0eb1aee372e779efd5f1ae070))
 
 ### Bug Fixes
 
-- handle message.removed and message.part.removed SSE events in webview ([1402acb](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/1402acbe4b65d11d64385725f8e311009d7600b6))
-- **MessageTurn:** scroll to current turn's user message instead of last one ([c2a7c63](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c2a7c63baa138cae61ec152ad72aaad2d63a8b25))
+- **review:** register file:open handler on review panel IPC bridge ([d2d44f4](https://github.com/pengjiantao/opencode-vscode-client/commit/d2d44f46a6c14725414d2afbddfb0df2db0ba3ce))
 
-### [0.1.22](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.21...v0.1.22) (2026-05-27)
+### [0.1.23](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.22...v0.1.23) (2026-05-28)
 
 ### Features
 
-- add message revert/redo (undo) feature ([c79ef22](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c79ef2247e2897b15f9733cfc1069b3fe9f24799))
+- add session fork feature (toolbar and per-message) ([35f6aee](https://github.com/pengjiantao/opencode-vscode-client/commit/35f6aee6300b508fef82d8e818ee6e6caea45e2e))
 
-### [0.1.21](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.20...v0.1.21) (2026-05-27)
+### Bug Fixes
+
+- handle message.removed and message.part.removed SSE events in webview ([1402acb](https://github.com/pengjiantao/opencode-vscode-client/commit/1402acbe4b65d11d64385725f8e311009d7600b6))
+- **MessageTurn:** scroll to current turn's user message instead of last one ([c2a7c63](https://github.com/pengjiantao/opencode-vscode-client/commit/c2a7c63baa138cae61ec152ad72aaad2d63a8b25))
+
+### [0.1.22](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.21...v0.1.22) (2026-05-27)
 
 ### Features
 
-- replace SettingsPanel with native VS Code QuickPick UI ([7a595fe](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/7a595fe925cde7452380b9d12b2e4ca07f6110db))
+- add message revert/redo (undo) feature ([c79ef22](https://github.com/pengjiantao/opencode-vscode-client/commit/c79ef2247e2897b15f9733cfc1069b3fe9f24799))
 
-### [0.1.20](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.19...v0.1.20) (2026-05-26)
-
-### Features
-
-- add session history management with QuickPick UI and batch operations ([1ea3406](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/1ea3406f3353f4bab45863b9db8a4cf45b56507e))
-- add status icons to diff viewer and improve task subagent output display ([07cf2f9](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/07cf2f9cd1244fd22cfef4086008c2af28313ca4))
-- add text truncation to tool name in ToolPart ([493f1c3](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/493f1c3d909fac81cf62fb2ff69e0ee2ddd3bd15))
-- move Close All Sessions to native status bar, conditionally show overflow menu in SessionTabs ([791c22d](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/791c22d1fb6ba87356a017bb5900139a2f566b4e))
-- recursively fetch child session messages and render TaskToolPart ([31a45b8](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/31a45b8fa683c20aeab076b47dca5c309b97a69d))
-- render markdown in TaskToolPart, migrate styles to theme-agnostic color-mix ([89a05a5](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/89a05a53674ddbc51cb2fc212e3b9a13f12ee916))
-
-### Bug Fixes
-
-- **ToolPart:** show glob pattern in description when title is empty ([895d1f0](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/895d1f039ce417dbd4797e172e60795c7552ba77))
-
-### [0.1.19](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.18...v0.1.19) (2026-05-25)
-
-### Bug Fixes
-
-- clean up test warnings and console.error spy leak ([5af6526](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/5af65262752ada26da64719bf8937760b3348776))
-- filter out sub-agent child sessions from history picker ([9df4633](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/9df46333793639f26194c4d7091ed4a9889ee090))
-- prevent Enter from aborting running session ([0a145df](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/0a145dfdef14ae43b0b085eb97451052afff2807))
-- update token/cost statistics in real-time on step end ([0c8a9f9](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/0c8a9f96356e80a40523c77e6c9fa136035e99a7))
-
-### [0.1.18](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.17...v0.1.18) (2026-05-25)
+### [0.1.21](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.20...v0.1.21) (2026-05-27)
 
 ### Features
 
-- forward sub-agent permission and question requests to parent session ([db107f1](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/db107f1872b6045b1aa384507a0a9d693847fe35))
+- replace SettingsPanel with native VS Code QuickPick UI ([7a595fe](https://github.com/pengjiantao/opencode-vscode-client/commit/7a595fe925cde7452380b9d12b2e4ca07f6110db))
 
-### [0.1.17](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.16...v0.1.17) (2026-05-25)
-
-### Features
-
-- add Codicon icons to empty states, remove defunct new-session button ([0af3105](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/0af3105b7c248440d53804af6696c6e7c71db314))
-
-### Bug Fixes
-
-- add responsive width constraints to popover/select layout ([409f791](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/409f79174058231b054aceddbbaaafdfda03c031))
-
-### [0.1.16](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.15...v0.1.16) (2026-05-25)
+### [0.1.20](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.19...v0.1.20) (2026-05-26)
 
 ### Features
 
-- auto-scroll active session tab into view on switch ([c02753a](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c02753a6c6f29ca93d82bcee774b8ab0217301bf))
+- add session history management with QuickPick UI and batch operations ([1ea3406](https://github.com/pengjiantao/opencode-vscode-client/commit/1ea3406f3353f4bab45863b9db8a4cf45b56507e))
+- add status icons to diff viewer and improve task subagent output display ([07cf2f9](https://github.com/pengjiantao/opencode-vscode-client/commit/07cf2f9cd1244fd22cfef4086008c2af28313ca4))
+- add text truncation to tool name in ToolPart ([493f1c3](https://github.com/pengjiantao/opencode-vscode-client/commit/493f1c3d909fac81cf62fb2ff69e0ee2ddd3bd15))
+- move Close All Sessions to native status bar, conditionally show overflow menu in SessionTabs ([791c22d](https://github.com/pengjiantao/opencode-vscode-client/commit/791c22d1fb6ba87356a017bb5900139a2f566b4e))
+- recursively fetch child session messages and render TaskToolPart ([31a45b8](https://github.com/pengjiantao/opencode-vscode-client/commit/31a45b8fa683c20aeab076b47dca5c309b97a69d))
+- render markdown in TaskToolPart, migrate styles to theme-agnostic color-mix ([89a05a5](https://github.com/pengjiantao/opencode-vscode-client/commit/89a05a53674ddbc51cb2fc212e3b9a13f12ee916))
 
 ### Bug Fixes
 
-- preserve session tab order on webview reload ([c434a4c](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c434a4cbc03c32d8d5a0e2d85ff15881a8dc939f))
+- **ToolPart:** show glob pattern in description when title is empty ([895d1f0](https://github.com/pengjiantao/opencode-vscode-client/commit/895d1f039ce417dbd4797e172e60795c7552ba77))
 
-### [0.1.15](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.14...v0.1.15) (2026-05-25)
+### [0.1.19](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.18...v0.1.19) (2026-05-25)
 
 ### Bug Fixes
 
-- restore sessionStatus on webview rebuild to prevent premature action buttons ([59ab74f](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/59ab74f7a40fc499da0e7dbca40fd9ad7cf4b349))
+- clean up test warnings and console.error spy leak ([5af6526](https://github.com/pengjiantao/opencode-vscode-client/commit/5af65262752ada26da64719bf8937760b3348776))
+- filter out sub-agent child sessions from history picker ([9df4633](https://github.com/pengjiantao/opencode-vscode-client/commit/9df46333793639f26194c4d7091ed4a9889ee090))
+- prevent Enter from aborting running session ([0a145df](https://github.com/pengjiantao/opencode-vscode-client/commit/0a145dfdef14ae43b0b085eb97451052afff2807))
+- update token/cost statistics in real-time on step end ([0c8a9f9](https://github.com/pengjiantao/opencode-vscode-client/commit/0c8a9f96356e80a40523c77e6c9fa136035e99a7))
 
-### [0.1.14](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.13...v0.1.14) (2026-05-25)
+### [0.1.18](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.17...v0.1.18) (2026-05-25)
 
 ### Features
 
-- add popover-aware tooltip positioning ([d114474](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/d114474700e3533a683d2ffd4b575bddcbd8a6b6))
+- forward sub-agent permission and question requests to parent session ([db107f1](https://github.com/pengjiantao/opencode-vscode-client/commit/db107f1872b6045b1aa384507a0a9d693847fe35))
 
-### [0.1.13](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.12...v0.1.13) (2026-05-24)
-
-### Bug Fixes
-
-- improve horizontal wheel scrolling on session tabs ([381bef6](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/381bef6ba0917cae0f4c1853e97061c9fb7a3842))
-- replace scrollIntoView with manual scrollTop to prevent webview layout shift ([c27229d](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c27229dc3c97adc8e214c631f26cdd10d9b8b368))
-
-### [0.1.12](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.11...v0.1.12) (2026-05-24)
-
-### Bug Fixes
-
-- bash output auto-scroll timing and dynamic height ([5f1666c](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/5f1666c4c155dbdd2f775105683e1e379896cdd3))
-- enable horizontal mouse wheel scrolling on session tabs ([1b5db3a](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/1b5db3a212bcd7c069f0168bdc41a2209b72b4c1))
-- restore BASH tool command description in collapsible part header ([08446fa](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/08446fa59f721d3dd69c29d4fc25603b56170001))
-
-### [0.1.11](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.10...v0.1.11) (2026-05-24)
-
-### Bug Fixes
-
-- prefer connected SDK models and extract session-aware IPC handlers ([3ccc25a](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/3ccc25adb75aea7845f14ab6dc6fa644d8735313))
-- replace native title with data-custom-title in BashOutput ([1622d1d](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/1622d1d06fee95a52724ed1f3986974f353621d6))
-
-### [0.1.10](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.9...v0.1.10) (2026-05-24)
+### [0.1.17](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.16...v0.1.17) (2026-05-25)
 
 ### Features
 
-- **webview:** add custom Bash output with real-time streaming, auto-scroll, and styled container ([1fc0596](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/1fc059673657ce3fd3d4e052fad7df8c4d06c9c5))
+- add Codicon icons to empty states, remove defunct new-session button ([0af3105](https://github.com/pengjiantao/opencode-vscode-client/commit/0af3105b7c248440d53804af6696c6e7c71db314))
 
-### [0.1.9](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.8...v0.1.9) (2026-05-23)
+### Bug Fixes
+
+- add responsive width constraints to popover/select layout ([409f791](https://github.com/pengjiantao/opencode-vscode-client/commit/409f79174058231b054aceddbbaaafdfda03c031))
+
+### [0.1.16](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.15...v0.1.16) (2026-05-25)
 
 ### Features
 
-- **extension:** buffer pending permission/question requests in extension host ([6ec214d](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/6ec214d33fd5a1b4620395ff7dd60ac6039a76a4))
-- **extension:** implement per-session model/agent/variant isolation ([de1a404](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/de1a404ef3afbacc4bbfc01b8c87b098d0bd825b))
+- auto-scroll active session tab into view on switch ([c02753a](https://github.com/pengjiantao/opencode-vscode-client/commit/c02753a6c6f29ca93d82bcee774b8ab0217301bf))
 
-### [0.1.8](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.7...v0.1.8) (2026-05-23)
+### Bug Fixes
+
+- preserve session tab order on webview reload ([c434a4c](https://github.com/pengjiantao/opencode-vscode-client/commit/c434a4cbc03c32d8d5a0e2d85ff15881a8dc939f))
+
+### [0.1.15](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.14...v0.1.15) (2026-05-25)
+
+### Bug Fixes
+
+- restore sessionStatus on webview rebuild to prevent premature action buttons ([59ab74f](https://github.com/pengjiantao/opencode-vscode-client/commit/59ab74f7a40fc499da0e7dbca40fd9ad7cf4b349))
+
+### [0.1.14](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.13...v0.1.14) (2026-05-25)
 
 ### Features
 
-- add model variant reasoning profile support ([57e0dff](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/57e0dff3f8c26ad6d7c788679be8fde4bf0d5fba))
-- add paste-as-plain-text with context menu and Ctrl+Shift+V shortcut ([2645c4d](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/2645c4d35b0cefa38872e9a88c516bf279056716))
-- **webview:** implement question tool rendering with interactive QuestionBar ([a70b18c](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/a70b18cf4a5949dad65c9de2871295ac2cb8aef7))
-- **webview:** make diff component interactive — click to open/jump to file ([755d44a](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/755d44a92d3e0a40981968993bb01563beb3ec94))
-- **webview:** render edit/write/apply_patch diff output as structured table ([d92e3dd](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/d92e3dd9abd99327e4906ec8cdbbce56a945dea7))
-- **webview:** synthetic diff for write tool, expanded by default, hide labels ([855a9da](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/855a9daf803831f1d5f3014a9d21a12227ad2fa7))
+- add popover-aware tooltip positioning ([d114474](https://github.com/pengjiantao/opencode-vscode-client/commit/d114474700e3533a683d2ffd4b575bddcbd8a6b6))
+
+### [0.1.13](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.12...v0.1.13) (2026-05-24)
 
 ### Bug Fixes
 
-- **webview:** use errorForeground token for stop button with opacity-based hover ([741c0e4](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/741c0e43e4ad4e708730fada3cae96f62a80b1e7))
+- improve horizontal wheel scrolling on session tabs ([381bef6](https://github.com/pengjiantao/opencode-vscode-client/commit/381bef6ba0917cae0f4c1853e97061c9fb7a3842))
+- replace scrollIntoView with manual scrollTop to prevent webview layout shift ([c27229d](https://github.com/pengjiantao/opencode-vscode-client/commit/c27229dc3c97adc8e214c631f26cdd10d9b8b368))
 
-### [0.1.7](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.6...v0.1.7) (2026-05-22)
-
-### Bug Fixes
-
-- **webview:** improve tooltip code block styling and fix word-break ([9eb2ffb](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/9eb2ffb4818579ef3b37189e574c9524f97c2767))
-
-### [0.1.6](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.5...v0.1.6) (2026-05-22)
+### [0.1.12](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.11...v0.1.12) (2026-05-24)
 
 ### Bug Fixes
 
-- **webview:** measure tooltip height offscreen when switching targets ([c1fef49](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c1fef4943e33a7f79775ad375163af6fa6244bbb))
-- **webview:** prevent paste handler from misclassifying // comments and / commands as file paths ([4ed4dcb](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/4ed4dcb9aecce813178f8f4b0d817cdfc72f69eb))
+- bash output auto-scroll timing and dynamic height ([5f1666c](https://github.com/pengjiantao/opencode-vscode-client/commit/5f1666c4c155dbdd2f775105683e1e379896cdd3))
+- enable horizontal mouse wheel scrolling on session tabs ([1b5db3a](https://github.com/pengjiantao/opencode-vscode-client/commit/1b5db3a212bcd7c069f0168bdc41a2209b72b4c1))
+- restore BASH tool command description in collapsible part header ([08446fa](https://github.com/pengjiantao/opencode-vscode-client/commit/08446fa59f721d3dd69c29d4fc25603b56170001))
 
-### [0.1.5](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/compare/v0.1.3...v0.1.5) (2026-05-21)
+### [0.1.11](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.10...v0.1.11) (2026-05-24)
+
+### Bug Fixes
+
+- prefer connected SDK models and extract session-aware IPC handlers ([3ccc25a](https://github.com/pengjiantao/opencode-vscode-client/commit/3ccc25adb75aea7845f14ab6dc6fa644d8735313))
+- replace native title with data-custom-title in BashOutput ([1622d1d](https://github.com/pengjiantao/opencode-vscode-client/commit/1622d1d06fee95a52724ed1f3986974f353621d6))
+
+### [0.1.10](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.9...v0.1.10) (2026-05-24)
 
 ### Features
 
-- add command and skill chip support in prompt editor ([f0ff93d](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/f0ff93d2c3d8cb39c25c6b4cabf0af28ab5aaab3))
-- add editor/terminal selection context menu and inline chips ([25e836c](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/25e836c4d892a2b2517b351079f8bb21631cf7ce))
-- add local file attachment via native file dialog ([4b2b6b3](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/4b2b6b3ca44cce3505eb7d5cf55baf9426fa8a61))
-- add workspace file search with @ mention autocomplete and gitignore support ([cf509b8](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/cf509b87119b3c354fdc15c91e96afd317d585ab))
-- replace Thinking... text with 3-dot ripple animation indicator ([8ab2951](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/8ab29510ac00c6e2a3dea069434dada586e88a6f))
-- **webview:** add auto-scroll to ChatView when new messages arrive ([56e286e](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/56e286ee9642fa8b8e7c64af31110c6c5cd36b24))
-- **webview:** add inline attachment chips with file handlers and metadata footer ([a2dfa58](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/a2dfa580834abc017b55c7f6d6098f09cfc41828))
-- **webview:** add responsive sidebar layout with metadata label hiding ([eba5edb](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/eba5edb10095cd791f943796cb4a5a76167c3104))
-- **webview:** add scroll-shadow fade indicators to chat message list ([0d61912](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/0d619120d29a0c9d80d7ccd572253cad84f85a18))
-- **webview:** add timeline visualization for tool/reasoning parts ([5fb2c66](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/5fb2c66e7c7b268c935aac128dd1b9385368c0eb))
-- **webview:** tint search input backgrounds with foreground color via color-mix ([248302a](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/248302ac251e1d55926d7762ad4c2b46a7b2fa34))
+- **webview:** add custom Bash output with real-time streaming, auto-scroll, and styled container ([1fc0596](https://github.com/pengjiantao/opencode-vscode-client/commit/1fc059673657ce3fd3d4e052fad7df8c4d06c9c5))
 
-### Bug Fixes
-
-- preserve directory mime type and prevent spurious line ranges on whole-file parts ([a6cc676](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/a6cc6768d1915d7773dba18c0a7c2bded17039dd))
-- silently ignore unknown part types in PartRenderer ([a9f1a2b](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/a9f1a2bf0d35f17cc8a128d36f6907adce284401))
-- **webview:** ensure command names fully display in suggestion popover ([c5cd1e7](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/c5cd1e758435a01149ac73f00046017aac4b68a8))
-- **webview:** improve inline chip vertical alignment and centralize CSS ([3994ef5](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/3994ef597ebce7b74ca22398188cfd8d29275de0))
-- **webview:** preserve loose markdown lists across blank lines ([31f5a4a](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/31f5a4ad600f78e4bb7c7824b4740d137ac81f64))
-- **webview:** prevent sub-footer icon overlap and workspace early truncation ([0714058](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/0714058d9a6ff5aa7d87d0aacdf570782f08b22e))
-- **webview:** replace deprecated execCommand('insertText') with custom DOM insertion ([254657c](http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client/commit/254657cb008ac0c3a8e209a791ba0481181e8a70))
-
-### [0.1.4](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/compare/v0.1.3...v0.1.4) (2026-05-19)
+### [0.1.9](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.8...v0.1.9) (2026-05-23)
 
 ### Features
 
-- add editor/terminal selection context menu and inline chips ([25e836c](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/25e836c4d892a2b2517b351079f8bb21631cf7ce))
-- add workspace file search with @ mention autocomplete and gitignore support ([cf509b8](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/cf509b87119b3c354fdc15c91e96afd317d585ab))
-- **webview:** add auto-scroll to ChatView when new messages arrive ([56e286e](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/56e286ee9642fa8b8e7c64af31110c6c5cd36b24))
-- **webview:** add inline attachment chips with file handlers and metadata footer ([a2dfa58](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/a2dfa580834abc017b55c7f6d6098f09cfc41828))
-- **webview:** add responsive sidebar layout with metadata label hiding ([eba5edb](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/eba5edb10095cd791f943796cb4a5a76167c3104))
+- **extension:** buffer pending permission/question requests in extension host ([6ec214d](https://github.com/pengjiantao/opencode-vscode-client/commit/6ec214d33fd5a1b4620395ff7dd60ac6039a76a4))
+- **extension:** implement per-session model/agent/variant isolation ([de1a404](https://github.com/pengjiantao/opencode-vscode-client/commit/de1a404ef3afbacc4bbfc01b8c87b098d0bd825b))
+
+### [0.1.8](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.7...v0.1.8) (2026-05-23)
+
+### Features
+
+- add model variant reasoning profile support ([57e0dff](https://github.com/pengjiantao/opencode-vscode-client/commit/57e0dff3f8c26ad6d7c788679be8fde4bf0d5fba))
+- add paste-as-plain-text with context menu and Ctrl+Shift+V shortcut ([2645c4d](https://github.com/pengjiantao/opencode-vscode-client/commit/2645c4d35b0cefa38872e9a88c516bf279056716))
+- **webview:** implement question tool rendering with interactive QuestionBar ([a70b18c](https://github.com/pengjiantao/opencode-vscode-client/commit/a70b18cf4a5949dad65c9de2871295ac2cb8aef7))
+- **webview:** make diff component interactive — click to open/jump to file ([755d44a](https://github.com/pengjiantao/opencode-vscode-client/commit/755d44a92d3e0a40981968993bb01563beb3ec94))
+- **webview:** render edit/write/apply_patch diff output as structured table ([d92e3dd](https://github.com/pengjiantao/opencode-vscode-client/commit/d92e3dd9abd99327e4906ec8cdbbce56a945dea7))
+- **webview:** synthetic diff for write tool, expanded by default, hide labels ([855a9da](https://github.com/pengjiantao/opencode-vscode-client/commit/855a9daf803831f1d5f3014a9d21a12227ad2fa7))
 
 ### Bug Fixes
 
-- **webview:** preserve loose markdown lists across blank lines ([31f5a4a](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/31f5a4ad600f78e4bb7c7824b4740d137ac81f64))
+- **webview:** use errorForeground token for stop button with opacity-based hover ([741c0e4](https://github.com/pengjiantao/opencode-vscode-client/commit/741c0e43e4ad4e708730fada3cae96f62a80b1e7))
+
+### [0.1.7](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.6...v0.1.7) (2026-05-22)
+
+### Bug Fixes
+
+- **webview:** improve tooltip code block styling and fix word-break ([9eb2ffb](https://github.com/pengjiantao/opencode-vscode-client/commit/9eb2ffb4818579ef3b37189e574c9524f97c2767))
+
+### [0.1.6](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.5...v0.1.6) (2026-05-22)
+
+### Bug Fixes
+
+- **webview:** measure tooltip height offscreen when switching targets ([c1fef49](https://github.com/pengjiantao/opencode-vscode-client/commit/c1fef4943e33a7f79775ad375163af6fa6244bbb))
+- **webview:** prevent paste handler from misclassifying // comments and / commands as file paths ([4ed4dcb](https://github.com/pengjiantao/opencode-vscode-client/commit/4ed4dcb9aecce813178f8f4b0d817cdfc72f69eb))
+
+### [0.1.5](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.3...v0.1.5) (2026-05-21)
+
+### Features
+
+- add command and skill chip support in prompt editor ([f0ff93d](https://github.com/pengjiantao/opencode-vscode-client/commit/f0ff93d2c3d8cb39c25c6b4cabf0af28ab5aaab3))
+- add editor/terminal selection context menu and inline chips ([25e836c](https://github.com/pengjiantao/opencode-vscode-client/commit/25e836c4d892a2b2517b351079f8bb21631cf7ce))
+- add local file attachment via native file dialog ([4b2b6b3](https://github.com/pengjiantao/opencode-vscode-client/commit/4b2b6b3ca44cce3505eb7d5cf55baf9426fa8a61))
+- add workspace file search with @ mention autocomplete and gitignore support ([cf509b8](https://github.com/pengjiantao/opencode-vscode-client/commit/cf509b87119b3c354fdc15c91e96afd317d585ab))
+- replace Thinking... text with 3-dot ripple animation indicator ([8ab2951](https://github.com/pengjiantao/opencode-vscode-client/commit/8ab29510ac00c6e2a3dea069434dada586e88a6f))
+- **webview:** add auto-scroll to ChatView when new messages arrive ([56e286e](https://github.com/pengjiantao/opencode-vscode-client/commit/56e286ee9642fa8b8e7c64af31110c6c5cd36b24))
+- **webview:** add inline attachment chips with file handlers and metadata footer ([a2dfa58](https://github.com/pengjiantao/opencode-vscode-client/commit/a2dfa580834abc017b55c7f6d6098f09cfc41828))
+- **webview:** add responsive sidebar layout with metadata label hiding ([eba5edb](https://github.com/pengjiantao/opencode-vscode-client/commit/eba5edb10095cd791f943796cb4a5a76167c3104))
+- **webview:** add scroll-shadow fade indicators to chat message list ([0d61912](https://github.com/pengjiantao/opencode-vscode-client/commit/0d619120d29a0c9d80d7ccd572253cad84f85a18))
+- **webview:** add timeline visualization for tool/reasoning parts ([5fb2c66](https://github.com/pengjiantao/opencode-vscode-client/commit/5fb2c66e7c7b268c935aac128dd1b9385368c0eb))
+- **webview:** tint search input backgrounds with foreground color via color-mix ([248302a](https://github.com/pengjiantao/opencode-vscode-client/commit/248302ac251e1d55926d7762ad4c2b46a7b2fa34))
+
+### Bug Fixes
+
+- preserve directory mime type and prevent spurious line ranges on whole-file parts ([a6cc676](https://github.com/pengjiantao/opencode-vscode-client/commit/a6cc6768d1915d7773dba18c0a7c2bded17039dd))
+- silently ignore unknown part types in PartRenderer ([a9f1a2b](https://github.com/pengjiantao/opencode-vscode-client/commit/a9f1a2bf0d35f17cc8a128d36f6907adce284401))
+- **webview:** ensure command names fully display in suggestion popover ([c5cd1e7](https://github.com/pengjiantao/opencode-vscode-client/commit/c5cd1e758435a01149ac73f00046017aac4b68a8))
+- **webview:** improve inline chip vertical alignment and centralize CSS ([3994ef5](https://github.com/pengjiantao/opencode-vscode-client/commit/3994ef597ebce7b74ca22398188cfd8d29275de0))
+- **webview:** preserve loose markdown lists across blank lines ([31f5a4a](https://github.com/pengjiantao/opencode-vscode-client/commit/31f5a4ad600f78e4bb7c7824b4740d137ac81f64))
+- **webview:** prevent sub-footer icon overlap and workspace early truncation ([0714058](https://github.com/pengjiantao/opencode-vscode-client/commit/0714058d9a6ff5aa7d87d0aacdf570782f08b22e))
+- **webview:** replace deprecated execCommand('insertText') with custom DOM insertion ([254657c](https://github.com/pengjiantao/opencode-vscode-client/commit/254657cb008ac0c3a8e209a791ba0481181e8a70))
+
+### [0.1.4](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.3...v0.1.4) (2026-05-19)
+
+### Features
+
+- add editor/terminal selection context menu and inline chips ([25e836c](https://github.com/pengjiantao/opencode-vscode-client/commit/25e836c4d892a2b2517b351079f8bb21631cf7ce))
+- add workspace file search with @ mention autocomplete and gitignore support ([cf509b8](https://github.com/pengjiantao/opencode-vscode-client/commit/cf509b87119b3c354fdc15c91e96afd317d585ab))
+- **webview:** add auto-scroll to ChatView when new messages arrive ([56e286e](https://github.com/pengjiantao/opencode-vscode-client/commit/56e286ee9642fa8b8e7c64af31110c6c5cd36b24))
+- **webview:** add inline attachment chips with file handlers and metadata footer ([a2dfa58](https://github.com/pengjiantao/opencode-vscode-client/commit/a2dfa580834abc017b55c7f6d6098f09cfc41828))
+- **webview:** add responsive sidebar layout with metadata label hiding ([eba5edb](https://github.com/pengjiantao/opencode-vscode-client/commit/eba5edb10095cd791f943796cb4a5a76167c3104))
+
+### Bug Fixes
+
+- **webview:** preserve loose markdown lists across blank lines ([31f5a4a](https://github.com/pengjiantao/opencode-vscode-client/commit/31f5a4ad600f78e4bb7c7824b4740d137ac81f64))
 
 ### 0.1.3 (2026-05-19)
 
 ### Features
 
-- add regression testing rule and fix dropdown enablement ([64ce826](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/64ce826f3bbd5012e567455d6fab34e1a066734a))
-- add VS Code sidebar menu commands for New Session and History ([1214347](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/1214347e39847d8c761664c9488f8319253a687e))
-- initial opencode VS Code extension with webview UI ([eae8e53](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/eae8e535e4efa0e7a4cd4e028dc0e36d45b410e9))
-- migrate to SDK v2 API and add metadata sync with status footer ([ecd1c96](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/ecd1c9637d1620fe53277a84e5126e4a57440100))
-- move StatusBar from webview to native VS Code status bar item ([08cfbfe](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/08cfbfec1e96d9d79063affd351f04ca791e6517))
-- persist and restore active model/agent selections ([067caee](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/067caeeb95bbf9881c57c466ed9ffa40f6c717c6))
-- prevent duplicate sessions and improve tabs styling ([88aec12](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/88aec12a723bbe17722c0f159ae3d00847dc2553))
-- replace archive with close session and refactor view provider ([954b5e4](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/954b5e4378cddc4f11f0778a1d374522ef7fb48a))
-- support streaming delta events and session history ([ced8b5e](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/ced8b5e38a6ec11c645a084d5af7623506f9957e))
-- **ui:** add reusable Codicon component for VS Code icons ([99ff5e2](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/99ff5e29e4e33341b4429fb790e3492dc0de6454))
-- **ui:** add tool/reasoning icons and deduplicate CSS ([3de3a01](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/3de3a0184d644f9c4f32817d0900ad7f0bfca023))
-- **webview:** add action controls, collapsible parts, and markdown rendering ([3ea2723](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/3ea2723880566b15531ccb9cfd5904e7b92ce9ae))
-- **webview:** add custom tooltip system replacing native browser tooltips ([28f4c87](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/28f4c87a465c67dc1458fb8feb5b17e8f2c1521f))
-- **webview:** add GFM table rendering and extract CodeBlock component ([446cf9c](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/446cf9c1eb85a3b444275520af7235c52a89a3a2))
-- **webview:** support multi-assistant turns and migrate syntax highlighting to PrismJS ([7336717](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/733671782cf957f2034d2a5de800f98135065e4d))
+- add regression testing rule and fix dropdown enablement ([64ce826](https://github.com/pengjiantao/opencode-vscode-client/commit/64ce826f3bbd5012e567455d6fab34e1a066734a))
+- add VS Code sidebar menu commands for New Session and History ([1214347](https://github.com/pengjiantao/opencode-vscode-client/commit/1214347e39847d8c761664c9488f8319253a687e))
+- initial opencode VS Code extension with webview UI ([eae8e53](https://github.com/pengjiantao/opencode-vscode-client/commit/eae8e535e4efa0e7a4cd4e028dc0e36d45b410e9))
+- migrate to SDK v2 API and add metadata sync with status footer ([ecd1c96](https://github.com/pengjiantao/opencode-vscode-client/commit/ecd1c9637d1620fe53277a84e5126e4a57440100))
+- move StatusBar from webview to native VS Code status bar item ([08cfbfe](https://github.com/pengjiantao/opencode-vscode-client/commit/08cfbfec1e96d9d79063affd351f04ca791e6517))
+- persist and restore active model/agent selections ([067caee](https://github.com/pengjiantao/opencode-vscode-client/commit/067caeeb95bbf9881c57c466ed9ffa40f6c717c6))
+- prevent duplicate sessions and improve tabs styling ([88aec12](https://github.com/pengjiantao/opencode-vscode-client/commit/88aec12a723bbe17722c0f159ae3d00847dc2553))
+- replace archive with close session and refactor view provider ([954b5e4](https://github.com/pengjiantao/opencode-vscode-client/commit/954b5e4378cddc4f11f0778a1d374522ef7fb48a))
+- support streaming delta events and session history ([ced8b5e](https://github.com/pengjiantao/opencode-vscode-client/commit/ced8b5e38a6ec11c645a084d5af7623506f9957e))
+- **ui:** add reusable Codicon component for VS Code icons ([99ff5e2](https://github.com/pengjiantao/opencode-vscode-client/commit/99ff5e29e4e33341b4429fb790e3492dc0de6454))
+- **ui:** add tool/reasoning icons and deduplicate CSS ([3de3a01](https://github.com/pengjiantao/opencode-vscode-client/commit/3de3a0184d644f9c4f32817d0900ad7f0bfca023))
+- **webview:** add action controls, collapsible parts, and markdown rendering ([3ea2723](https://github.com/pengjiantao/opencode-vscode-client/commit/3ea2723880566b15531ccb9cfd5904e7b92ce9ae))
+- **webview:** add custom tooltip system replacing native browser tooltips ([28f4c87](https://github.com/pengjiantao/opencode-vscode-client/commit/28f4c87a465c67dc1458fb8feb5b17e8f2c1521f))
+- **webview:** add GFM table rendering and extract CodeBlock component ([446cf9c](https://github.com/pengjiantao/opencode-vscode-client/commit/446cf9c1eb85a3b444275520af7235c52a89a3a2))
+- **webview:** support multi-assistant turns and migrate syntax highlighting to PrismJS ([7336717](https://github.com/pengjiantao/opencode-vscode-client/commit/733671782cf957f2034d2a5de800f98135065e4d))
 
 ### Bug Fixes
 
-- **extension:** resolve relative URL fetch error and support multi-window directory isolation ([875563b](https://10.144.144.2:2222/fiyqkrc/opencode-vscode-client/commit/875563beb5f84fec8b54c83824618da0cea1f9d0))
+- **extension:** resolve relative URL fetch error and support multi-window directory isolation ([875563b](https://github.com/pengjiantao/opencode-vscode-client/commit/875563beb5f84fec8b54c83824618da0cea1f9d0))
 
 ### [0.1.2](///compare/v0.1.1...v0.1.2) (2026-05-17)
 

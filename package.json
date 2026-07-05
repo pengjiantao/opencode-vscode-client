@@ -2,15 +2,42 @@
   "name": "opencode-vscode-client",
   "publisher": "fiyqkrc",
   "version": "0.1.38",
-  "displayName": "OpenCode Vscode Client",
-  "description": "VS Code Sidebar Extension for OpenCode SDK - AI-powered programming assistant",
+  "displayName": "OpenCode VS Code Client",
+  "description": "AI programming assistant sidebar for OpenCode with multi-session chat, editor context, terminal analysis, and review tools.",
   "icon": "assets/icon.png",
   "license": "MIT",
+  "categories": [
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "opencode",
+    "ai",
+    "coding-assistant",
+    "agent",
+    "chat",
+    "sdk",
+    "sidebar",
+    "terminal",
+    "code-review",
+    "diff",
+    "developer-tools"
+  ],
+  "galleryBanner": {
+    "color": "#0E639C",
+    "theme": "dark"
+  },
+  "pricing": "Free",
+  "markdown": "github",
+  "qna": "marketplace",
   "repository": {
     "type": "git",
-    "url": "http://10.144.144.2:3000/fiyqkrc/opencode-vscode-client.git"
+    "url": "https://github.com/pengjiantao/opencode-vscode-client.git"
   },
-  "private": true,
+  "bugs": {
+    "url": "https://github.com/pengjiantao/opencode-vscode-client/issues"
+  },
+  "homepage": "https://github.com/pengjiantao/opencode-vscode-client#readme",
   "main": "./dist/extension/index.js",
   "activationEvents": [
     "onView:opencode-sidebar.main",
