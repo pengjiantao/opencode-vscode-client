@@ -1,4 +1,7 @@
-/* Styles for all message part types: text, tool, reasoning, file, agent */
+/**
+ * @file Styles for all message part types: text, tool, reasoning, file, and agent.
+ */
+
 .part {
   margin: 8px 0;
 }
@@ -436,7 +439,7 @@
 }
 
 .timeline-dot.reasoning-dot {
-  background-color: #ffffff;
+  background-color: var(--vscode-descriptionForeground, var(--webview-foreground));
   opacity: 0.5;
 }
 
@@ -457,7 +460,6 @@
 }
 
 .timeline-dot.reasoning-dot.status-running {
-  background-color: #ffffff;
   animation: timeline-blink 1.2s infinite ease-in-out;
 }
 
