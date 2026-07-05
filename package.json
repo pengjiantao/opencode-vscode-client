@@ -4,6 +4,7 @@
   "version": "0.1.38",
   "displayName": "OpenCode Vscode Client",
   "description": "VS Code Sidebar Extension for OpenCode SDK - AI-powered programming assistant",
+  "icon": "assets/icon.png",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -98,7 +99,7 @@
         {
           "id": "opencode-sidebar",
           "title": "OpenCode",
-          "icon": "$(copilot)"
+          "icon": "assets/activitybar.svg"
         }
       ]
     },
