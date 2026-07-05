@@ -14,6 +14,10 @@ OpenCode VS Code Client brings OpenCode's AI programming workflow into the VS Co
 
 It is intended for developers who want code understanding, code changes, review, terminal-output analysis, and multi-turn AI programming sessions without leaving VS Code.
 
+## Screenshot
+
+![OpenCode VS Code Client sidebar screenshot](screenshot/main.png)
+
 ## Features
 
 - Native VS Code sidebar entry with UI styles driven by VS Code theme variables.

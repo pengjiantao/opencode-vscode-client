@@ -14,6 +14,10 @@ OpenCode VS Code Client 将 OpenCode 的 AI 编程能力集成到 VS Code Activi
 
 它适合希望在 VS Code 内完成代码理解、修改、审查、终端输出分析和多轮 AI 编程会话的开发者。
 
+## 效果图
+
+![OpenCode VS Code Client 侧边栏截图](screenshot/main.png)
+
 ## 主要功能
 
 - 原生 VS Code 侧边栏入口，界面遵循 VS Code 主题变量自动适配深色/浅色主题。
