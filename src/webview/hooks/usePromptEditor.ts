@@ -1,12 +1,12 @@
 /**
  * @file Custom React hook for managing PromptInput contenteditable DOM operations (chip insertion and paste handling).
- * Extracts complex DOM traversal and clipboard parsing to keep UI components focused and modular.
+ * Delegates clipboard parsing to utilities so this hook can focus on DOM insertion.
  */
 
 import { useCallback } from 'react';
 import type { WebviewToExt } from '../../shared/types';
-import { getMimeType } from '../../shared/utils';
 import { getChipDisplayLabel, getIconClass, getTooltipHtml } from '../utils/chipUtils';
+import { ClipboardAttachmentUtils } from '../utils/clipboardAttachments';
 import { getFileIconUrl } from '../utils/file-icons';
 import { createChipIconElement } from '../utils/inlineChipDom';
 
@@ -60,7 +60,7 @@ function setCursorAfter(node: Node) {
 }
 
 /**
- * Hook providing chip insertion and clipboard paste parsing logic for the prompt input editor.
+ * Hook providing chip insertion and clipboard paste execution for the prompt input editor.
  */
 export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UsePromptEditorProps) {
   const insertChip = useCallback(
@@ -193,152 +193,87 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLDivElement>) => {
-      const pastedText = e.clipboardData.getData('text/plain')?.trim();
-
-      let isPastedPath = false;
-      if (pastedText) {
-        // A valid path should be a single line (no newlines).
-        const isSingleLine = !pastedText.includes('\n') && !pastedText.includes('\r');
-        if (isSingleLine) {
-          // Check if it is a file:// URL.
-          if (pastedText.startsWith('file://')) {
-            isPastedPath = true;
-          }
-          // Check if it is a Windows absolute path (e.g. C:\path or D:/path).
-          else if (/^[a-zA-Z]:[\\/]/.test(pastedText)) {
-            isPastedPath = true;
-          }
-          // Check if it is a Unix absolute path.
-          // It must start with a single slash (not double slashes like '//' for comments, or '/*' for block comments).
-          // To prevent mistaking slash commands (e.g. /goal, /help) as paths, we ensure it contains
-          // either another directory separator or an extension dot.
-          else if (/^\/(?![\\/*\s])/.test(pastedText)) {
-            const hasAdditionalSeparator = pastedText.indexOf('/', 1) !== -1;
-            const hasExtension = /\.[a-zA-Z0-9]+$/.test(pastedText);
-            if (hasAdditionalSeparator || hasExtension) {
-              isPastedPath = true;
-            }
-          }
-        }
+      const pastePlan = ClipboardAttachmentUtils.createPastePlan(e.clipboardData);
+      if (!pastePlan.handled) {
+        return;
       }
 
-      if (e.clipboardData.files && e.clipboardData.files.length > 0) {
-        const files = Array.from(e.clipboardData.files);
-        let handled = false;
+      e.preventDefault();
 
-        for (const file of files) {
-          if (file.type.startsWith('image/')) {
-            e.preventDefault();
-            handled = true;
+      for (const action of pastePlan.actions) {
+        switch (action.type) {
+          case 'image-file': {
             const reader = new FileReader();
             reader.onload = () => {
-              const dataUrl = reader.result as string;
               insertChip({
                 id: `img-${Math.random().toString(36).substring(7)}`,
                 type: 'image',
-                filename: file.name || 'Pasted Image',
-                size: file.size,
-                mime: file.type,
-                dataUrl,
+                filename: action.filename,
+                size: action.size,
+                mime: action.mime,
+                dataUrl: reader.result as string,
               });
             };
-            reader.readAsDataURL(file);
-          } else {
-            const resolvedPath =
-              (file as unknown as { path?: string }).path ||
-              (isPastedPath ? pastedText : undefined);
-            if (resolvedPath) {
-              e.preventDefault();
-              handled = true;
-              const isImage =
-                file.type?.startsWith('image/') ||
-                resolvedPath.toLowerCase().endsWith('.png') ||
-                resolvedPath.toLowerCase().endsWith('.jpg') ||
-                resolvedPath.toLowerCase().endsWith('.jpeg') ||
-                resolvedPath.toLowerCase().endsWith('.gif') ||
-                resolvedPath.toLowerCase().endsWith('.webp');
-              const isPdf =
-                file.type === 'application/pdf' || resolvedPath.toLowerCase().endsWith('.pdf');
-              const resolvedMime = isImage
-                ? file.type || 'image/png'
-                : isPdf
-                  ? 'application/pdf'
-                  : 'text/plain';
-              insertChip({
-                id: `file-path-${Math.random().toString(36).substring(7)}`,
-                type: 'file',
-                path: resolvedPath,
-                filename: file.name || resolvedPath.split(/[\\/]/).pop() || 'file',
-                size: file.size,
-                mime: resolvedMime,
-              });
-            } else {
-              e.preventDefault();
-              handled = true;
-              const reader = new FileReader();
-              reader.onload = () => {
-                const textContent = reader.result as string;
-                const linesCount = textContent.split('\n').length;
-                const isImage =
-                  file.type?.startsWith('image/') ||
-                  file.name.toLowerCase().endsWith('.png') ||
-                  file.name.toLowerCase().endsWith('.jpg') ||
-                  file.name.toLowerCase().endsWith('.jpeg') ||
-                  file.name.toLowerCase().endsWith('.gif') ||
-                  file.name.toLowerCase().endsWith('.webp');
-                const isPdf =
-                  file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-                const resolvedMime = isImage
-                  ? file.type || 'image/png'
-                  : isPdf
-                    ? 'application/pdf'
-                    : 'text/plain';
-                insertChip({
-                  id: `file-${Math.random().toString(36).substring(7)}`,
-                  type: 'file',
-                  filename: file.name,
-                  size: file.size,
-                  mime: resolvedMime,
-                  text: textContent,
-                  linesCount,
-                });
-              };
-              reader.readAsText(file);
-            }
+            reader.readAsDataURL(action.file);
+            break;
           }
+          case 'file-chip':
+            insertChip({
+              id: `file-path-${Math.random().toString(36).substring(7)}`,
+              type: 'file',
+              path: action.path,
+              filename: action.filename,
+              size: action.size,
+              mime: action.mime,
+            });
+            break;
+          case 'markdown-reference':
+            insertText(action.text);
+            break;
+          case 'text-file': {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const textContent = reader.result as string;
+              const linesCount = textContent.split('\n').length;
+              insertChip({
+                id: `file-${Math.random().toString(36).substring(7)}`,
+                type: 'file',
+                filename: action.filename,
+                size: action.size,
+                mime: action.mime,
+                text: textContent,
+                linesCount,
+              });
+            };
+            reader.readAsText(action.file);
+            break;
+          }
+          case 'text-chip':
+            insertChip({
+              id: `text-${Math.random().toString(36).substring(7)}`,
+              type: 'text',
+              filename: action.filename,
+              text: action.text,
+              linesCount: action.linesCount,
+            });
+            break;
+          case 'resolve-file-path':
+            send({
+              type: 'clipboard:resolve-file-paths',
+              requestID: `clipboard-paste-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+              files: [
+                {
+                  name: action.filename,
+                  size: action.size,
+                  mime: action.mime,
+                },
+              ],
+            });
+            break;
         }
-
-        if (handled) return;
-      }
-
-      if (pastedText) {
-        if (isPastedPath) {
-          e.preventDefault();
-          const resolvedMime = getMimeType(pastedText);
-          insertChip({
-            id: `file-path-${Math.random().toString(36).substring(7)}`,
-            type: 'file',
-            path: pastedText,
-            filename: pastedText.split(/[\\/]/).pop() || 'file',
-            mime: resolvedMime,
-          });
-          return;
-        }
-
-        e.preventDefault();
-        const linesCount = pastedText.split(/\r?\n/).length;
-        // Treat all other pasted text (single-line or multi-line) as text chips under ordinary paste.
-        insertChip({
-          id: `text-${Math.random().toString(36).substring(7)}`,
-          type: 'text',
-          filename: `Pasted ${linesCount} Lines`,
-          text: pastedText,
-          linesCount,
-        });
-        return;
       }
     },
-    [insertChip],
+    [insertChip, insertText, send],
   );
 
   return { insertChip, insertText, handlePaste };

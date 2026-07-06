@@ -616,6 +616,155 @@ describe('PromptInput', () => {
     expect(chip).toHaveAttribute('data-chip-path', '/workspace/test.txt');
   });
 
+  it('regression: inserts selected PDFs as Markdown absolute path references', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const editor = screen.getByTestId('prompt-editor');
+
+    fireEvent(
+      window,
+      new MessageEvent('message', {
+        data: {
+          type: 'file:selected',
+          files: [
+            {
+              name: 'statement.pdf',
+              fsPath: '/workspace/docs/statement.pdf',
+              size: 100,
+              mime: 'application/pdf',
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(editor.querySelector('.opencode-chip')).not.toBeInTheDocument();
+    expect(editor.textContent).toBe('[statement.pdf](</workspace/docs/statement.pdf>)\n');
+
+    fireEvent.click(screen.getByRole('button', { name: /send/i }));
+
+    expect(mockOnSubmit).toHaveBeenCalledWith('[statement.pdf](</workspace/docs/statement.pdf>)', [
+      expect.objectContaining({
+        type: 'text',
+        text: '[statement.pdf](</workspace/docs/statement.pdf>)',
+      }),
+    ]);
+  });
+
+  it('regression: inserts resolved clipboard file paths as Markdown absolute path references', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const editor = screen.getByTestId('prompt-editor');
+
+    fireEvent(
+      window,
+      new MessageEvent('message', {
+        data: {
+          type: 'clipboard:file-paths-resolved',
+          requestID: 'clipboard-paste-1',
+          files: [
+            {
+              name: 'income-proof.docx',
+              fsPath: '/home/user/Documents/income-proof.docx',
+              size: 100,
+              mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            },
+          ],
+          unresolved: [],
+        },
+      }),
+    );
+
+    expect(editor.querySelector('.opencode-chip')).not.toBeInTheDocument();
+    expect(editor.textContent).toBe(
+      '[income-proof.docx](</home/user/Documents/income-proof.docx>)\n',
+    );
+  });
+
+  it('regression: inserts selected VSIX files as Markdown absolute path references', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const editor = screen.getByTestId('prompt-editor');
+
+    fireEvent(
+      window,
+      new MessageEvent('message', {
+        data: {
+          type: 'file:selected',
+          files: [
+            {
+              name: 'extension.vsix',
+              fsPath: '/workspace/dist/extension.vsix',
+              size: 100,
+              mime: 'text/plain',
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(editor.querySelector('.opencode-chip')).not.toBeInTheDocument();
+    expect(editor.textContent).toBe('[extension.vsix](</workspace/dist/extension.vsix>)\n');
+  });
+
+  it('regression: inserts selected extensionless files as Markdown absolute path references', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const editor = screen.getByTestId('prompt-editor');
+
+    fireEvent(
+      window,
+      new MessageEvent('message', {
+        data: {
+          type: 'file:selected',
+          files: [
+            {
+              name: 'opencode',
+              fsPath: '/usr/local/bin/opencode',
+              size: 100,
+              mime: 'text/plain',
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(editor.querySelector('.opencode-chip')).not.toBeInTheDocument();
+    expect(editor.textContent).toBe('[opencode](</usr/local/bin/opencode>)\n');
+  });
+
   /** Regression: inserts plain text when receiving editor:paste-plain-text message */
   it('regression: inserts plain text when receiving editor:paste-plain-text message', () => {
     render(

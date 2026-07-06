@@ -6,7 +6,7 @@
 
 import * as fs from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { workspace } from 'vscode';
+import { env, workspace } from 'vscode';
 import type { IPCBridge } from '../ipc';
 import type { SDKClient } from '../sdk-client';
 import type { WorkspaceSearchResult } from '../types';
@@ -77,7 +77,7 @@ describe('fileHandlers', () => {
   });
 
   describe('registerFileHandlers', () => {
-    it('should register file:open, file:query, and workspace:search-files listeners', () => {
+    it('should register file, workspace search, and clipboard path listeners', () => {
       const onSpy = vi.fn();
       const mockIpc = {
         on: onSpy,
@@ -89,6 +89,7 @@ describe('fileHandlers', () => {
       expect(onSpy).toHaveBeenCalledWith('file:open', expect.any(Function));
       expect(onSpy).toHaveBeenCalledWith('file:query', expect.any(Function));
       expect(onSpy).toHaveBeenCalledWith('workspace:search-files', expect.any(Function));
+      expect(onSpy).toHaveBeenCalledWith('clipboard:resolve-file-paths', expect.any(Function));
     });
 
     it('should delegate workspace:search-files to SDK find.files and convert results', async () => {
@@ -225,6 +226,123 @@ describe('fileHandlers', () => {
       });
 
       consoleSpy.mockRestore();
+    });
+
+    it('regression: resolves pasted clipboard file paths from native file URI text', async () => {
+      const readTextMock = vi
+        .fn()
+        .mockResolvedValue('file:///home/user/Documents/income-proof.docx');
+      Object.defineProperty(env.clipboard, 'readText', {
+        value: readTextMock,
+        configurable: true,
+      });
+      vi.mocked(fs.promises.stat).mockResolvedValue({
+        isDirectory: () => false,
+        isFile: () => true,
+        size: 2,
+      } as fs.Stats);
+
+      const onSpy = vi.fn();
+      const sendSpy = vi.fn();
+      const mockIpc = {
+        on: onSpy,
+        send: sendSpy,
+      } as unknown as IPCBridge;
+
+      registerFileHandlers(mockIpc, createMockSdkClient());
+
+      const resolveCall = onSpy.mock.calls.find(
+        (call) => call[0] === 'clipboard:resolve-file-paths',
+      );
+      const handler = resolveCall![1] as (msg: {
+        requestID: string;
+        files: Array<{ name: string; size: number; mime: string }>;
+      }) => void;
+
+      handler({
+        requestID: 'clipboard-paste-1',
+        files: [{ name: 'income-proof.docx', size: 2, mime: 'text/plain' }],
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(sendSpy).toHaveBeenCalledWith({
+        type: 'clipboard:file-paths-resolved',
+        requestID: 'clipboard-paste-1',
+        files: [
+          {
+            name: 'income-proof.docx',
+            fsPath: '/home/user/Documents/income-proof.docx',
+            size: 2,
+            mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            dataUrl: undefined,
+          },
+        ],
+        unresolved: [],
+      });
+    });
+
+    it('regression: resolves pasted clipboard files through workspace search fallback', async () => {
+      const originalFolders = workspace.workspaceFolders;
+      (workspace as { workspaceFolders: unknown }).workspaceFolders = [
+        {
+          uri: { fsPath: '/home/workspace', path: '/home/workspace', scheme: 'file' },
+          name: 'workspace',
+          index: 0,
+        },
+      ];
+
+      const readTextMock = vi.fn().mockResolvedValue('income-proof.docx');
+      Object.defineProperty(env.clipboard, 'readText', {
+        value: readTextMock,
+        configurable: true,
+      });
+      vi.mocked(fs.promises.stat).mockResolvedValue({
+        isDirectory: () => false,
+        isFile: () => true,
+        size: 2,
+      } as fs.Stats);
+
+      const findFilesMock = vi.fn().mockResolvedValue(['docs/income-proof.docx']);
+      const onSpy = vi.fn();
+      const sendSpy = vi.fn();
+      const mockIpc = {
+        on: onSpy,
+        send: sendSpy,
+      } as unknown as IPCBridge;
+
+      registerFileHandlers(mockIpc, createMockSdkClient({ findFiles: findFilesMock }));
+
+      const resolveCall = onSpy.mock.calls.find(
+        (call) => call[0] === 'clipboard:resolve-file-paths',
+      );
+      const handler = resolveCall![1] as (msg: {
+        requestID: string;
+        files: Array<{ name: string; size: number; mime: string }>;
+      }) => void;
+
+      handler({
+        requestID: 'clipboard-paste-2',
+        files: [{ name: 'income-proof.docx', size: 2, mime: 'text/plain' }],
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(findFilesMock).toHaveBeenCalledWith('income-proof.docx', 50);
+      expect(sendSpy).toHaveBeenCalledWith({
+        type: 'clipboard:file-paths-resolved',
+        requestID: 'clipboard-paste-2',
+        files: [
+          {
+            name: 'income-proof.docx',
+            fsPath: '/home/workspace/docs/income-proof.docx',
+            size: 2,
+            mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            dataUrl: undefined,
+          },
+        ],
+        unresolved: [],
+      });
+
+      (workspace as { workspaceFolders: unknown }).workspaceFolders = originalFolders;
     });
   });
 });

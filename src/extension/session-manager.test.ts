@@ -179,6 +179,55 @@ describe('SessionManager', () => {
       expect(passedParts[0].url).toBe('file:///workspace/memory');
     });
 
+    it('regression: should preserve binary document MIME types for file references', async () => {
+      const mockPromptAsync = vi.fn().mockResolvedValue(undefined);
+      const mockSdk = {
+        session: {
+          promptAsync: mockPromptAsync,
+        },
+      } as unknown as SDKClient;
+      const manager = new SessionManager(mockSdk);
+
+      const parts = [
+        {
+          type: 'file',
+          mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          url: 'file:///workspace/%E6%94%B6%E5%85%A5%E8%AF%81%E6%98%8E.docx',
+          filename: '收入证明.docx',
+        } as unknown as Part,
+        {
+          type: 'file',
+          mime: 'application/pdf',
+          url: 'file:///workspace/statement.pdf',
+          filename: 'statement.pdf',
+        } as unknown as Part,
+      ];
+
+      await manager.sendPrompt('s1', parts);
+
+      expect(mockPromptAsync).toHaveBeenCalledTimes(1);
+      const passedParts = (mockPromptAsync.mock.calls[0][0] as PromptOptions).parts as Array<{
+        type: string;
+        mime: string;
+        url?: string;
+        filename?: string;
+      }>;
+      expect(passedParts).toMatchObject([
+        {
+          type: 'file',
+          mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          url: 'file:///workspace/%E6%94%B6%E5%85%A5%E8%AF%81%E6%98%8E.docx',
+          filename: '收入证明.docx',
+        },
+        {
+          type: 'file',
+          mime: 'application/pdf',
+          url: 'file:///workspace/statement.pdf',
+          filename: 'statement.pdf',
+        },
+      ]);
+    });
+
     it('should propagate variant argument to promptAsync', async () => {
       const mockPromptAsync = vi.fn().mockResolvedValue(undefined);
       const mockSdk = {

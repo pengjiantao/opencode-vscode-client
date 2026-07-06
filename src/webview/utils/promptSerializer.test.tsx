@@ -40,4 +40,34 @@ describe('getPromptData', () => {
       endOffset: 24,
     });
   });
+
+  it('regression: preserves file URL paths and document MIME types for file chips', () => {
+    const editor = document.createElement('div');
+    const chip = document.createElement('span');
+    chip.className = 'opencode-chip file-chip inline-chip';
+    chip.setAttribute('data-chip-id', 'file-1');
+    chip.setAttribute('data-chip-type', 'file');
+    chip.setAttribute('data-chip-filename', 'statement.pdf');
+    chip.setAttribute('data-chip-path', 'file:///home/user/Documents/statement.pdf');
+    chip.setAttribute('data-chip-mime', 'application/pdf');
+
+    editor.appendChild(document.createTextNode('Review '));
+    editor.appendChild(chip);
+
+    const result = getPromptData(editor, 'session-1', {});
+    const filePart = result.parts[0] as {
+      type: 'file';
+      mime: string;
+      filename?: string;
+      url: string;
+    };
+
+    expect(result.text).toBe('Review [File: statement.pdf]');
+    expect(filePart).toMatchObject({
+      type: 'file',
+      mime: 'application/pdf',
+      filename: 'statement.pdf',
+      url: 'file:///home/user/Documents/statement.pdf',
+    });
+  });
 });

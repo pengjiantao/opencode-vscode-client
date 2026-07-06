@@ -5,7 +5,18 @@
 
 import type { Message, Part, Session } from '@opencode-ai/sdk/v2/client';
 import type { Memento } from 'vscode';
+import { isImageMime, isTextLikeMime } from '../shared/utils';
 import type { SDKClient, ServerHandle } from './sdk-client';
+
+function shouldPreserveFileMime(mime: string): boolean {
+  if (mime === 'directory' || mime === 'application/x-directory') return true;
+  if (isImageMime(mime)) return true;
+  if (isTextLikeMime(mime)) return false;
+
+  // opencode uses text/plain file URLs to invoke the Read tool for source/text files.
+  // Binary document types need their original MIME so downstream tooling can parse them.
+  return true;
+}
 
 /** Current state of the session manager. */
 export interface SessionManagerState {
@@ -261,11 +272,11 @@ export class SessionManager {
         } as unknown as Part;
       }
       if (part.type === 'file') {
-        const isImageOrPdf = part.mime.startsWith('image/') || part.mime === 'application/pdf';
+        const preserveMime = shouldPreserveFileMime(part.mime);
         const isDirectory = part.mime === 'directory' || part.mime === 'application/x-directory';
-        const finalMime = isImageOrPdf || isDirectory ? part.mime : 'text/plain';
+        const finalMime = preserveMime || isDirectory ? part.mime : 'text/plain';
         let finalUrl = part.url;
-        if (!isImageOrPdf && part.url.startsWith('data:')) {
+        if (!preserveMime && part.url.startsWith('data:')) {
           const commaIndex = part.url.indexOf(',');
           if (commaIndex !== -1) {
             const meta = part.url.substring(0, commaIndex);

@@ -7,7 +7,13 @@ import type { Part, SessionStatus } from '@opencode-ai/sdk/v2/client';
 import React from 'react';
 import { resolveDefaultModelId } from '../../shared/model-selection';
 import { DRAFT_RETENTION_MIN_CHARS } from '../../shared/promptHistory';
-import type { AgentInfo, ModelInfo, WebviewToExt } from '../../shared/types';
+import type { AgentInfo, ModelInfo, SelectedFileInfo, WebviewToExt } from '../../shared/types';
+import {
+  formatMarkdownFileReference,
+  getAttachmentMimeType,
+  isImageMime,
+  shouldUseMarkdownPathReference,
+} from '../../shared/utils';
 import { useCommandEditor } from '../hooks/useCommandEditor';
 import { useIPC } from '../hooks/useIPC';
 import { useMentionEditor } from '../hooks/useMentionEditor';
@@ -227,23 +233,39 @@ export function PromptInput({
     onSubmit: handleSubmit,
   });
 
-  useIPC((message) => {
-    if (message.type === 'workspace:search-files-response') {
-      setMentionResults(message.results);
-      setSelectedIndex(0);
-    } else if (message.type === 'file:selected') {
-      for (const file of message.files) {
-        const isImage = file.mime.startsWith('image/');
+  // File dialog selections and resolved clipboard files share the same insertion rules.
+  const insertAttachmentFiles = React.useCallback(
+    (files: SelectedFileInfo[]) => {
+      for (const file of files) {
+        const mime = getAttachmentMimeType(file.fsPath || file.name, file.mime);
+        const isImage = isImageMime(mime);
+        if (shouldUseMarkdownPathReference(mime)) {
+          insertText(`${formatMarkdownFileReference(file.name, file.fsPath)}\n`);
+          continue;
+        }
         insertChip({
           id: `${isImage ? 'img' : 'file-path'}-${Math.random().toString(36).substring(7)}`,
           type: isImage ? 'image' : 'file',
           path: file.fsPath,
           filename: file.name,
           size: file.size,
-          mime: file.mime,
+          mime,
           dataUrl: file.dataUrl,
         });
       }
+    },
+    [insertChip, insertText],
+  );
+
+  useIPC((message) => {
+    if (message.type === 'workspace:search-files-response') {
+      setMentionResults(message.results);
+      setSelectedIndex(0);
+    } else if (
+      message.type === 'file:selected' ||
+      message.type === 'clipboard:file-paths-resolved'
+    ) {
+      insertAttachmentFiles(message.files);
     }
   });
 

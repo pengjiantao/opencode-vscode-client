@@ -14,17 +14,15 @@ import { usePromptEditor } from './usePromptEditor';
 class MockClipboardData {
   items: DataTransferItem[] = [];
   files: File[] = [];
+  private readonly dataByFormat: Record<string, string>;
 
-  constructor(
-    private text: string = '',
-    files: File[] = [],
-  ) {
+  constructor(textOrData: string | Record<string, string> = '', files: File[] = []) {
     this.files = files;
+    this.dataByFormat = typeof textOrData === 'string' ? { 'text/plain': textOrData } : textOrData;
   }
 
   getData(format: string) {
-    if (format === 'text/plain') return this.text;
-    return '';
+    return this.dataByFormat[format] ?? '';
   }
 }
 
@@ -175,6 +173,159 @@ describe('usePromptEditor', () => {
     expect(chip).toBeInTheDocument();
     expect(chip).toHaveAttribute('data-chip-path', '/home/workspace/package.json');
     expect(chip).toHaveAttribute('data-chip-filename', 'package.json');
+  });
+
+  it('regression: should insert pasted PDFs as Markdown absolute path references', () => {
+    const sendSpy = vi.fn();
+    render(<TestComponent fileInfos={{}} sendSpy={sendSpy} onInputSpy={vi.fn()} />);
+
+    const editor = screen.getByTestId('editor');
+    const file = new File(['%PDF-1.4'], 'statement.pdf', { type: 'application/pdf' });
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: new MockClipboardData(
+        {
+          'text/plain': 'statement.pdf',
+          'text/uri-list': 'file:///home/user/Documents/statement.pdf',
+        },
+        [file],
+      ),
+    });
+
+    fireEvent(editor, pasteEvent);
+
+    const chip = editor.querySelector('.opencode-chip.file-chip');
+    expect(chip).not.toBeInTheDocument();
+    expect(editor.textContent).toBe('[statement.pdf](</home/user/Documents/statement.pdf>)\n');
+    expect(sendSpy).not.toHaveBeenCalled();
+  });
+
+  it('regression: should infer document MIME from pasted file paths when clipboard reports text/plain', () => {
+    const sendSpy = vi.fn();
+    render(<TestComponent fileInfos={{}} sendSpy={sendSpy} onInputSpy={vi.fn()} />);
+
+    const editor = screen.getByTestId('editor');
+    const file = new File(['PK'], 'income-proof.docx', { type: 'text/plain' });
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: new MockClipboardData(
+        {
+          'text/plain': 'income-proof.docx',
+          'text/uri-list': 'file:///home/user/Documents/income-proof.docx',
+        },
+        [file],
+      ),
+    });
+
+    fireEvent(editor, pasteEvent);
+
+    expect(editor.querySelector('.opencode-chip.file-chip')).not.toBeInTheDocument();
+    expect(editor.textContent).toBe(
+      '[income-proof.docx](</home/user/Documents/income-proof.docx>)\n',
+    );
+    expect(sendSpy).not.toHaveBeenCalled();
+  });
+
+  it('regression: should parse GNOME copied file paths as Markdown references', () => {
+    const sendSpy = vi.fn();
+    render(<TestComponent fileInfos={{}} sendSpy={sendSpy} onInputSpy={vi.fn()} />);
+
+    const editor = screen.getByTestId('editor');
+    const file = new File(['%PDF-1.4'], 'statement.pdf', { type: 'application/pdf' });
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: new MockClipboardData(
+        {
+          'text/plain': 'statement.pdf',
+          'x-special/gnome-copied-files': 'copy\nfile:///home/user/Documents/statement.pdf',
+        },
+        [file],
+      ),
+    });
+
+    fireEvent(editor, pasteEvent);
+
+    expect(editor.querySelector('.opencode-chip.file-chip')).not.toBeInTheDocument();
+    expect(editor.textContent).toBe('[statement.pdf](</home/user/Documents/statement.pdf>)\n');
+    expect(sendSpy).not.toHaveBeenCalled();
+  });
+
+  it('regression: should request absolute path resolution for non-text clipboard files without exposed paths', () => {
+    const sendSpy = vi.fn<(msg: WebviewToExt) => void>();
+    render(<TestComponent fileInfos={{}} sendSpy={sendSpy} onInputSpy={vi.fn()} />);
+
+    const editor = screen.getByTestId('editor');
+    const file = new File(['%PDF-1.4'], 'statement.pdf', { type: 'application/pdf' });
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: new MockClipboardData('', [file]),
+    });
+
+    fireEvent(editor, pasteEvent);
+
+    expect(editor.querySelector('.opencode-chip.file-chip')).not.toBeInTheDocument();
+    expect(editor.textContent).toBe('');
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+
+    const message = sendSpy.mock.calls[0]?.[0];
+    expect(message?.type).toBe('clipboard:resolve-file-paths');
+    if (message?.type !== 'clipboard:resolve-file-paths') return;
+    expect(message.requestID).toMatch(/^clipboard-paste-/);
+    expect(message.files).toEqual([
+      {
+        name: 'statement.pdf',
+        size: file.size,
+        mime: 'application/pdf',
+      },
+    ]);
+  });
+
+  it('regression: should insert pasted VSIX files as Markdown absolute path references', () => {
+    const sendSpy = vi.fn();
+    render(<TestComponent fileInfos={{}} sendSpy={sendSpy} onInputSpy={vi.fn()} />);
+
+    const editor = screen.getByTestId('editor');
+    const file = new File(['PK'], 'extension.vsix', { type: 'text/plain' });
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: new MockClipboardData(
+        {
+          'text/plain': 'extension.vsix',
+          'text/uri-list': 'file:///home/user/Downloads/extension.vsix',
+        },
+        [file],
+      ),
+    });
+
+    fireEvent(editor, pasteEvent);
+
+    expect(editor.querySelector('.opencode-chip.file-chip')).not.toBeInTheDocument();
+    expect(editor.textContent).toBe('[extension.vsix](</home/user/Downloads/extension.vsix>)\n');
+    expect(sendSpy).not.toHaveBeenCalled();
+  });
+
+  it('regression: should insert pasted extensionless files as Markdown absolute path references', () => {
+    const sendSpy = vi.fn();
+    render(<TestComponent fileInfos={{}} sendSpy={sendSpy} onInputSpy={vi.fn()} />);
+
+    const editor = screen.getByTestId('editor');
+    const file = new File(['\u007fELF'], 'opencode', { type: '' });
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: new MockClipboardData(
+        {
+          'text/plain': 'opencode',
+          'text/uri-list': 'file:///usr/local/bin/opencode',
+        },
+        [file],
+      ),
+    });
+
+    fireEvent(editor, pasteEvent);
+
+    expect(editor.querySelector('.opencode-chip.file-chip')).not.toBeInTheDocument();
+    expect(editor.textContent).toBe('[opencode](</usr/local/bin/opencode>)\n');
+    expect(sendSpy).not.toHaveBeenCalled();
   });
 
   it('should parse pasted multiline text and insert it as a text chip', () => {

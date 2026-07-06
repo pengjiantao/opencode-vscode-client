@@ -6,11 +6,16 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { Position, Range, Selection, Uri, commands, window, workspace } from 'vscode';
-import { getMimeType } from '../../shared/utils';
+import { Position, Range, Selection, Uri, commands, env, window, workspace } from 'vscode';
+import {
+  basenameOf,
+  getAttachmentMimeType,
+  isImageMime,
+  parseClipboardPathList,
+} from '../../shared/utils';
 import type { IPCBridge } from '../ipc';
 import type { SDKClient } from '../sdk-client';
-import type { SelectedFileInfo, WorkspaceSearchResult } from '../types';
+import type { ClipboardFilePathRequest, SelectedFileInfo, WorkspaceSearchResult } from '../types';
 
 /**
  * Resolves a given path string to a canonical absolute file path.
@@ -42,6 +47,156 @@ export function resolveFilePath(filePath: string): string {
   }
 
   return resolved;
+}
+
+/**
+ * Reads the native VS Code clipboard and extracts local path candidates.
+ *
+ * @returns Local paths parsed from the clipboard, or an empty array when inaccessible.
+ */
+async function getClipboardPathCandidates(): Promise<string[]> {
+  try {
+    return parseClipboardPathList(await env.clipboard.readText());
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Converts a resolved filesystem path into selected-file metadata for the webview.
+ *
+ * @param fsPath Absolute path to validate and describe.
+ * @param request Original clipboard file request carrying MIME and size hints.
+ * @returns File metadata when the path points to a readable file; otherwise undefined.
+ */
+async function createSelectedFileInfo(
+  fsPath: string,
+  request: ClipboardFilePathRequest,
+): Promise<SelectedFileInfo | undefined> {
+  try {
+    const stat = await fs.promises.stat(fsPath);
+    if (!stat.isFile()) return undefined;
+
+    const name = basenameOf(fsPath);
+    const mime = getAttachmentMimeType(fsPath || name, request.mime);
+    let dataUrl: string | undefined;
+
+    if (isImageMime(mime)) {
+      try {
+        const buffer = await fs.promises.readFile(fsPath);
+        dataUrl = `data:${mime};base64,${buffer.toString('base64')}`;
+      } catch (readErr) {
+        console.error(`Failed to read image file ${fsPath}:`, readErr);
+      }
+    }
+
+    return {
+      name,
+      fsPath,
+      size: stat.size,
+      mime,
+      dataUrl,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Resolves one clipboard file request against explicit paths from the native clipboard.
+ *
+ * @param request Clipboard file metadata reported by the webview.
+ * @param candidates Local paths parsed from native clipboard text.
+ * @returns A single unambiguous file match, preferring a size match when available.
+ */
+async function resolveFromClipboardCandidates(
+  request: ClipboardFilePathRequest,
+  candidates: readonly string[],
+): Promise<SelectedFileInfo | undefined> {
+  const matches: SelectedFileInfo[] = [];
+  for (const candidate of candidates) {
+    if (basenameOf(candidate) !== request.name) continue;
+
+    const info = await createSelectedFileInfo(candidate, request);
+    if (info) matches.push(info);
+  }
+
+  // Size is only a disambiguation hint because some platforms report pasted File.size as 0.
+  const sizeMatches =
+    request.size !== undefined && request.size > 0
+      ? matches.filter((info) => info.size === request.size)
+      : [];
+  if (sizeMatches.length === 1) return sizeMatches[0];
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+/**
+ * Resolves one clipboard file request by searching the active workspace.
+ *
+ * @param request Clipboard file metadata reported by the webview.
+ * @param sdkClient Opencode SDK client used for workspace file search.
+ * @returns A single unambiguous workspace file match, or undefined.
+ */
+async function resolveFromWorkspaceSearch(
+  request: ClipboardFilePathRequest,
+  sdkClient: SDKClient,
+): Promise<SelectedFileInfo | undefined> {
+  const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath;
+  if (!workspaceRoot) return undefined;
+
+  try {
+    const paths = await sdkClient.find.files(request.name, 50);
+    const exactPaths = paths
+      .map((p) => path.resolve(workspaceRoot, p))
+      .filter((fsPath) => basenameOf(fsPath) === request.name);
+    const matches: SelectedFileInfo[] = [];
+
+    for (const fsPath of exactPaths) {
+      const info = await createSelectedFileInfo(fsPath, request);
+      if (info) matches.push(info);
+    }
+
+    // Size is only a disambiguation hint because some platforms report pasted File.size as 0.
+    const sizeMatches =
+      request.size !== undefined && request.size > 0
+        ? matches.filter((info) => info.size === request.size)
+        : [];
+    if (sizeMatches.length === 1) return sizeMatches[0];
+    return matches.length === 1 ? matches[0] : undefined;
+  } catch (err) {
+    console.error('Error resolving clipboard file path from workspace search:', err);
+    return undefined;
+  }
+}
+
+/**
+ * Resolves pasted clipboard files into absolute paths before the webview inserts references.
+ *
+ * @param files Clipboard file requests that lack webview-visible absolute paths.
+ * @param sdkClient Opencode SDK client used for workspace search fallback.
+ * @returns Resolved selected-file metadata plus the requests that remained ambiguous or missing.
+ */
+async function resolveClipboardFilePathRequests(
+  files: readonly ClipboardFilePathRequest[],
+  sdkClient: SDKClient,
+): Promise<{ files: SelectedFileInfo[]; unresolved: ClipboardFilePathRequest[] }> {
+  const candidates = await getClipboardPathCandidates();
+  const resolved: SelectedFileInfo[] = [];
+  const unresolved: ClipboardFilePathRequest[] = [];
+
+  for (const request of files) {
+    const clipboardInfo =
+      (await resolveFromClipboardCandidates(request, candidates)) ??
+      (await resolveFromWorkspaceSearch(request, sdkClient));
+
+    if (clipboardInfo) {
+      resolved.push(clipboardInfo);
+    } else {
+      unresolved.push(request);
+    }
+  }
+
+  return { files: resolved, unresolved };
 }
 
 /**
@@ -220,6 +375,30 @@ export function registerFileHandlers(ipc: IPCBridge, sdkClient: SDKClient): void
     })();
   });
 
+  ipc.on('clipboard:resolve-file-paths', (msg) => {
+    void (async () => {
+      const { requestID, files } = msg as {
+        requestID: string;
+        files: ClipboardFilePathRequest[];
+      };
+      const result = await resolveClipboardFilePathRequests(files, sdkClient);
+
+      if (result.unresolved.length > 0) {
+        const names = result.unresolved.map((file) => file.name).join(', ');
+        void window.showWarningMessage(
+          `Unable to resolve absolute path for pasted file(s): ${names}. Use Attach File if the file is outside the workspace.`,
+        );
+      }
+
+      ipc.send({
+        type: 'clipboard:file-paths-resolved',
+        requestID,
+        files: result.files,
+        unresolved: result.unresolved,
+      });
+    })();
+  });
+
   // IPC command to select local files/images
   ipc.on('file:select', () => {
     return (async () => {
@@ -243,7 +422,7 @@ export function registerFileHandlers(ipc: IPCBridge, sdkClient: SDKClient): void
           const name = path.basename(fsPath);
           const size = stat.size;
 
-          const mime = getMimeType(name);
+          const mime = getAttachmentMimeType(name);
           let dataUrl: string | undefined;
 
           if (mime.startsWith('image/')) {

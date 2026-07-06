@@ -3,7 +3,7 @@
  */
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
-import { FILENAME_LINE_RANGE_PATTERN } from '../../shared/utils';
+import { FILENAME_LINE_RANGE_PATTERN, pathToFileUrl } from '../../shared/utils';
 
 /**
  * Traverses the editor DOM tree and extracts text (with inline placeholders) and parts.
@@ -93,11 +93,7 @@ export const getPromptData = (
           promptText += `[Code Selection: ${cleanFilename} ${displayRange}]`;
           let finalUrl: string;
           if (path) {
-            let cleanPath = path.replace(/\\/g, '/');
-            if (!cleanPath.startsWith('/')) {
-              cleanPath = '/' + cleanPath;
-            }
-            finalUrl = `file://${cleanPath}`;
+            finalUrl = pathToFileUrl(path);
           } else {
             const MAX_DATA_URL_LIMIT = 50 * 1024;
             const truncatedText =
@@ -201,11 +197,9 @@ export const getPromptData = (
           const cached = path ? fileInfos[path] : undefined;
           let finalUrl: string;
           if (path) {
-            let cleanPath = path.replace(/\\/g, '/');
-            if (!cleanPath.startsWith('/')) {
-              cleanPath = '/' + cleanPath;
-            }
-            finalUrl = `file://${cleanPath}`;
+            finalUrl = pathToFileUrl(path);
+          } else if (dataUrl) {
+            finalUrl = dataUrl;
           } else {
             const fileContent = chipText || cached?.content || '';
             const MAX_DATA_URL_LIMIT = 50 * 1024;
@@ -214,7 +208,8 @@ export const getPromptData = (
                 ? fileContent.slice(0, MAX_DATA_URL_LIMIT) + '\n... (truncated due to size limit)'
                 : fileContent;
             const base64Content = btoa(unescape(encodeURIComponent(truncatedText)));
-            finalUrl = `data:${mime || 'text/plain'};base64,${base64Content}`;
+            const dataUrlMime = mime.startsWith('text/') ? 'text/plain' : mime || 'text/plain';
+            finalUrl = `data:${dataUrlMime};base64,${base64Content}`;
           }
           // Do not create source object for whole files and directories to avoid backend schema validation errors
           // and to prevent rendering them as code selections with line ranges (e.g. [1-1]) in the chat history.
