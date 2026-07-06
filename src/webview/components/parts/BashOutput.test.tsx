@@ -174,6 +174,7 @@ describe('BashOutput', () => {
 
       // Dispatch scroll event so ScrollFadeContainer state updates
       act(() => {
+        scrollContainer.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, bubbles: true }));
         scrollContainer.dispatchEvent(new Event('scroll'));
       });
 

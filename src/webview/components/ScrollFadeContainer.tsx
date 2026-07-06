@@ -2,7 +2,22 @@
  * @file Reusable scrolling container with optional auto-scroll and top/bottom gradient shadows (fading effects).
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+
+const BOTTOM_THRESHOLD_PX = 10;
+const AUTO_SCROLL_SETTLE_FRAMES = 3;
+
+type UserScrollDirection = 'none' | 'up' | 'down' | 'unknown';
+
+function isAtBottom(container: HTMLElement): boolean {
+  return (
+    container.scrollHeight - container.scrollTop - container.clientHeight <= BOTTOM_THRESHOLD_PX
+  );
+}
+
+function scrollToBottom(container: HTMLElement): void {
+  container.scrollTop = container.scrollHeight;
+}
 
 /** Props for the ScrollFadeContainer component. */
 export interface ScrollFadeContainerProps {
@@ -39,18 +54,21 @@ export function ScrollFadeContainer({
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(autoScroll);
+  const shouldStickToBottomRef = useRef(autoScroll);
+  const scheduledFrameRef = useRef<number | null>(null);
+  const userScrollIntentRef = useRef(false);
+  const pointerScrollActiveRef = useRef(false);
+  const touchScrollActiveRef = useRef(false);
+  const userScrollDirectionRef = useRef<UserScrollDirection>('none');
   /** Tracks the previous scrollTrigger value to detect changes reliably (handles wraparound). */
   const prevScrollTriggerRef = useRef(scrollTrigger);
-  /** Flag to force scroll to bottom on next effect cycle (set by scrollTrigger changes). */
-  const forceScrollRef = useRef(false);
 
   /**
    * Evaluates the scroll position and container heights to toggle top/bottom shadow fade overlays.
    * Directly modifies the DOM class list on the wrapper ref to bypass React rendering cycles.
    * This is a performance optimization for smooth scrolling behavior.
    */
-  const updateShadows = () => {
+  const updateShadows = useCallback(() => {
     const container = scrollRef.current;
     const wrapper = containerRef.current;
     if (!container || !wrapper) return;
@@ -74,60 +92,167 @@ export function ScrollFadeContainer({
     } else {
       wrapper.classList.remove('has-bottom-shadow');
     }
-  };
+  }, []);
+
+  const cancelScheduledScroll = useCallback(() => {
+    if (scheduledFrameRef.current !== null) {
+      cancelAnimationFrame(scheduledFrameRef.current);
+      scheduledFrameRef.current = null;
+    }
+  }, []);
+
+  const scheduleScrollToBottom = useCallback(() => {
+    if (!autoScroll || !shouldStickToBottomRef.current) {
+      updateShadows();
+      return;
+    }
+
+    cancelScheduledScroll();
+
+    let framesRemaining = AUTO_SCROLL_SETTLE_FRAMES;
+    const run = () => {
+      scheduledFrameRef.current = null;
+      const container = scrollRef.current;
+      if (!container) return;
+
+      if (shouldStickToBottomRef.current) {
+        // Large output bursts can change height across multiple layouts; repeating
+        // the snap for a few frames keeps the bottom anchor until the DOM settles.
+        scrollToBottom(container);
+      }
+      updateShadows();
+
+      framesRemaining -= 1;
+      if (framesRemaining > 0 && shouldStickToBottomRef.current) {
+        scheduledFrameRef.current = requestAnimationFrame(run);
+      }
+    };
+
+    scheduledFrameRef.current = requestAnimationFrame(run);
+  }, [autoScroll, cancelScheduledScroll, updateShadows]);
+
+  const isEventFromCurrentScrollContainer = useCallback((target: EventTarget | null): boolean => {
+    const container = scrollRef.current;
+    if (!container || !(target instanceof Element)) return false;
+    return target.closest('.scroll-fade-content') === container;
+  }, []);
+
+  const markUserScrollIntent = useCallback((direction: UserScrollDirection) => {
+    userScrollIntentRef.current = true;
+    userScrollDirectionRef.current = direction;
+  }, []);
+
+  const clearDiscreteScrollIntent = useCallback(() => {
+    if (pointerScrollActiveRef.current || touchScrollActiveRef.current) return;
+    userScrollIntentRef.current = false;
+    userScrollDirectionRef.current = 'none';
+  }, []);
+
+  const handleWheel = useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      if (!isEventFromCurrentScrollContainer(event.target)) return;
+      const direction = event.deltaY < 0 ? 'up' : event.deltaY > 0 ? 'down' : 'unknown';
+      markUserScrollIntent(direction);
+    },
+    [isEventFromCurrentScrollContainer, markUserScrollIntent],
+  );
+
+  const handlePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (event.target !== scrollRef.current || !isEventFromCurrentScrollContainer(event.target)) {
+        return;
+      }
+      pointerScrollActiveRef.current = true;
+      markUserScrollIntent('unknown');
+    },
+    [isEventFromCurrentScrollContainer, markUserScrollIntent],
+  );
+
+  const handleTouchStart = useCallback(
+    (event: React.TouchEvent<HTMLDivElement>) => {
+      if (!isEventFromCurrentScrollContainer(event.target)) return;
+      touchScrollActiveRef.current = true;
+    },
+    [isEventFromCurrentScrollContainer],
+  );
+
+  const handleTouchMove = useCallback(
+    (event: React.TouchEvent<HTMLDivElement>) => {
+      if (!isEventFromCurrentScrollContainer(event.target)) return;
+      touchScrollActiveRef.current = true;
+      markUserScrollIntent('unknown');
+    },
+    [isEventFromCurrentScrollContainer, markUserScrollIntent],
+  );
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!isEventFromCurrentScrollContainer(event.target)) return;
+      if (event.key === 'ArrowUp' || event.key === 'PageUp' || event.key === 'Home') {
+        markUserScrollIntent('up');
+      } else if (
+        event.key === 'ArrowDown' ||
+        event.key === 'PageDown' ||
+        event.key === 'End' ||
+        event.key === ' '
+      ) {
+        markUserScrollIntent('down');
+      }
+    },
+    [isEventFromCurrentScrollContainer, markUserScrollIntent],
+  );
 
   /**
    * Scroll event handler.
-   * If autoScroll is enabled, updates the autoScroll lock state based on whether
-   * the user is at the bottom of the container.
+   * If autoScroll is enabled, updates the bottom lock only after direct user
+   * scroll input. Browser/layout scroll events from large content growth should
+   * not be allowed to break the sticky-bottom contract.
    */
   const handleScroll = () => {
     const container = scrollRef.current;
     if (!container) return;
 
     if (autoScroll) {
-      // 10px threshold to account for fractional pixels and subpixel rendering
-      const threshold = 10;
-      const isAtBottom =
-        container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
-      setIsAutoScrollEnabled(isAtBottom);
+      const hasUserIntent =
+        userScrollIntentRef.current ||
+        pointerScrollActiveRef.current ||
+        touchScrollActiveRef.current;
+      const direction = userScrollDirectionRef.current;
+
+      if (hasUserIntent) {
+        if (isAtBottom(container)) {
+          shouldStickToBottomRef.current = true;
+        } else if (pointerScrollActiveRef.current || touchScrollActiveRef.current) {
+          shouldStickToBottomRef.current = false;
+        } else if (direction === 'up' || direction === 'unknown') {
+          shouldStickToBottomRef.current = false;
+        }
+
+        clearDiscreteScrollIntent();
+      }
     }
     updateShadows();
   };
 
   // Force reset auto-scroll and scroll to bottom when scrollTrigger changes
   // This is used for user-initiated actions like sending a message
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Only trigger when scrollTrigger actually changes (handles wraparound to 0)
     if (scrollTrigger === undefined || scrollTrigger === prevScrollTriggerRef.current) return;
     prevScrollTriggerRef.current = scrollTrigger;
-    // Set flag to force scroll on next effect cycle (avoids setState in effect)
-    forceScrollRef.current = true;
-    // Trigger re-render by updating state (this is acceptable as it's a direct user action)
-    setIsAutoScrollEnabled(true);
-    return () => {
-      forceScrollRef.current = false;
-    };
-  }, [scrollTrigger]);
+    shouldStickToBottomRef.current = true;
+    scheduleScrollToBottom();
+  }, [scheduleScrollToBottom, scrollTrigger]);
 
   // Perform auto-scroll to bottom and update shadow states when dependencies or children update
-  useEffect(() => {
-    const runUpdate = () => {
-      if (scrollRef.current) {
-        // Check if forced scroll was requested (from scrollTrigger change)
-        if (forceScrollRef.current) {
-          forceScrollRef.current = false;
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        } else if (autoScroll && isAutoScrollEnabled) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-        updateShadows();
-      }
-    };
-    const animationFrameId = requestAnimationFrame(runUpdate);
-    return () => cancelAnimationFrame(animationFrameId);
+  useLayoutEffect(() => {
+    if (autoScroll && shouldStickToBottomRef.current) {
+      scheduleScrollToBottom();
+    } else {
+      updateShadows();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [children, autoScroll, isAutoScrollEnabled, ...dependencies]);
+  }, [children, autoScroll, scheduleScrollToBottom, updateShadows, ...dependencies]);
 
   // Set up ResizeObserver to update shadow overlay visibility when container or content size changes
   useEffect(() => {
@@ -136,7 +261,11 @@ export function ScrollFadeContainer({
     if (!container || !content || typeof ResizeObserver === 'undefined') return;
 
     const observer = new ResizeObserver(() => {
-      updateShadows();
+      if (autoScroll && shouldStickToBottomRef.current) {
+        scheduleScrollToBottom();
+      } else {
+        updateShadows();
+      }
     });
     observer.observe(container);
     observer.observe(content);
@@ -144,7 +273,31 @@ export function ScrollFadeContainer({
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [autoScroll, scheduleScrollToBottom, updateShadows]);
+
+  useEffect(() => {
+    const clearPointerScroll = () => {
+      pointerScrollActiveRef.current = false;
+      clearDiscreteScrollIntent();
+    };
+    const clearTouchScroll = () => {
+      touchScrollActiveRef.current = false;
+      clearDiscreteScrollIntent();
+    };
+
+    window.addEventListener('pointerup', clearPointerScroll);
+    window.addEventListener('pointercancel', clearPointerScroll);
+    window.addEventListener('touchend', clearTouchScroll);
+    window.addEventListener('touchcancel', clearTouchScroll);
+
+    return () => {
+      window.removeEventListener('pointerup', clearPointerScroll);
+      window.removeEventListener('pointercancel', clearPointerScroll);
+      window.removeEventListener('touchend', clearTouchScroll);
+      window.removeEventListener('touchcancel', clearTouchScroll);
+      cancelScheduledScroll();
+    };
+  }, [cancelScheduledScroll, clearDiscreteScrollIntent]);
 
   return (
     <div
@@ -157,6 +310,11 @@ export function ScrollFadeContainer({
         className={`scroll-fade-content ${contentClassName}`}
         ref={scrollRef}
         onScroll={handleScroll}
+        onWheel={handleWheel}
+        onPointerDown={handlePointerDown}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onKeyDown={handleKeyDown}
       >
         <div ref={contentRef} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
           {children}

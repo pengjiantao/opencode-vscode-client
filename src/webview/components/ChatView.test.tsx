@@ -100,6 +100,7 @@ describe('ChatView', () => {
     // Simulate scroll up (not at bottom)
     act(() => {
       chatView.scrollTop = 100;
+      chatView.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, bubbles: true }));
       chatView.dispatchEvent(new Event('scroll'));
     });
 
@@ -177,6 +178,7 @@ describe('ChatView', () => {
       // Simulate user scrolling up (not at bottom)
       act(() => {
         chatView.scrollTop = 100;
+        chatView.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, bubbles: true }));
         chatView.dispatchEvent(new Event('scroll'));
       });
 

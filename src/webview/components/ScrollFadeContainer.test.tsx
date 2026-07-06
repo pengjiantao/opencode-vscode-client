@@ -6,6 +6,39 @@ import { act, render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ScrollFadeContainer } from './ScrollFadeContainer';
 
+interface QueuedAnimationFrames {
+  /** Runs every pending animation frame that has not been cancelled. */
+  flushAll: () => void;
+}
+
+function installQueuedAnimationFrames(): QueuedAnimationFrames {
+  let nextFrameID = 1;
+  const frames: Array<{ id: number; callback: FrameRequestCallback; cancelled: boolean }> = [];
+
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    const id = nextFrameID++;
+    frames.push({ id, callback, cancelled: false });
+    return id;
+  });
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => {
+    const frame = frames.find((item) => item.id === id);
+    if (frame) {
+      frame.cancelled = true;
+    }
+  });
+
+  return {
+    flushAll: () => {
+      while (frames.length > 0) {
+        const frame = frames.shift();
+        if (frame && !frame.cancelled) {
+          frame.callback(performance.now());
+        }
+      }
+    },
+  };
+}
+
 describe('ScrollFadeContainer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -152,6 +185,61 @@ describe('ScrollFadeContainer', () => {
     expect(outer).not.toHaveClass('has-bottom-shadow');
   });
 
+  it('regression: keeps bottom pin when a large content burst fires scroll before the next frame', () => {
+    const frames = installQueuedAnimationFrames();
+    const { container, rerender } = render(
+      <ScrollFadeContainer autoScroll={true} dependencies={[0]}>
+        <div>Initial output</div>
+      </ScrollFadeContainer>,
+    );
+
+    const inner = container.querySelector('.scroll-fade-content') as HTMLDivElement;
+    let scrollHeight = 1000;
+    let scrollTop = 800;
+    const clientHeight = 200;
+
+    Object.defineProperty(inner, 'scrollHeight', {
+      configurable: true,
+      get: () => scrollHeight,
+    });
+    Object.defineProperty(inner, 'clientHeight', {
+      configurable: true,
+      get: () => clientHeight,
+    });
+    Object.defineProperty(inner, 'scrollTop', {
+      configurable: true,
+      get: () => scrollTop,
+      set: (value: number) => {
+        scrollTop = value;
+      },
+    });
+
+    act(() => {
+      inner.dispatchEvent(new Event('scroll'));
+    });
+
+    scrollHeight = 2400;
+    act(() => {
+      rerender(
+        <ScrollFadeContainer autoScroll={true} dependencies={[1]}>
+          <div>Initial output</div>
+          <div>Large server output burst</div>
+        </ScrollFadeContainer>,
+      );
+    });
+
+    // Browser layout/scroll anchoring can emit scroll before the scheduled
+    // bottom snap runs. That must not be treated as a user decision to unpin.
+    act(() => {
+      inner.dispatchEvent(new Event('scroll'));
+    });
+    act(() => {
+      frames.flushAll();
+    });
+
+    expect(scrollTop).toBe(2400);
+  });
+
   describe('scrollTrigger', () => {
     it('should force scroll to bottom when scrollTrigger changes', () => {
       const { container, rerender } = render(
@@ -170,6 +258,7 @@ describe('ScrollFadeContainer', () => {
       // Simulate user scrolling up (not at bottom)
       act(() => {
         inner.scrollTop = 100;
+        inner.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, bubbles: true }));
         inner.dispatchEvent(new Event('scroll'));
       });
 
@@ -206,6 +295,7 @@ describe('ScrollFadeContainer', () => {
       // Simulate user scrolling up (not at bottom)
       act(() => {
         inner.scrollTop = 100;
+        inner.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, bubbles: true }));
         inner.dispatchEvent(new Event('scroll'));
       });
 
@@ -249,6 +339,7 @@ describe('ScrollFadeContainer', () => {
       // Simulate user scrolling up
       act(() => {
         inner.scrollTop = 100;
+        inner.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, bubbles: true }));
         inner.dispatchEvent(new Event('scroll'));
       });
 
