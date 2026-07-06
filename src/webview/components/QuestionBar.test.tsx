@@ -73,6 +73,7 @@ describe('QuestionBar', () => {
             { label: 'Option A', description: 'Desc A' },
             { label: 'Option B', description: 'Desc B' },
           ],
+          custom: false,
         },
       ],
     };
@@ -88,6 +89,36 @@ describe('QuestionBar', () => {
 
     expect(mockOnReply).toHaveBeenCalledWith('q-1', [['Option A']]);
     expect(useSessionStore.getState().pendingQuestions).toEqual([]);
+  });
+
+  it('shows "Type your own answer" and disables auto-submit when custom is undefined (default)', () => {
+    const req: QuestionRequest = {
+      id: 'q-1',
+      sessionID: 'session-1',
+      questions: [
+        {
+          header: 'Simple question',
+          question: 'Pick one',
+          options: [
+            { label: 'Option A', description: 'Desc A' },
+            { label: 'Option B', description: 'Desc B' },
+          ],
+        },
+      ],
+    };
+
+    useSessionStore.setState({
+      pendingQuestions: [req],
+    });
+
+    render(<QuestionBar sessionID="session-1" onReply={mockOnReply} onReject={mockOnReject} />);
+
+    expect(screen.getByText('Type your own answer')).toBeInTheDocument();
+
+    const optionA = screen.getByText('Option A');
+    fireEvent.click(optionA);
+
+    expect(mockOnReply).not.toHaveBeenCalled();
   });
 
   it('requires explicit submit when there is a custom answer option', () => {

@@ -66,7 +66,7 @@ export function QuestionBar({ sessionID, onReply, onReject }: QuestionBarProps) 
   const hasOptions = q.options && q.options.length > 0;
   // Textarea should show if we allow custom answers AND either there are no options at all
   // or the user explicitly selected the custom answer option checkbox/radio
-  const showTextarea = q.custom && (!hasOptions || customInfo.isSelected);
+  const showTextarea = q.custom !== false && (!hasOptions || customInfo.isSelected);
 
   /**
    * Compiles and formats the answers for all questions to match SDK requirements.
@@ -78,12 +78,12 @@ export function QuestionBar({ sessionID, onReply, onReject }: QuestionBarProps) 
 
       const optionsPresent = question.options && question.options.length > 0;
       if (!optionsPresent) {
-        if (question.custom) {
+        if (question.custom !== false) {
           return info.text.trim() ? [info.text.trim()] : [];
         }
         return [];
       } else {
-        if (question.custom && info.isSelected) {
+        if (question.custom !== false && info.isSelected) {
           return info.text.trim() ? [...predefined, info.text.trim()] : predefined;
         }
         return predefined;
@@ -99,7 +99,7 @@ export function QuestionBar({ sessionID, onReply, onReject }: QuestionBarProps) 
     // we immediately select the option and submit the entire form (skip confirm).
     const isSingleQuestion = questions.length === 1;
     const isSingleChoice = !q.multiple;
-    const isNoCustom = !q.custom;
+    const isNoCustom = q.custom === false;
 
     if (isSingleQuestion && isSingleChoice && isNoCustom) {
       const finalAnswers = [[label]];
@@ -257,7 +257,7 @@ export function QuestionBar({ sessionID, onReply, onReject }: QuestionBarProps) 
               );
             })}
 
-          {q.custom && (
+          {q.custom !== false && (
             <div className="question-bar-custom-container">
               {hasOptions ? (
                 <label
