@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.40](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.38...v0.1.40) (2026-07-06)
+
+### Features
+
+- add opencode extension icon ([f9d74d1](https://github.com/pengjiantao/opencode-vscode-client/commit/f9d74d1ca00c0c966d175c05efcb0a7ae4253018))
+
+### Bug Fixes
+
+- adapt bash output colors to vscode themes ([4a79d34](https://github.com/pengjiantao/opencode-vscode-client/commit/4a79d3453ed953718ade40d16cbcc1f6b1c02147))
+- default custom=true in question tool to match TUI behavior ([9786627](https://github.com/pengjiantao/opencode-vscode-client/commit/9786627c3f094baa1377580543a6a782eb2d2f0c))
+- keep output auto-scroll pinned during bursts ([2fbe851](https://github.com/pengjiantao/opencode-vscode-client/commit/2fbe85156c3473dcf5843026aa7621cab94f0f0f))
+- **webview:** ensure tooltip opacity in light themes ([564955b](https://github.com/pengjiantao/opencode-vscode-client/commit/564955b036affe0a3b2d3a47c6b432b216e50e1e))
+- **webview:** use theme-aware color for footer cost metric ([7db07aa](https://github.com/pengjiantao/opencode-vscode-client/commit/7db07aa4c7888aa7b908c9aae92f2c85647a9b9e)), closes [#e2c08](https://github.com/pengjiantao/opencode-vscode-client/issues/e2c08)
+- **webview:** use theme-aware color for reasoning timeline dot ([7c5b170](https://github.com/pengjiantao/opencode-vscode-client/commit/7c5b170b4374525479d7b28b4a347d3c9fb7373d))
+
 ### [0.1.39](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.38...v0.1.39) (2026-07-05)
 
 ### Features
