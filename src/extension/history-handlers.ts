@@ -146,6 +146,16 @@ export async function handleSelectHistory({
       });
 
       quickPick.items = items;
+
+      // Pre-select the currently active session in the list
+      const activeSessionID = sessionManager.activeSessionID;
+      if (activeSessionID) {
+        const activeItem = items.find((item) => item.sessionID === activeSessionID);
+        if (activeItem) {
+          quickPick.activeItems = [activeItem];
+        }
+      }
+
       quickPick.placeholder =
         items.length === 0 ? 'No previous sessions found.' : 'Select a previous session to open';
     } catch (err) {
