@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.41](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.40...v0.1.41) (2026-07-09)
+
+### Bug Fixes
+
+- handle pasted attachment paths ([7fa15d1](https://github.com/pengjiantao/opencode-vscode-client/commit/7fa15d1d77150ca527f2870fafd403dd7d75a383))
+- pre-select active session in history QuickPick list ([a0e4bde](https://github.com/pengjiantao/opencode-vscode-client/commit/a0e4bdecd7d68fd3227a1475f54e9dc7d3a9f446))
+
 ### [0.1.40](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.38...v0.1.40) (2026-07-06)
 
 ### Features
