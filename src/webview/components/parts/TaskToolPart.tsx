@@ -149,7 +149,7 @@ export function TaskToolPart({
   const isFinished = state.status === 'completed' || state.status === 'error';
 
   const [prevStatus, setPrevStatus] = useState(state.status);
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(!isExecuting);
   const [isAutoCollapsing, setIsAutoCollapsing] = useState(false);
 
   // Synchronously adjust state when status prop changes during render

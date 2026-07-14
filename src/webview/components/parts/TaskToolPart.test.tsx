@@ -232,4 +232,46 @@ describe('TaskToolPart', () => {
     expect(screen.getAllByText('Run tests').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Done')).toBeInTheDocument();
   });
+
+  it('regression: executing task is expanded by default on initial mount', () => {
+    const state = {
+      status: 'running' as const,
+      input: {
+        description: 'Run project tests',
+      },
+      metadata: {
+        sessionId: 'child-session-123',
+      },
+      time: { start: Date.now() },
+    };
+
+    const { container } = render(<TaskToolPart tool="task" state={state} />);
+
+    // Component root should have 'expanded' class (not 'collapsed')
+    const root = container.querySelector('.tool-part');
+    expect(root).toHaveClass('expanded');
+    expect(root).not.toHaveClass('collapsed');
+  });
+
+  it('regression: completed task is collapsed by default on initial mount', () => {
+    const state = {
+      status: 'completed' as const,
+      input: {
+        description: 'Run project tests',
+        prompt: 'Run tests in directory',
+      },
+      metadata: {
+        sessionId: 'child-session-123',
+      },
+      output: '<task_result>Done</task_result>',
+      time: { start: Date.now() - 5000, end: Date.now() },
+    };
+
+    const { container } = render(<TaskToolPart tool="task" state={state} />);
+
+    // Component root should have 'collapsed' class (not 'expanded')
+    const root = container.querySelector('.tool-part');
+    expect(root).toHaveClass('collapsed');
+    expect(root).not.toHaveClass('expanded');
+  });
 });
