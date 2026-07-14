@@ -31,7 +31,7 @@ import type { AgentInfo, ModelInfo } from './types';
 import { handleCommandPart } from './utils/command-router';
 import { getConfiguration } from './utils/config';
 import { registerFileHandlers } from './utils/fileHandlers';
-import { resolveOpencodeBinary, deriveReasonFromError } from './utils/opencode-path';
+import { deriveReasonFromError, resolveOpencodeBinary } from './utils/opencode-path';
 import { showOpencodeNotFoundPrompt } from './utils/opencode-prompt';
 import { OpencodeSidebarViewProvider } from './webview-provider';
 
@@ -193,6 +193,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     /** Handles webview initialization: loads sessions, messages, models, and agents. */
     ipc.on('init', async () => {
+      // Mark the IPC bridge as ready and flush any buffered selection messages
+      // that were queued while the webview was reloading after being hidden.
+      ipc.markReady();
+
       try {
         const [models, agents] = await Promise.all([sdk.getModels(), sdk.getAgents()]);
         cachedModels = models;
@@ -614,10 +618,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
       // cause is e.g. EACCES on a configured file). The configuredPath is
       // threaded through so config-* messages can quote the exact path the
       // user typed into settings.
-      const source: 'config' | 'path' =
-        resolvedBinary.source === 'config' ? 'config' : 'path';
-      const configuredPath =
-        resolvedBinary.source === 'config' ? resolvedBinary.path : undefined;
+      const source: 'config' | 'path' = resolvedBinary.source === 'config' ? 'config' : 'path';
+      const configuredPath = resolvedBinary.source === 'config' ? resolvedBinary.path : undefined;
       const reason = deriveReasonFromError(err, source);
       const noneResult = {
         path: null,

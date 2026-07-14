@@ -70,6 +70,9 @@ export class ReviewPanelManager {
 
     const ipc = new IPCBridge();
     ipc.setPanel(panel);
+    // Review panels are created fresh each time and don't have the sidebar's
+    // hidden/shown lifecycle, so mark ready immediately to avoid buffering.
+    ipc.markReady();
     registerFileHandlers(ipc, this.sdk);
 
     panel.webview.html = getWebviewHtml(

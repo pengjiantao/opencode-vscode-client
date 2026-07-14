@@ -43,7 +43,7 @@ export function registerExtensionCommands(
 ): void {
   context.subscriptions.push(
     commands.registerCommand('opencode-sidebar.focus', () => {
-      provider.view?.show(true);
+      void commands.executeCommand('opencode-sidebar.main.focus');
     }),
   );
 
@@ -105,7 +105,7 @@ export function registerExtensionCommands(
         action: 'insert',
       });
       // Bring sidebar to focus to ensure immediate visibility of the inserted chip
-      provider.view?.show(true);
+      void commands.executeCommand('opencode-sidebar.main.focus');
     }),
   );
 
@@ -131,7 +131,7 @@ export function registerExtensionCommands(
         action: 'explain',
       });
       // Bring sidebar to focus to ensure immediate visibility of the inserted chip
-      provider.view?.show(true);
+      void commands.executeCommand('opencode-sidebar.main.focus');
     }),
   );
 
@@ -163,7 +163,7 @@ export function registerExtensionCommands(
         action: 'insert',
       });
       // Bring sidebar to focus to ensure immediate visibility of the inserted chip
-      provider.view?.show(true);
+      void commands.executeCommand('opencode-sidebar.main.focus');
     }),
   );
 
@@ -195,7 +195,7 @@ export function registerExtensionCommands(
         action: 'explain-fix',
       });
       // Bring sidebar to focus to ensure immediate visibility of the inserted chip
-      provider.view?.show(true);
+      void commands.executeCommand('opencode-sidebar.main.focus');
     }),
   );
 }

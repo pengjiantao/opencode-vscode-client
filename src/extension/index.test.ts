@@ -68,6 +68,7 @@ vi.mock('./ipc', () => {
       send: (...args: unknown[]) => {
         mockIpcSend(...args);
       },
+      markReady: vi.fn(),
     })),
   };
 });
