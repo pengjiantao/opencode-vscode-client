@@ -22,10 +22,31 @@ import type {
 } from '@opencode-ai/sdk/v2/client';
 import { createOpencodeClient } from '@opencode-ai/sdk/v2/client';
 import * as path from 'node:path';
-import type { CommandOptions, PromptOptions, SDKClient, ServerHandle } from './sdk-client';
+import type {
+  CommandOptions,
+  PromptOptions,
+  SDKClient,
+  ServerHandle,
+  SummarizeOptions,
+} from './sdk-client';
 import type { AgentInfo, CommandInfo, ModelInfo, SkillInfo } from './types';
 import { joinPath } from './utils/opencode-path';
 import { normalizeDirectory } from './utils/path-utils';
+
+/**
+ * Client-side compact command definition injected into getCommands().
+ * The backend Command service does not register "compact" (it's only
+ * available as a TUI keybinding), so we inject it here to make it
+ * available as a slash command in the webview.
+ */
+const COMPACT_COMMAND = {
+  name: 'compact',
+  description: 'Compact the session to reduce context size',
+  source: 'command' as const,
+  agent: undefined,
+  model: undefined,
+  hints: [],
+};
 
 /** Options for creating an SDK client instance. */
 export interface SDKClientOptions {
@@ -190,6 +211,23 @@ export function createSDKClient(options?: SDKClientOptions): SDKClient {
         });
         return result.data ?? [];
       },
+      /** Compacts/summarizes a session via the SDK's session.summarize() endpoint. */
+      summarize: async (options: SummarizeOptions): Promise<void> => {
+        const result = await client.session.summarize({
+          sessionID: options.id,
+          providerID: options.providerID,
+          modelID: options.modelID,
+          directory: options.directory,
+        });
+        const typed = result as { data?: unknown; error?: unknown };
+        if (typed.error) {
+          const errMsg =
+            typeof typed.error === 'string'
+              ? typed.error
+              : (typed.error as { message?: string }).message || JSON.stringify(typed.error);
+          throw new Error(`Compact failed: ${errMsg}`);
+        }
+      },
       command: async (options: CommandOptions): Promise<void> => {
         const { id, cmd, args, model, agent, variant } = options;
         const result = await client.session.command({
@@ -353,11 +391,15 @@ export function createSDKClient(options?: SDKClientOptions): SDKClient {
         return [];
       }
     },
-    /** Fetches the available command list from the server. */
+    /**
+     * Fetches the available command list from the server.
+     * Injects "compact" client-side because the backend Command service
+     * does not register it (it's only available as a TUI keybinding there).
+     */
     getCommands: async (): Promise<CommandInfo[]> => {
       try {
         const result = await client.command.list();
-        return (result.data ?? []).map((c) => ({
+        const commands = (result.data ?? []).map((c) => ({
           name: c.name,
           description: c.description,
           source: c.source,
@@ -365,9 +407,24 @@ export function createSDKClient(options?: SDKClientOptions): SDKClient {
           model: c.model,
           hints: c.hints,
         }));
+        // Inject "compact" if the backend didn't include it (expected behavior)
+        const hasCompact = commands.some((c) => c.name === 'compact');
+        if (!hasCompact) {
+          commands.push(COMPACT_COMMAND);
+        }
+        // Sort by source priority (command -> mcp -> skill), then by name
+        const sourceOrder: Record<string, number> = { command: 0, mcp: 1, skill: 2 };
+        commands.sort((a, b) => {
+          const sa = sourceOrder[a.source ?? ''] ?? 3;
+          const sb = sourceOrder[b.source ?? ''] ?? 3;
+          if (sa !== sb) return sa - sb;
+          return (a.name ?? '').localeCompare(b.name ?? '');
+        });
+        return commands;
       } catch (err) {
         console.error('Failed to get commands from SDK:', err);
-        return [];
+        // Return at least the compact command so it's always available
+        return [COMPACT_COMMAND];
       }
     },
     find: {

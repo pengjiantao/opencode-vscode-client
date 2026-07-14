@@ -63,6 +63,36 @@ export function handleCommandPart(params: HandleCommandPartOptions): boolean {
 
   const commandName =
     (commandPart.metadata as Record<string, string>).command || (commandPart.text as string) || '';
+
+  // "compact" is not registered as a backend slash command (it's only available as a TUI keybinding).
+  // We intercept it here and route directly to the SDK's session.summarize() API,
+  // bypassing the normal command dispatch path.
+  if (commandName === 'compact') {
+    console.log('[prompt:send] detected compact command, routing to summarize API');
+
+    void (async () => {
+      try {
+        await sessionManager.sendCompact(activeID, activeModel);
+        console.log('[prompt:send] compact completed successfully');
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('[prompt:send] compact failed:', err);
+        ipc.send({ type: 'error', message: `Compact failed: ${msg}` });
+      }
+      // Refresh messages after compaction so the webview reflects the summarized context
+      try {
+        const { messages, parts: fetchedParts } =
+          await sessionManager.getMessagesAndParts(activeID);
+        ipc.send({ type: 'messages:list', sessionID: activeID, messages, parts: fetchedParts });
+      } catch (fetchErr) {
+        console.error('[prompt:send] failed to fetch messages after compact:', fetchErr);
+        ipc.send({ type: 'error', message: 'Failed to fetch session messages after compact' });
+      }
+    })();
+
+    return true;
+  }
+
   // Extract arguments text by stripping the command placeholder from prompt text
   // Note: backend requires `arguments` to be a non-optional string, never omit it
   const placeholder = `[Command: ${commandName}]`;

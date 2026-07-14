@@ -622,4 +622,56 @@ describe('PartRenderer', () => {
       expect(getToolIcon('')).toBe('$(tools)');
     });
   });
+
+  /** Regression tests for compaction part rendering. */
+  describe('compaction part', () => {
+    it('renders compaction part with manual label', () => {
+      const part = {
+        type: 'compaction' as const,
+        id: 'p1',
+        sessionID: 's1',
+        messageID: 'm1',
+        auto: false,
+      };
+      render(<PartRenderer part={part} />);
+      expect(screen.getByText('Session compacted')).toBeInTheDocument();
+    });
+
+    it('renders compaction part with auto label', () => {
+      const part = {
+        type: 'compaction' as const,
+        id: 'p1',
+        sessionID: 's1',
+        messageID: 'm1',
+        auto: true,
+      };
+      render(<PartRenderer part={part} />);
+      expect(screen.getByText('Auto-compacted')).toBeInTheDocument();
+    });
+
+    it('renders compaction part with overflow label', () => {
+      const part = {
+        type: 'compaction' as const,
+        id: 'p1',
+        sessionID: 's1',
+        messageID: 'm1',
+        auto: true,
+        overflow: true,
+      };
+      render(<PartRenderer part={part} />);
+      expect(screen.getByText('Context overflow — auto-compacted')).toBeInTheDocument();
+    });
+
+    it('renders compaction part with default label when metadata is missing', () => {
+      const part = {
+        type: 'compaction' as const,
+        id: 'p1',
+        sessionID: 's1',
+        messageID: 'm1',
+        auto: false,
+      };
+      render(<PartRenderer part={part} />);
+      expect(screen.getByText('Session compacted')).toBeInTheDocument();
+    });
+  });
 });

@@ -51,6 +51,18 @@ export interface CommandOptions {
   variant?: string;
 }
 
+/** Options for compacting/summarizing a session. */
+export interface SummarizeOptions {
+  /** The session ID. */
+  id: string;
+  /** The model provider ID (e.g. "anthropic"). */
+  providerID: string;
+  /** The model ID (e.g. "claude-3-opus"). */
+  modelID: string;
+  /** Optional workspace directory for multi-root support. */
+  directory?: string;
+}
+
 /** Interface for all SDK operations used by the extension host. */
 export interface SDKClient {
   /** Starts or connects to an OpenCode server. */
@@ -84,6 +96,12 @@ export interface SDKClient {
     fork(sessionID: string, messageID?: string): Promise<Session>;
     /** Retrieves file diffs for a session, optionally filtered by message ID. */
     diff(sessionID: string, messageID?: string): Promise<SnapshotFileDiff[]>;
+    /**
+     * Compacts/summarizes a session to reduce context size.
+     * Calls the backend's POST /api/session/:id/summarize endpoint directly,
+     * bypassing the Command service (which does not register "compact" as a slash command).
+     */
+    summarize(options: SummarizeOptions): Promise<void>;
   };
   lsp: {
     status(): Promise<LspStatus[]>;

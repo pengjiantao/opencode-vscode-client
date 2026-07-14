@@ -397,4 +397,122 @@ describe('SessionManager', () => {
       expect(manager.activeSessionID).toBeNull();
     });
   });
+
+  /** Regression tests for sendCompact: model parsing validation and summarize API calls. */
+  describe('sendCompact regression tests', () => {
+    it('should call summarize with parsed providerID/modelID from model string', async () => {
+      const mockSummarize = vi.fn().mockResolvedValue({ data: true });
+      const mockSdk = {
+        session: {
+          summarize: mockSummarize,
+        },
+      } as unknown as SDKClient;
+      const manager = new SessionManager(mockSdk);
+
+      await manager.sendCompact('s1', 'anthropic/claude-3-opus');
+
+      expect(mockSummarize).toHaveBeenCalledWith({
+        id: 's1',
+        providerID: 'anthropic',
+        modelID: 'claude-3-opus',
+      });
+    });
+
+    it('should handle model IDs containing slashes', async () => {
+      const mockSummarize = vi.fn().mockResolvedValue({ data: true });
+      const mockSdk = {
+        session: {
+          summarize: mockSummarize,
+        },
+      } as unknown as SDKClient;
+      const manager = new SessionManager(mockSdk);
+
+      await manager.sendCompact('s1', 'openrouter/org/model-v1');
+
+      expect(mockSummarize).toHaveBeenCalledWith({
+        id: 's1',
+        providerID: 'openrouter',
+        modelID: 'org/model-v1',
+      });
+    });
+
+    it('should throw on malformed model string without slash', async () => {
+      const mockSdk = {
+        session: {
+          summarize: vi.fn(),
+        },
+      } as unknown as SDKClient;
+      const manager = new SessionManager(mockSdk);
+
+      await expect(manager.sendCompact('s1', 'invalid-model')).rejects.toThrowError(
+        'Invalid model format "invalid-model"',
+      );
+    });
+
+    it('should treat empty model string as no model and fall back to session', async () => {
+      const mockGet = vi.fn().mockResolvedValue({
+        id: 's1',
+        model: { id: 'gpt-4', providerID: 'openai' },
+      });
+      const mockSummarize = vi.fn().mockResolvedValue({ data: true });
+      const mockSdk = {
+        session: {
+          get: mockGet,
+          summarize: mockSummarize,
+        },
+      } as unknown as SDKClient;
+      const manager = new SessionManager(mockSdk);
+
+      await manager.sendCompact('s1', '');
+
+      expect(mockGet).toHaveBeenCalledWith('s1');
+      expect(mockSummarize).toHaveBeenCalledWith({
+        id: 's1',
+        providerID: 'openai',
+        modelID: 'gpt-4',
+      });
+    });
+
+    it('should fall back to session model when no model provided', async () => {
+      const mockGet = vi.fn().mockResolvedValue({
+        id: 's1',
+        model: { id: 'gpt-4', providerID: 'openai' },
+      });
+      const mockSummarize = vi.fn().mockResolvedValue({ data: true });
+      const mockSdk = {
+        session: {
+          get: mockGet,
+          summarize: mockSummarize,
+        },
+      } as unknown as SDKClient;
+      const manager = new SessionManager(mockSdk);
+
+      await manager.sendCompact('s1');
+
+      expect(mockGet).toHaveBeenCalledWith('s1');
+      expect(mockSummarize).toHaveBeenCalledWith({
+        id: 's1',
+        providerID: 'openai',
+        modelID: 'gpt-4',
+      });
+    });
+
+    it('should throw when session has no stored model and no model provided', async () => {
+      const mockGet = vi.fn().mockResolvedValue({
+        id: 's1',
+        model: undefined,
+      });
+      const mockSdk = {
+        session: {
+          get: mockGet,
+          summarize: vi.fn(),
+        },
+      } as unknown as SDKClient;
+      const manager = new SessionManager(mockSdk);
+
+      await expect(manager.sendCompact('s1')).rejects.toThrowError(
+        'Cannot determine model for compact',
+      );
+    });
+  });
 });

@@ -351,6 +351,45 @@ export class SessionManager {
   }
 
   /**
+   * Compacts/summarizes the session to reduce context size.
+   * This calls the SDK's session.summarize() endpoint directly, bypassing the command service.
+   *
+   * @param sessionID The session ID.
+   * @param model The target model in "providerID/modelID" format (e.g. "anthropic/claude-3-opus").
+   *              Falls back to the session's stored model if not provided.
+   */
+  async sendCompact(sessionID: string, model?: string): Promise<void> {
+    let providerID: string;
+    let modelID: string;
+
+    if (model) {
+      const slashIndex = model.indexOf('/');
+      if (slashIndex <= 0 || slashIndex === model.length - 1) {
+        throw new Error(
+          `Invalid model format "${model}": expected "providerID/modelID" (e.g. "anthropic/claude-3-opus")`,
+        );
+      }
+      providerID = model.substring(0, slashIndex);
+      modelID = model.substring(slashIndex + 1);
+    } else {
+      const session = await this.sdk.session.get(sessionID);
+      providerID = session.model?.providerID || '';
+      modelID = session.model?.id || '';
+      if (!providerID || !modelID) {
+        throw new Error(
+          'Cannot determine model for compact: no model specified and session has no stored model',
+        );
+      }
+    }
+
+    await this.sdk.session.summarize({
+      id: sessionID,
+      providerID,
+      modelID,
+    });
+  }
+
+  /**
    * Aborts a running prompt for the given session.
    *
    * @param sessionID The session ID to abort.

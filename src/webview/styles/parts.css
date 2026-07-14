@@ -949,3 +949,40 @@
 .spin {
   animation: spin 1s linear infinite;
 }
+
+/* Compaction part — divider-style indicator with a descriptive label */
+.compaction-part {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 8px 0;
+}
+
+.compaction-part .compaction-part-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.compaction-part .compaction-part-line {
+  flex: 1 1 auto;
+  height: 1px;
+  background: color-mix(in srgb, var(--vscode-descriptionForeground) 30%, transparent);
+}
+
+.compaction-part .compaction-part-label {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(
+    --vscode-descriptionForeground,
+    color-mix(in srgb, var(--webview-foreground) 60%, transparent)
+  );
+}

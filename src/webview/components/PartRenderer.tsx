@@ -6,6 +6,7 @@
 import type { Part } from '@opencode-ai/sdk/v2/client';
 import { Chip } from './Chip';
 import { Codicon } from './Codicon';
+import { CompactionPart } from './parts/CompactionPart';
 import { FilePart } from './parts/FilePart';
 import { ReasoningPart } from './parts/ReasoningPart';
 import { TaskToolPart } from './parts/TaskToolPart';
@@ -156,6 +157,9 @@ export function PartRenderer({
     case 'step-start':
     case 'step-finish':
       return null;
+
+    case 'compaction':
+      return <CompactionPart part={part} />;
 
     default:
       if (process.env.NODE_ENV === 'development') {
