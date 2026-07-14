@@ -4,9 +4,15 @@
  */
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
-import { getChipDisplayLabel, getIconClass, parseFileUrl } from './chipUtils';
+import { getChipDisplayLabel, getIconClass, getTooltipHtml, parseFileUrl } from './chipUtils';
 import { getFileIconUrl } from './file-icons';
-import { createChipIconElement } from './inlineChipDom';
+import { createInlineChipElement } from './inlineChipDom';
+
+/** Map of file paths to their cached information from the extension host. */
+export type FileInfoMap = Record<
+  string,
+  { exists: boolean; size: number; content?: string; isWorkspace: boolean }
+>;
 
 /** Checks if a text part is a display text part (not a metadata/backing part). */
 function isDisplayTextPart(part: Part): boolean {
@@ -40,32 +46,21 @@ function getInlinePlaceholder(part: Part): string | undefined {
 }
 
 /** Creates a chip DOM element matching the PromptInput's chip rendering. */
-function createChipElement(chip: {
-  id: string;
-  type: 'file' | 'image' | 'text' | 'code-selection' | 'terminal' | 'command' | 'skill';
-  filename?: string;
-  path?: string;
-  text?: string;
-  mime?: string;
-  dataUrl?: string;
-  linesCount?: number;
-  startLine?: number;
-  endLine?: number;
-}): HTMLElement {
-  const chipNode = document.createElement('span');
-  chipNode.className = `opencode-chip ${chip.type}-chip inline-chip`;
-  chipNode.contentEditable = 'false';
-  chipNode.setAttribute('data-chip-id', chip.id);
-  chipNode.setAttribute('data-chip-type', chip.type);
-  if (chip.filename) chipNode.setAttribute('data-chip-filename', chip.filename);
-  if (chip.path) chipNode.setAttribute('data-chip-path', chip.path);
-  if (chip.text) chipNode.setAttribute('data-chip-text', chip.text);
-  if (chip.mime) chipNode.setAttribute('data-chip-mime', chip.mime);
-  if (chip.dataUrl) chipNode.setAttribute('data-chip-data-url', chip.dataUrl);
-  if (chip.linesCount) chipNode.setAttribute('data-chip-lines-count', String(chip.linesCount));
-  if (chip.startLine) chipNode.setAttribute('data-chip-start-line', String(chip.startLine));
-  if (chip.endLine) chipNode.setAttribute('data-chip-end-line', String(chip.endLine));
-
+function createChipElement(
+  chip: {
+    id: string;
+    type: 'file' | 'image' | 'text' | 'code-selection' | 'terminal' | 'command' | 'skill';
+    filename?: string;
+    path?: string;
+    text?: string;
+    mime?: string;
+    dataUrl?: string;
+    linesCount?: number;
+    startLine?: number;
+    endLine?: number;
+  },
+  fileInfos: FileInfoMap,
+): HTMLElement {
   const iconClass = getIconClass(chip.type, chip.mime);
   const iconUrl =
     (chip.type === 'file' || chip.type === 'code-selection') && chip.path
@@ -79,15 +74,31 @@ function createChipElement(chip: {
     chip.endLine,
     chip.text,
   );
+  const tooltipHtml = getTooltipHtml(chip, fileInfos);
 
-  chipNode.appendChild(createChipIconElement(iconClass, iconUrl));
+  const cached = chip.path ? fileInfos[chip.path] : undefined;
+  const isWorkspace = cached?.isWorkspace ?? false;
 
-  const labelSpan = document.createElement('span');
-  labelSpan.className = 'chip-label';
-  labelSpan.textContent = displayLabel;
-  chipNode.appendChild(labelSpan);
-
-  return chipNode;
+  return createInlineChipElement({
+    id: chip.id,
+    type: chip.type,
+    className: `opencode-chip ${chip.type}-chip inline-chip`,
+    attributes: {
+      ...(chip.filename && { 'data-chip-filename': chip.filename }),
+      ...(chip.path && { 'data-chip-path': chip.path }),
+      ...(chip.text && { 'data-chip-text': chip.text }),
+      ...(chip.mime && { 'data-chip-mime': chip.mime }),
+      ...(chip.dataUrl && { 'data-chip-data-url': chip.dataUrl }),
+      ...(chip.linesCount && { 'data-chip-lines-count': String(chip.linesCount) }),
+      ...(chip.startLine && { 'data-chip-start-line': String(chip.startLine) }),
+      ...(chip.endLine && { 'data-chip-end-line': String(chip.endLine) }),
+      'data-chip-is-workspace': String(isWorkspace),
+    },
+    iconClass,
+    iconUrl,
+    label: displayLabel,
+    tooltipHtml,
+  });
 }
 
 /**
@@ -99,7 +110,11 @@ function createChipElement(chip: {
  * @param userParts The parts array from the user message.
  * @param activeSessionID The current active session ID.
  */
-export function restoreUserMessageToEditor(editor: HTMLDivElement, userParts: Part[]): void {
+export function restoreUserMessageToEditor(
+  editor: HTMLDivElement,
+  userParts: Part[],
+  fileInfos: FileInfoMap = {},
+): void {
   // Clear existing content
   editor.innerHTML = '';
 
@@ -266,7 +281,7 @@ export function restoreUserMessageToEditor(editor: HTMLDivElement, userParts: Pa
         fragment.appendChild(document.createTextNode(remaining.slice(0, earliestIndex)));
       }
       // Create and append chip node
-      const chipNode = createChipElement(earliestEntry.chipData);
+      const chipNode = createChipElement(earliestEntry.chipData, fileInfos);
       fragment.appendChild(chipNode);
       remaining = remaining.slice(earliestIndex + earliestEntry.placeholder.length);
     } else {
@@ -282,7 +297,7 @@ export function restoreUserMessageToEditor(editor: HTMLDivElement, userParts: Pa
   // append them as trailing chips
   if (mainText.length === 0 && chipEntries.length > 0) {
     for (const entry of chipEntries) {
-      const chipNode = createChipElement(entry.chipData);
+      const chipNode = createChipElement(entry.chipData, fileInfos);
       fragment.appendChild(chipNode);
       fragment.appendChild(document.createTextNode(' '));
     }

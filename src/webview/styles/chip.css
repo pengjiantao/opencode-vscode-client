@@ -150,3 +150,15 @@
 .opencode-chip-inline-wrapper .opencode-chip {
   max-width: min(300px, 100%);
 }
+
+/* Clickable chip states for input box chips (using attribute selectors for raw DOM chips) */
+.opencode-chip[data-chip-is-workspace='true'],
+.opencode-chip[data-chip-type='code-selection'] {
+  cursor: pointer;
+}
+
+.opencode-chip[data-chip-is-workspace='true']:hover,
+.opencode-chip[data-chip-type='code-selection']:hover {
+  background-color: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+  border-color: var(--vscode-focusBorder, #007acc);
+}

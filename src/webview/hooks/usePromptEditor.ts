@@ -8,7 +8,7 @@ import type { WebviewToExt } from '../../shared/types';
 import { getChipDisplayLabel, getIconClass, getTooltipHtml } from '../utils/chipUtils';
 import { ClipboardAttachmentUtils } from '../utils/clipboardAttachments';
 import { getFileIconUrl } from '../utils/file-icons';
-import { createChipIconElement } from '../utils/inlineChipDom';
+import { createInlineChipElement } from '../utils/inlineChipDom';
 
 /**
  * Interface representing the properties required by the usePromptEditor hook.
@@ -77,22 +77,6 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
         }
       }
 
-      const chipNode = document.createElement('span');
-      chipNode.className = `opencode-chip ${chip.type}-chip inline-chip`;
-      chipNode.contentEditable = 'false';
-      chipNode.setAttribute('data-chip-id', chip.id);
-      chipNode.setAttribute('data-chip-type', chip.type);
-      if (chip.filename) chipNode.setAttribute('data-chip-filename', chip.filename);
-      if (chip.path) chipNode.setAttribute('data-chip-path', chip.path);
-      if (chip.text) chipNode.setAttribute('data-chip-text', chip.text);
-      if (chip.size) chipNode.setAttribute('data-chip-size', String(chip.size));
-      if (chip.mime) chipNode.setAttribute('data-chip-mime', chip.mime);
-      if (chip.isWorkspace) chipNode.setAttribute('data-chip-is-workspace', 'true');
-      if (chip.dataUrl) chipNode.setAttribute('data-chip-data-url', chip.dataUrl);
-      if (chip.linesCount) chipNode.setAttribute('data-chip-lines-count', String(chip.linesCount));
-      if (chip.startLine) chipNode.setAttribute('data-chip-start-line', String(chip.startLine));
-      if (chip.endLine) chipNode.setAttribute('data-chip-end-line', String(chip.endLine));
-
       if (chip.type === 'file' && chip.path) {
         send({ type: 'file:query', path: chip.path });
       }
@@ -110,15 +94,6 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
         chip.endLine,
         chip.text,
       );
-
-      const iconSpan = createChipIconElement(iconClass, iconUrl);
-      chipNode.appendChild(iconSpan);
-
-      const labelSpan = document.createElement('span');
-      labelSpan.className = 'chip-label';
-      labelSpan.textContent = displayLabel;
-      chipNode.appendChild(labelSpan);
-
       const tooltipHtml = getTooltipHtml(
         {
           type: chip.type,
@@ -135,7 +110,28 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
         },
         fileInfos,
       );
-      chipNode.setAttribute('data-custom-title', tooltipHtml);
+
+      const chipNode = createInlineChipElement({
+        id: chip.id,
+        type: chip.type,
+        className: `opencode-chip ${chip.type}-chip inline-chip`,
+        attributes: {
+          ...(chip.filename && { 'data-chip-filename': chip.filename }),
+          ...(chip.path && { 'data-chip-path': chip.path }),
+          ...(chip.text && { 'data-chip-text': chip.text }),
+          ...(chip.size && { 'data-chip-size': String(chip.size) }),
+          ...(chip.mime && { 'data-chip-mime': chip.mime }),
+          ...(chip.isWorkspace && { 'data-chip-is-workspace': 'true' }),
+          ...(chip.dataUrl && { 'data-chip-data-url': chip.dataUrl }),
+          ...(chip.linesCount && { 'data-chip-lines-count': String(chip.linesCount) }),
+          ...(chip.startLine && { 'data-chip-start-line': String(chip.startLine) }),
+          ...(chip.endLine && { 'data-chip-end-line': String(chip.endLine) }),
+        },
+        iconClass,
+        iconUrl,
+        label: displayLabel,
+        tooltipHtml,
+      });
 
       if (editorRef.current) {
         editorRef.current.focus();

@@ -38,7 +38,7 @@ export interface InlineChipConfig {
  * @param iconUrl Optional file-type SVG URL; takes precedence when present.
  * @returns The constructed `<span class="chip-icon">` element.
  */
-export function createChipIconElement(iconClass: string, iconUrl?: string): HTMLSpanElement {
+function createChipIconElement(iconClass: string, iconUrl?: string): HTMLSpanElement {
   const iconSpan = document.createElement('span');
   iconSpan.className = 'chip-icon';
   if (iconUrl) {
@@ -70,7 +70,7 @@ export function createInlineChipElement(config: InlineChipConfig): HTMLSpanEleme
   chipNode.setAttribute('data-chip-id', config.id);
   chipNode.setAttribute('data-chip-type', config.type);
 
-  // Set additional attributes
+  // Set attributes
   for (const [key, value] of Object.entries(config.attributes)) {
     if (value !== undefined && value !== null) {
       chipNode.setAttribute(key, value);

@@ -273,6 +273,37 @@ export function PromptInput({
     send({ type: 'file:select' });
   }, [send]);
 
+  /** Handles click events on chips inside the contenteditable editor via event delegation. */
+  const handleChipClick = React.useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const target = e.target as HTMLElement;
+      const chipEl = target.closest('.opencode-chip');
+      if (!chipEl) return;
+
+      const chipType = chipEl.getAttribute('data-chip-type');
+      const path = chipEl.getAttribute('data-chip-path');
+      const startLine = chipEl.getAttribute('data-chip-start-line');
+      const endLine = chipEl.getAttribute('data-chip-end-line');
+      const isWorkspace = chipEl.getAttribute('data-chip-is-workspace') === 'true';
+
+      if (chipType === 'file' && path && isWorkspace) {
+        send({ type: 'file:open', path });
+        e.stopPropagation();
+      } else if (chipType === 'code-selection' && path) {
+        const parsedStart = startLine ? Number(startLine) : undefined;
+        const parsedEnd = endLine ? Number(endLine) : undefined;
+        send({
+          type: 'file:open',
+          path,
+          startLine: Number.isFinite(parsedStart) ? parsedStart : undefined,
+          endLine: Number.isFinite(parsedEnd) ? parsedEnd : undefined,
+        });
+        e.stopPropagation();
+      }
+    },
+    [send],
+  );
+
   // Synchronously update tooltip custom titles when async file queries settle
   React.useEffect(() => {
     if (editorRef.current) {
@@ -282,6 +313,9 @@ export function PromptInput({
         if (path) {
           const cached = fileInfos[path];
           if (cached) {
+            // Update isWorkspace attribute for click handler
+            chipEl.setAttribute('data-chip-is-workspace', cached.isWorkspace ? 'true' : 'false');
+
             const chipData = {
               type: 'file' as const,
               path,
@@ -289,7 +323,7 @@ export function PromptInput({
               text: chipEl.getAttribute('data-chip-text') || undefined,
               size: Number(chipEl.getAttribute('data-chip-size') || '0'),
               mime: chipEl.getAttribute('data-chip-mime') || undefined,
-              isWorkspace: chipEl.getAttribute('data-chip-is-workspace') === 'true',
+              isWorkspace: cached.isWorkspace,
             };
             const tooltipHtml = getTooltipHtml(chipData, fileInfos);
             chipEl.setAttribute('data-custom-title', tooltipHtml);
@@ -317,7 +351,7 @@ export function PromptInput({
   // Restore parts into the editor when restoreParts prop changes (e.g. from revert action)
   React.useEffect(() => {
     if (restoreParts && restoreParts.length > 0 && editorRef.current) {
-      restoreUserMessageToEditor(editorRef.current, restoreParts);
+      restoreUserMessageToEditor(editorRef.current, restoreParts, fileInfos);
       const { text } = getPromptData(editorRef.current, activeSessionID, fileInfos);
       setHasContent(text.trim().length > 0);
       // Notify parent that restore is complete so it can clear restoreParts
@@ -479,7 +513,7 @@ export function PromptInput({
       history.startNavigation(lastTextRef.current);
       const entry = history.previous();
       if (entry) {
-        restoreHistoryEntryToEditor(editor, entry, { caret: 'start' });
+        restoreHistoryEntryToEditor(editor, entry, { caret: 'start' }, fileInfos);
         lastTextRef.current = entry.input;
         lastPartsRef.current = entry.parts;
         setHasContent(entry.input.trim().length > 0);
@@ -493,7 +527,7 @@ export function PromptInput({
       const result = history.next();
       if (result === null) return;
       if (result.kind === 'entry') {
-        restoreHistoryEntryToEditor(editor, result.entry, { caret: 'end' });
+        restoreHistoryEntryToEditor(editor, result.entry, { caret: 'end' }, fileInfos);
         lastTextRef.current = result.entry.input;
         lastPartsRef.current = result.entry.parts;
         setHasContent(result.entry.input.trim().length > 0);
@@ -547,6 +581,7 @@ export function PromptInput({
           onKeyUp={updateMentionState}
           onMouseUp={updateMentionState}
           onPaste={handlePaste}
+          onClick={handleChipClick}
           onFocus={() => setIsFocused(true)}
           onBlur={() => {
             setIsFocused(false);

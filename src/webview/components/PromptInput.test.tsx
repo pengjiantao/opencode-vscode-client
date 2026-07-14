@@ -842,6 +842,128 @@ describe('PromptInput', () => {
     fireEvent.click(option);
     expect(mockOnVariantChange).toHaveBeenCalledWith('model-with-variants', 'high');
   });
+
+  /** Regression: clicking a workspace file chip sends file:open IPC message */
+  it('regression: clicking a workspace file chip sends file:open with path', () => {
+    vi.mocked(useSessionStore).mockImplementation(<T,>(selector: (state: SessionStore) => T): T => {
+      return selector({
+        ...defaultMockState,
+        fileInfos: {
+          '/workspace/test.txt': { exists: true, size: 100, isWorkspace: true },
+        },
+      } as unknown as SessionStore);
+    });
+
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const editor = screen.getByTestId('prompt-editor');
+
+    // Insert a workspace file chip into the editor
+    editor.innerHTML =
+      '<span class="opencode-chip file-chip inline-chip" contenteditable="false" data-chip-id="test-1" data-chip-type="file" data-chip-path="/workspace/test.txt" data-chip-is-workspace="true"><span class="chip-icon"><i class="codicon codicon-file"></i></span><span class="chip-label">test.txt</span></span>';
+
+    const chip = editor.querySelector('.opencode-chip')!;
+    fireEvent.click(chip);
+
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: '/workspace/test.txt',
+    });
+  });
+
+  /** Regression: clicking a code selection chip sends file:open with line range */
+  it('regression: clicking a code selection chip sends file:open with startLine and endLine', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const editor = screen.getByTestId('prompt-editor');
+
+    // Insert a code selection chip into the editor
+    editor.innerHTML =
+      '<span class="opencode-chip code-selection-chip inline-chip" contenteditable="false" data-chip-id="test-2" data-chip-type="code-selection" data-chip-path="/workspace/main.ts" data-chip-start-line="10" data-chip-end-line="20"><span class="chip-icon"><i class="codicon codicon-file-code"></i></span><span class="chip-label">main.ts [10-20]</span></span>';
+
+    const chip = editor.querySelector('.opencode-chip')!;
+    fireEvent.click(chip);
+
+    expect(window.vscode.postMessage).toHaveBeenCalledWith({
+      type: 'file:open',
+      path: '/workspace/main.ts',
+      startLine: 10,
+      endLine: 20,
+    });
+  });
+
+  /** Regression: clicking a non-workspace file chip does not send file:open */
+  it('regression: clicking a non-workspace file chip does nothing', () => {
+    vi.mocked(useSessionStore).mockImplementation(<T,>(selector: (state: SessionStore) => T): T => {
+      return selector({
+        ...defaultMockState,
+        fileInfos: {
+          '/external/file.txt': { exists: true, size: 50, isWorkspace: false },
+        },
+      } as unknown as SessionStore);
+    });
+
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const editor = screen.getByTestId('prompt-editor');
+
+    // Insert a non-workspace file chip (no data-chip-is-workspace attribute)
+    editor.innerHTML =
+      '<span class="opencode-chip file-chip inline-chip" contenteditable="false" data-chip-id="test-3" data-chip-type="file" data-chip-path="/external/file.txt"><span class="chip-icon"><i class="codicon codicon-file"></i></span><span class="chip-label">file.txt</span></span>';
+
+    const chip = editor.querySelector('.opencode-chip')!;
+    fireEvent.click(chip);
+
+    expect(window.vscode.postMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'file:open' }),
+    );
+  });
+
+  /** Regression: clicking outside a chip does not trigger any IPC message */
+  it('regression: clicking outside a chip does nothing', () => {
+    render(
+      <PromptInput
+        onSubmit={mockOnSubmit}
+        models={[]}
+        agents={[]}
+        onModelChange={mockOnModelChange}
+        onAgentChange={mockOnAgentChange}
+      />,
+    );
+
+    const editor = screen.getByTestId('prompt-editor');
+    editor.textContent = 'Hello world';
+
+    fireEvent.click(editor);
+
+    expect(window.vscode.postMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'file:open' }),
+    );
+  });
 });
 
 describe('PromptInputHeader', () => {

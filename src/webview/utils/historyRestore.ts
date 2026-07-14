@@ -15,6 +15,7 @@
  */
 
 import type { Part, PromptHistoryEntry } from '../../shared/types';
+import type { FileInfoMap } from './editorRestore';
 import { restoreUserMessageToEditor } from './editorRestore';
 
 const randomId = (): string =>
@@ -66,6 +67,7 @@ export function restoreHistoryEntryToEditor(
   editor: HTMLDivElement,
   entry: PromptHistoryEntry,
   options: { caret: 'start' | 'end' } = { caret: 'end' },
+  fileInfos: FileInfoMap = {},
 ): void {
   if (entry.parts.length === 0) {
     editor.innerHTML = '';
@@ -81,7 +83,7 @@ export function restoreHistoryEntryToEditor(
   }
 
   const cloned = clonePartsWithFreshIDs(entry.parts);
-  restoreUserMessageToEditor(editor, cloned);
+  restoreUserMessageToEditor(editor, cloned, fileInfos);
   if (options.caret === 'start') {
     placeCaretAtStart(editor);
   } else {
