@@ -46,7 +46,7 @@ describe('Markdown Component', () => {
     const { container } = render(<Markdown text={markdownTable} />);
 
     expect(container.querySelector('.markdown-table-wrapper')).toBeInTheDocument();
-    expect(container.querySelector('table')).toBeInTheDocument();
+    expect(container.querySelector('table')).toHaveClass('markdown-table');
     expect(container.querySelectorAll('th')).toHaveLength(2);
     expect(container.querySelectorAll('td')).toHaveLength(4);
 
@@ -212,6 +212,60 @@ describe('Markdown Component', () => {
     expect(cell?.querySelector('strong')?.textContent).toBe('bold');
     expect(cell?.querySelector('em')?.textContent).toBe('italic');
     expect(cell?.querySelector('a')?.getAttribute('href')).toBe('http://test');
+  });
+
+  it('regression: renders inline code nested inside bold table content', () => {
+    const markdownTable = [
+      '| Module | Description |',
+      '| --- | --- |',
+      '| **`cli`** | Command entry point |',
+    ].join('\n');
+
+    const { container } = render(<Markdown text={markdownTable} />);
+
+    const cell = container.querySelector('tbody td');
+    expect(cell?.querySelector('strong > code')?.textContent).toBe('cli');
+  });
+
+  it('regression: retains table columns when malformed code delimiters are unclosed', () => {
+    const markdownTable = [
+      '| Module | Description | Reference |',
+      '| --- | --- | --- |',
+      '| **`agent_stats/`` | Agent usage statistics | - |',
+      '| **`token_usage/`` | Token management | - |',
+    ].join('\n');
+
+    const { container } = render(<Markdown text={markdownTable} />);
+
+    const rows = container.querySelectorAll('tbody tr');
+    expect(rows).toHaveLength(2);
+    expect(rows[0].querySelectorAll('td')).toHaveLength(3);
+    expect(rows[1].querySelectorAll('td')).toHaveLength(3);
+    expect(rows[0].textContent).toContain('Agent usage statistics');
+    expect(rows[1].textContent).toContain('Token management');
+  });
+
+  it.each(['---', '***', '___', '- - -', '* * *', '_ _ _'])(
+    'renders %s as a thematic break',
+    (marker) => {
+      const { container } = render(<Markdown text={`Before\n\n${marker}\n\nAfter`} />);
+
+      expect(container.querySelector('hr')).toBeInTheDocument();
+      expect(container.textContent).toBe('BeforeAfter');
+    },
+  );
+
+  it('renders YAML front matter as metadata instead of thematic breaks', () => {
+    const markdown = ['---', 'title: QwenPaw', 'tags:', '  - agents', '---', '', '# Overview'].join(
+      '\n',
+    );
+
+    const { container } = render(<Markdown text={markdown} />);
+
+    expect(container.querySelector('.markdown-frontmatter')).toHaveTextContent('title: QwenPaw');
+    expect(container.querySelector('.markdown-frontmatter')).toHaveTextContent('- agents');
+    expect(container.querySelectorAll('hr')).toHaveLength(0);
+    expect(container.querySelector('h1')?.textContent).toBe('Overview');
   });
 
   it('regression: renders plain markdown file references as clickable editor links', () => {

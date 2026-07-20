@@ -10,6 +10,16 @@
   margin-bottom: 0;
 }
 
+.markdown-body hr {
+  margin: 12px 0;
+  border: 0;
+  border-top: 1px solid var(--vscode-editorWidget-border);
+}
+
+.markdown-frontmatter {
+  margin: 12px 0;
+}
+
 .markdown-body ul,
 .markdown-body ol {
   margin: 4px 0 8px 0;
