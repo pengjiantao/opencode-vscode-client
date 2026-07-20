@@ -22,7 +22,7 @@ import { usePromptHistory } from '../hooks/usePromptHistory';
 import { usePromptSelectionIPC } from '../hooks/usePromptSelectionIPC';
 import { usePromptHistoryStore } from '../store/promptHistoryStore';
 import { useSessionStore } from '../store/sessionStore';
-import { getTooltipHtml } from '../utils/chipUtils';
+import { getTooltipContent } from '../utils/chipUtils';
 import { restoreUserMessageToEditor } from '../utils/editorRestore';
 import {
   isCaretAtEditorEnd,
@@ -30,6 +30,7 @@ import {
   restoreHistoryEntryToEditor,
 } from '../utils/historyRestore';
 import { getPromptData } from '../utils/promptSerializer';
+import { setElementTooltipContent } from '../utils/tooltipContentRegistry';
 import { AgentSelector } from './AgentSelector';
 import { CommandListPopover } from './CommandListPopover';
 import { IconButton } from './IconButton';
@@ -307,7 +308,9 @@ export function PromptInput({
   // Synchronously update tooltip custom titles when async file queries settle
   React.useEffect(() => {
     if (editorRef.current) {
-      const fileChips = editorRef.current.querySelectorAll('.opencode-chip[data-chip-type="file"]');
+      const fileChips = editorRef.current.querySelectorAll<HTMLElement>(
+        '.opencode-chip[data-chip-type="file"]',
+      );
       fileChips.forEach((chipEl) => {
         const path = chipEl.getAttribute('data-chip-path');
         if (path) {
@@ -325,8 +328,8 @@ export function PromptInput({
               mime: chipEl.getAttribute('data-chip-mime') || undefined,
               isWorkspace: cached.isWorkspace,
             };
-            const tooltipHtml = getTooltipHtml(chipData, fileInfos);
-            chipEl.setAttribute('data-custom-title', tooltipHtml);
+            const tooltipContent = getTooltipContent(chipData, fileInfos);
+            setElementTooltipContent(chipEl, tooltipContent);
           }
         }
       });

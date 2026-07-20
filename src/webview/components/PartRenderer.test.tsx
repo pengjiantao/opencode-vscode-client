@@ -11,6 +11,7 @@ import {
   createMockTextPart,
   createMockToolPart,
 } from '../../test/mocks/sdk';
+import { getRegisteredTooltipContent } from '../utils/tooltipContentRegistry';
 import { PartRenderer } from './PartRenderer';
 import { getToolIcon } from './parts/ToolPart';
 
@@ -98,7 +99,11 @@ describe('PartRenderer', () => {
     const { container } = render(<PartRenderer part={part} />);
     const chipElement = container.querySelector('.opencode-chip');
     expect(chipElement).toBeInTheDocument();
-    expect(chipElement?.getAttribute('data-custom-title')).toContain('hello');
+    const tooltipContent = getRegisteredTooltipContent(
+      chipElement?.getAttribute('data-custom-title-content') ?? null,
+    );
+    render(<>{tooltipContent}</>);
+    expect(screen.getByText('hello')).toBeInTheDocument();
   });
 
   it('renders unknown part type as null', () => {

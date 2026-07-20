@@ -4,7 +4,7 @@
  */
 
 import type { Part } from '@opencode-ai/sdk/v2/client';
-import { getChipDisplayLabel, getIconClass, getTooltipHtml, parseFileUrl } from './chipUtils';
+import { getChipDisplayLabel, getIconClass, getTooltipContent, parseFileUrl } from './chipUtils';
 import { getFileIconUrl } from './file-icons';
 import { createInlineChipElement } from './inlineChipDom';
 
@@ -74,7 +74,7 @@ function createChipElement(
     chip.endLine,
     chip.text,
   );
-  const tooltipHtml = getTooltipHtml(chip, fileInfos);
+  const tooltipContent = getTooltipContent(chip, fileInfos);
 
   const cached = chip.path ? fileInfos[chip.path] : undefined;
   const isWorkspace = cached?.isWorkspace ?? false;
@@ -97,7 +97,7 @@ function createChipElement(
     iconClass,
     iconUrl,
     label: displayLabel,
-    tooltipHtml,
+    tooltipContent,
   });
 }
 

@@ -2,13 +2,9 @@
  * @file Regression tests for prompt chip serialization helpers.
  */
 
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import {
-  getChipDisplayLabel,
-  getTooltipHtml,
-  parseMarkdownToHtml,
-  truncateMiddle,
-} from './chipUtils';
+import { getChipDisplayLabel, getTooltipContent, truncateMiddle } from './chipUtils';
 
 describe('truncateMiddle', () => {
   it('does not truncate strings shorter than or equal to maxLength', () => {
@@ -70,97 +66,36 @@ describe('getChipDisplayLabel', () => {
   });
 });
 
-describe('parseMarkdownToHtml', () => {
-  it('parses headers correctly', () => {
-    expect(parseMarkdownToHtml('# Header 1')).toBe('<h1 class="tooltip-markdown-h1">Header 1</h1>');
-    expect(parseMarkdownToHtml('## Header 2')).toBe(
-      '<h2 class="tooltip-markdown-h2">Header 2</h2>',
-    );
-  });
-
-  it('parses lists correctly', () => {
-    const md = '- Item 1\n- Item 2';
-    expect(parseMarkdownToHtml(md)).toBe(
-      '<ul class="tooltip-markdown-list"><li>Item 1</li><li>Item 2</li></ul>',
-    );
-  });
-
-  it('parses inline markup (bold, italic, inline code, links) correctly', () => {
-    expect(parseMarkdownToHtml('**bold** and *italic*')).toBe(
-      '<p class="tooltip-markdown-p"><strong>bold</strong> and <em>italic</em></p>',
-    );
-    expect(parseMarkdownToHtml('`code` and [link](https://url)')).toBe(
-      '<p class="tooltip-markdown-p"><code class="tooltip-markdown-inline-code">code</code> and <a href="https://url" target="_blank" rel="noopener noreferrer" class="markdown-link">link</a></p>',
-    );
-  });
-
-  it('neutralizes unsafe link protocols (like javascript:)', () => {
-    expect(parseMarkdownToHtml('click [here](javascript:x)')).toBe(
-      '<p class="tooltip-markdown-p">click here</p>',
-    );
-  });
-
-  it('parses nested bold-italic correctly', () => {
-    expect(parseMarkdownToHtml('***bold italic***')).toBe(
-      '<p class="tooltip-markdown-p"><strong><em>bold italic</em></strong></p>',
-    );
-  });
-
-  it('parses code blocks correctly', () => {
-    const md = '```js\nconst a = 1;\n```';
-    expect(parseMarkdownToHtml(md)).toBe(
-      '<pre class="tooltip-markdown-code"><code>const a = 1;\n</code></pre>',
-    );
-  });
-});
-
-describe('getTooltipHtml', () => {
+describe('getTooltipContent', () => {
   const fileInfos = {};
 
-  it('returns clean markdown container for skill chip', () => {
-    const chip = {
-      type: 'skill' as const,
-      filename: 'test-skill',
-      text: '# Skill Description\n- Detail 1',
-    };
-    const html = getTooltipHtml(chip, fileInfos);
-    expect(html).toContain('<strong>Skill: test-skill</strong>');
-    expect(html).toContain('<div class="tooltip-markdown-content">');
-    expect(html).toContain('<h1 class="tooltip-markdown-h1">Skill Description</h1>');
-    expect(html).toContain('<li>Detail 1</li>');
+  it('renders skill descriptions through the shared Markdown component', () => {
+    render(
+      <>
+        {getTooltipContent(
+          {
+            type: 'skill' as const,
+            filename: 'test-skill',
+            text: '# Skill Description\n\n| Name | Value |\n| --- | ---: |\n| Detail | `1` |',
+          },
+          fileInfos,
+        )}
+      </>,
+    );
+
+    expect(screen.getByText('Skill: test-skill')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Skill Description' })).toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('1').tagName).toBe('CODE');
   });
 
-  it('returns direct text without containers for terminal, code-selection, text, and file chips', () => {
+  it('renders direct text as text rather than HTML', () => {
     const terminalChip = {
       type: 'terminal' as const,
-      text: 'some terminal log\nline 2',
+      text: '<img src=x onerror=alert(1)>',
     };
-    expect(getTooltipHtml(terminalChip, fileInfos)).toBe(
-      '<div class="tooltip-text-direct">some terminal log\nline 2</div>',
-    );
-
-    const selectionChip = {
-      type: 'code-selection' as const,
-      text: 'const x = 5;',
-    };
-    expect(getTooltipHtml(selectionChip, fileInfos)).toBe(
-      '<div class="tooltip-text-direct">const x = 5;</div>',
-    );
-
-    const textChip = {
-      type: 'text' as const,
-      text: 'just plain text',
-    };
-    expect(getTooltipHtml(textChip, fileInfos)).toBe(
-      '<div class="tooltip-text-direct">just plain text</div>',
-    );
-
-    const fileChip = {
-      type: 'file' as const,
-      text: 'file contents',
-    };
-    expect(getTooltipHtml(fileChip, fileInfos)).toBe(
-      '<div class="tooltip-text-direct">file contents</div>',
-    );
+    const { container } = render(<>{getTooltipContent(terminalChip, fileInfos)}</>);
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText(terminalChip.text)).toBeInTheDocument();
   });
 });

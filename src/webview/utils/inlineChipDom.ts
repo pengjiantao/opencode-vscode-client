@@ -3,6 +3,9 @@
  * Provides functions to dynamically create inline chip nodes and insert them into a contenteditable editor.
  */
 
+import type { ReactNode } from 'react';
+import { setElementTooltipContent } from './tooltipContentRegistry';
+
 /**
  * Configuration options for creating an inline rich chip element.
  */
@@ -21,8 +24,8 @@ export interface InlineChipConfig {
   iconUrl?: string;
   /** The label text of the chip */
   label: string;
-  /** The HTML content for the chip's custom tooltip */
-  tooltipHtml: string;
+  /** React content rendered by the global custom tooltip. */
+  tooltipContent: ReactNode;
 }
 
 /**
@@ -85,8 +88,8 @@ export function createInlineChipElement(config: InlineChipConfig): HTMLSpanEleme
   labelSpan.textContent = config.label;
   chipNode.appendChild(labelSpan);
 
-  // Set tooltip attribute
-  chipNode.setAttribute('data-custom-title', config.tooltipHtml);
+  // React nodes cannot be stored in attributes, so the attribute holds a registry identifier.
+  setElementTooltipContent(chipNode, config.tooltipContent);
 
   return chipNode;
 }

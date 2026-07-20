@@ -5,7 +5,7 @@
 
 import { useCallback } from 'react';
 import type { WebviewToExt } from '../../shared/types';
-import { getChipDisplayLabel, getIconClass, getTooltipHtml } from '../utils/chipUtils';
+import { getChipDisplayLabel, getIconClass, getTooltipContent } from '../utils/chipUtils';
 import { ClipboardAttachmentUtils } from '../utils/clipboardAttachments';
 import { getFileIconUrl } from '../utils/file-icons';
 import { createInlineChipElement } from '../utils/inlineChipDom';
@@ -94,7 +94,7 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
         chip.endLine,
         chip.text,
       );
-      const tooltipHtml = getTooltipHtml(
+      const tooltipContent = getTooltipContent(
         {
           type: chip.type,
           filename: chip.filename,
@@ -130,7 +130,7 @@ export function usePromptEditor({ editorRef, fileInfos, send, onInput }: UseProm
         iconClass,
         iconUrl,
         label: displayLabel,
-        tooltipHtml,
+        tooltipContent,
       });
 
       if (editorRef.current) {

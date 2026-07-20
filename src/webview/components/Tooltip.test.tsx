@@ -4,6 +4,7 @@
 
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { registerTooltipContent } from '../utils/tooltipContentRegistry';
 import { Tooltip } from './Tooltip';
 
 describe('Tooltip Component', () => {
@@ -70,6 +71,27 @@ describe('Tooltip Component', () => {
     const tooltip = screen.getByTestId('custom-tooltip');
     expect(tooltip).toBeInTheDocument();
     expect(tooltip.textContent).toBe('Test Tooltip Content');
+  });
+
+  it('renders registered React content without injecting an HTML string', () => {
+    const contentId = registerTooltipContent(
+      <strong data-testid="rich-content">Rich content</strong>,
+    );
+    render(
+      <div>
+        <Tooltip />
+        <button data-testid="btn" data-custom-title-content={contentId}>
+          Hover Me
+        </button>
+      </div>,
+    );
+
+    fireEvent.mouseOver(screen.getByTestId('btn'));
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    expect(screen.getByTestId('rich-content')).toHaveTextContent('Rich content');
   });
 
   it('should not show if mouse leaves before the 400ms delay threshold', () => {

@@ -5,6 +5,7 @@
 import type { Part } from '@opencode-ai/sdk/v2/client';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { getRegisteredTooltipContent } from '../utils/tooltipContentRegistry';
 import { Markdown } from './Markdown';
 
 describe('Markdown Component', () => {
@@ -342,7 +343,11 @@ describe('Markdown Component', () => {
 
     const chipElement = container.querySelector('.opencode-chip');
     expect(chipElement).toBeInTheDocument();
-    expect(chipElement?.getAttribute('data-custom-title')).toContain('hello');
+    const tooltipContent = getRegisteredTooltipContent(
+      chipElement?.getAttribute('data-custom-title-content') ?? null,
+    );
+    render(<>{tooltipContent}</>);
+    expect(screen.getByText('hello')).toBeInTheDocument();
   });
 
   it('regression: renders custom Code Selection inline chips with range and text values', () => {

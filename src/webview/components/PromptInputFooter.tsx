@@ -7,7 +7,7 @@ import type { AssistantMessage, Message } from '@opencode-ai/sdk/v2/client';
 import React from 'react';
 import type { ModelInfo } from '../../shared/types';
 import { useSessionStore } from '../store/sessionStore';
-import { escapeHtml } from '../utils/chipUtils';
+import { useTooltipContent } from '../utils/tooltipContentRegistry';
 import { Codicon } from './Codicon';
 
 /** Props interface for PromptInputFooter component */
@@ -86,52 +86,103 @@ export function PromptInputFooter({ models, activeModel }: PromptInputFooterProp
   const contextPercentage =
     finalLimit && contextTotalTokens > 0 ? Math.round((contextTotalTokens / finalLimit) * 100) : 0;
 
-  // Compile rich HTML tooltips for hover displays
-  const workspaceTooltip = React.useMemo(() => {
-    return `
-      <strong>Workspace Info</strong><br/>
+  const workspaceTooltipId = useTooltipContent(
+    <>
+      <strong>Workspace Info</strong>
       <table>
-        <tr><td>Name:</td><td>${escapeHtml(workspaceName || 'No open folder')}</td></tr>
-        <tr><td>Session:</td><td>${escapeHtml(activeSessionID || 'None')}</td></tr>
-        ${plugins.length > 0 ? `<tr><td>Plugins:</td><td>${plugins.map(escapeHtml).join(', ')}</td></tr>` : ''}
+        <tbody>
+          <tr>
+            <td>Name:</td>
+            <td>{workspaceName || 'No open folder'}</td>
+          </tr>
+          <tr>
+            <td>Session:</td>
+            <td>{activeSessionID || 'None'}</td>
+          </tr>
+          {plugins.length > 0 && (
+            <tr>
+              <td>Plugins:</td>
+              <td>{plugins.join(', ')}</td>
+            </tr>
+          )}
+        </tbody>
       </table>
-    `;
-  }, [workspaceName, activeSessionID, plugins]);
+    </>,
+  );
 
-  const metricsTooltip = React.useMemo(() => {
-    return `
-      <strong>Context & Session Metrics</strong><br/>
-      ${
-        lastAssistantMsg
-          ? `
+  const metricsTooltipId = useTooltipContent(
+    <>
+      <strong>Context &amp; Session Metrics</strong>
+      {lastAssistantMsg ? (
         <table>
-          <tr><td>Input Tokens:</td><td>${(lastAssistantMsg.tokens?.input || 0).toLocaleString()}</td></tr>
-          <tr><td>Output Tokens:</td><td>${(lastAssistantMsg.tokens?.output || 0).toLocaleString()}</td></tr>
-          <tr><td>Reasoning:</td><td>${(lastAssistantMsg.tokens?.reasoning || 0).toLocaleString()}</td></tr>
-          <tr><td>Cache Read:</td><td>${(lastAssistantMsg.tokens?.cache?.read || 0).toLocaleString()}</td></tr>
-          <tr><td>Cache Write:</td><td>${(lastAssistantMsg.tokens?.cache?.write || 0).toLocaleString()}</td></tr>
-          <tr style="border-top: 1px solid var(--vscode-editor-widget-border)">
-            <td><strong>Total Context:</strong></td>
-            <td><strong>${contextTotalTokens.toLocaleString()}</strong></td>
-          </tr>
-          <tr><td>Model Limit:</td><td>${finalLimit ? finalLimit.toLocaleString() : 'N/A'}</td></tr>
-          <tr><td>Window Usage:</td><td>${contextPercentage}%</td></tr>
-          <tr style="border-top: 1px dashed var(--vscode-editor-widget-border)">
-            <td><strong>Cumulative Cost:</strong></td>
-            <td><strong>$${totalCost.toFixed(4)}</strong></td>
-          </tr>
+          <tbody>
+            <tr>
+              <td>Input Tokens:</td>
+              <td>{(lastAssistantMsg.tokens?.input || 0).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td>Output Tokens:</td>
+              <td>{(lastAssistantMsg.tokens?.output || 0).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td>Reasoning:</td>
+              <td>{(lastAssistantMsg.tokens?.reasoning || 0).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td>Cache Read:</td>
+              <td>{(lastAssistantMsg.tokens?.cache?.read || 0).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td>Cache Write:</td>
+              <td>{(lastAssistantMsg.tokens?.cache?.write || 0).toLocaleString()}</td>
+            </tr>
+            <tr style={{ borderTop: '1px solid var(--vscode-editor-widget-border)' }}>
+              <td>
+                <strong>Total Context:</strong>
+              </td>
+              <td>
+                <strong>{contextTotalTokens.toLocaleString()}</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>Model Limit:</td>
+              <td>{finalLimit ? finalLimit.toLocaleString() : 'N/A'}</td>
+            </tr>
+            <tr>
+              <td>Window Usage:</td>
+              <td>{contextPercentage}%</td>
+            </tr>
+            <tr style={{ borderTop: '1px dashed var(--vscode-editor-widget-border)' }}>
+              <td>
+                <strong>Cumulative Cost:</strong>
+              </td>
+              <td>
+                <strong>${totalCost.toFixed(4)}</strong>
+              </td>
+            </tr>
+          </tbody>
         </table>
-      `
-          : `
-        <p>No assistant interactions in this session yet.</p>
-        <table>
-          <tr><td>Model Limit:</td><td>${finalLimit ? finalLimit.toLocaleString() : 'N/A'}</td></tr>
-          <tr><td>Cumulative Cost:</td><td><strong>$${totalCost.toFixed(4)}</strong></td></tr>
-        </table>
-      `
-      }
-    `;
-  }, [lastAssistantMsg, finalLimit, contextTotalTokens, contextPercentage, totalCost]);
+      ) : (
+        <>
+          <p>No assistant interactions in this session yet.</p>
+          <table>
+            <tbody>
+              <tr>
+                <td>Model Limit:</td>
+                <td>{finalLimit ? finalLimit.toLocaleString() : 'N/A'}</td>
+              </tr>
+              <tr>
+                <td>Cumulative Cost:</td>
+                <td>
+                  <strong>${totalCost.toFixed(4)}</strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </>
+      )}
+    </>,
+  );
 
   const contextDisplay = React.useMemo(() => {
     if (contextTotalTokens > 0) {
@@ -157,7 +208,7 @@ export function PromptInputFooter({ models, activeModel }: PromptInputFooterProp
       <div className="sub-footer-left">
         <div
           className="metadata-item workspace"
-          data-custom-title={workspaceTooltip}
+          data-custom-title-content={workspaceTooltipId}
           data-testid="footer-workspace"
         >
           <Codicon name="folder" className="metadata-icon" />
@@ -168,7 +219,7 @@ export function PromptInputFooter({ models, activeModel }: PromptInputFooterProp
       <div className="sub-footer-right">
         <div
           className={`metadata-item percentage ${contextPercentage > 80 ? 'warning' : ''}`}
-          data-custom-title={metricsTooltip}
+          data-custom-title-content={metricsTooltipId}
           data-testid="footer-context"
         >
           <Codicon name="graph" className="metadata-icon" />
@@ -177,7 +228,7 @@ export function PromptInputFooter({ models, activeModel }: PromptInputFooterProp
 
         <div
           className="metadata-item cost"
-          data-custom-title={metricsTooltip}
+          data-custom-title-content={metricsTooltipId}
           data-testid="footer-cost"
         >
           <Codicon name="credit-card" className="metadata-icon" />

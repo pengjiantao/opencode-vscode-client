@@ -9,7 +9,7 @@ import {
   getChipDisplayLabel,
   getCommandIconClass,
   getIconClass,
-  getTooltipHtml,
+  getTooltipContent,
 } from '../utils/chipUtils';
 import { createInlineChipElement, insertInlineChipNode } from '../utils/inlineChipDom';
 
@@ -148,7 +148,7 @@ export function useCommandEditor({
 
       const chipId = `cmd-${Math.random().toString(36).substring(7)}`;
       const iconClass = getCommandIconClass(item.source);
-      const tooltipHtml = getTooltipHtml(
+      const tooltipContent = getTooltipContent(
         {
           type: 'command',
           filename: item.name,
@@ -167,7 +167,7 @@ export function useCommandEditor({
         },
         iconClass,
         label: getChipDisplayLabel('command', item.name),
-        tooltipHtml,
+        tooltipContent,
       });
 
       if (editorRef.current) {
@@ -195,7 +195,7 @@ export function useCommandEditor({
 
       const chipId = `skill-${Math.random().toString(36).substring(7)}`;
       const iconClass = getIconClass('skill');
-      const tooltipHtml = getTooltipHtml(
+      const tooltipContent = getTooltipContent(
         {
           type: 'skill',
           filename: item.name,
@@ -215,7 +215,7 @@ export function useCommandEditor({
         },
         iconClass,
         label: getChipDisplayLabel('skill', item.name),
-        tooltipHtml,
+        tooltipContent,
       });
 
       if (editorRef.current) {

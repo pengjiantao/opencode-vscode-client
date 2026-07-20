@@ -5,16 +5,17 @@
  * and automatically dismisses tooltips when the target element is detached/unmounted.
  */
 
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { getRegisteredTooltipContent } from '../utils/tooltipContentRegistry';
 
 /**
  * Reusable global Tooltip component.
  * Renders a single custom floating widget at the root level, listening to
- * elements that declare a `data-custom-title` attribute.
+ * elements that declare a text title or a registered React content identifier.
  */
 export function Tooltip() {
-  const [content, setContent] = useState<string>('');
+  const [content, setContent] = useState<ReactNode>('');
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const [style, setStyle] = useState<CSSProperties>({
     left: '-9999px',
@@ -25,7 +26,7 @@ export function Tooltip() {
   const [activeTarget, setActiveTarget] = useState<HTMLElement | null>(null);
 
   const isVisibleRef = useRef<boolean>(false);
-  const contentRef = useRef<string>('');
+  const contentRef = useRef<ReactNode>('');
   const activeTargetRef = useRef<HTMLElement | null>(null);
 
   // Keep refs updated dynamically to avoid stale closures in global event handlers without re-binding them
@@ -164,14 +165,20 @@ export function Tooltip() {
     }, 150); // 150ms hide delay
   };
 
-  // Set up global mouse listener to capture elements using data-custom-title
+  // Set up global mouse listeners for text titles and registered React content.
   useEffect(() => {
     const handleMouseOver = (e: MouseEvent) => {
-      const target = (e.target as HTMLElement).closest('[data-custom-title]');
+      const target = (e.target as HTMLElement).closest(
+        '[data-custom-title], [data-custom-title-content]',
+      );
       if (!target) return;
 
+      const registeredContent = getRegisteredTooltipContent(
+        target.getAttribute('data-custom-title-content'),
+      );
       const titleText = target.getAttribute('data-custom-title');
-      if (!titleText) return;
+      const nextContent = registeredContent ?? titleText;
+      if (!nextContent) return;
 
       // Cancel pending hide timeouts since the cursor returned or moved to another tooltip target
       if (hideTimerRef.current) {
@@ -181,8 +188,8 @@ export function Tooltip() {
 
       // If hover cursor is still on the same target, dynamically update text if the title has changed (e.g., from 'Copy' to 'Copied!')
       if (activeTargetRef.current === target) {
-        if (titleText !== contentRef.current) {
-          setContent(titleText);
+        if (nextContent !== contentRef.current) {
+          setContent(nextContent);
         }
         return;
       }
@@ -197,11 +204,11 @@ export function Tooltip() {
 
       if (isVisibleRef.current) {
         // If a tooltip is already open, instantly switch to the new target to optimize responsiveness
-        setContent(titleText);
+        setContent(nextContent);
       } else {
         // Delay showing the initial tooltip by 400ms to avoid unnecessary flashing on fast mouse sweeps
         showTimerRef.current = window.setTimeout(() => {
-          setContent(titleText);
+          setContent(nextContent);
           setIsVisible(true);
         }, 400);
       }
@@ -310,7 +317,7 @@ export function Tooltip() {
       onMouseLeave={handleTooltipMouseLeave}
       data-testid="custom-tooltip"
     >
-      <div dangerouslySetInnerHTML={{ __html: content }} />
+      {content}
     </div>
   );
 }

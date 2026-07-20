@@ -5,7 +5,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import type { WebviewToExt, WorkspaceSearchResult } from '../../shared/types';
 import { getMimeType } from '../../shared/utils';
-import { getChipDisplayLabel, getIconClass, getTooltipHtml } from '../utils/chipUtils';
+import { getChipDisplayLabel, getIconClass, getTooltipContent } from '../utils/chipUtils';
 import { getFileIconUrl } from '../utils/file-icons';
 import { createInlineChipElement, insertInlineChipNode } from '../utils/inlineChipDom';
 
@@ -99,7 +99,7 @@ export function useMentionEditor({ editorRef, fileInfos, send, onInput }: UseMen
 
       const iconClass = getIconClass(chipType, mime);
       const iconUrl = item.type === 'file' ? getFileIconUrl(item.fsPath) : undefined;
-      const tooltipHtml = getTooltipHtml(
+      const tooltipContent = getTooltipContent(
         {
           type: chipType,
           filename: item.name,
@@ -123,7 +123,7 @@ export function useMentionEditor({ editorRef, fileInfos, send, onInput }: UseMen
         iconClass,
         iconUrl,
         label: getChipDisplayLabel('file', item.name),
-        tooltipHtml,
+        tooltipContent,
       });
 
       if (editorRef.current) {

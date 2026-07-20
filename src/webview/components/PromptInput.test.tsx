@@ -5,6 +5,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getRegisteredTooltipContent } from '../utils/tooltipContentRegistry';
 import { PromptInput } from './PromptInput';
 import { PromptInputHeader } from './PromptInputHeader';
 
@@ -410,12 +411,16 @@ describe('PromptInput', () => {
       />,
     );
 
-    const tooltip = screen.getByTestId('footer-cost').getAttribute('data-custom-title') || '';
+    const tooltip = getRegisteredTooltipContent(
+      screen.getByTestId('footer-cost').getAttribute('data-custom-title-content'),
+    );
+    const { container } = render(<>{tooltip}</>);
+    const tooltipText = container.textContent || '';
 
-    expect(tooltip).toContain('Cumulative Cost:');
-    expect(tooltip).toContain('$0.0500');
-    expect(tooltip).not.toContain('--vscode-statusBarItem-warningForeground');
-    expect(tooltip).not.toContain('#e2c08d');
+    expect(tooltipText).toContain('Cumulative Cost:');
+    expect(tooltipText).toContain('$0.0500');
+    expect(container.innerHTML).not.toContain('--vscode-statusBarItem-warningForeground');
+    expect(container.innerHTML).not.toContain('#e2c08d');
   });
 
   /** Regression: footer token and cost statistics are always rendered, showing initial/fallback states correctly. */
@@ -995,19 +1000,29 @@ describe('PromptInputHeader', () => {
     expect(skillsEl).toHaveTextContent('Skills: 1');
     expect(versionEl).toHaveTextContent('v1.0.4');
 
-    // Retrieve tooltips
-    const lspTooltip = lspEl.getAttribute('data-custom-title') || '';
-    const mcpTooltip = mcpEl.getAttribute('data-custom-title') || '';
+    const lspTooltip = getRegisteredTooltipContent(lspEl.getAttribute('data-custom-title-content'));
+    const mcpTooltip = getRegisteredTooltipContent(mcpEl.getAttribute('data-custom-title-content'));
+    const skillsTooltip = getRegisteredTooltipContent(
+      skillsEl.getAttribute('data-custom-title-content'),
+    );
 
-    // Verify tooltip contents do not use hardcoded hex values (#89d185 / #cca700 / #f48771) for status colors
-    expect(lspTooltip).not.toContain('#89d185');
-    expect(lspTooltip).not.toContain('#cca700');
-    expect(mcpTooltip).not.toContain('#f48771');
+    const { container: tooltipContainer } = render(
+      <>
+        {lspTooltip}
+        {mcpTooltip}
+        {skillsTooltip}
+      </>,
+    );
+    const tooltipStyles = tooltipContainer.innerHTML;
 
-    // Verify they use standard VS Code theme variables instead
-    expect(lspTooltip).toContain('var(--vscode-charts-green)');
-    expect(mcpTooltip).toContain('var(--vscode-charts-red)');
-    expect(mcpTooltip).toContain('Port bind error');
+    // Status colors remain VS Code theme tokens after moving tooltip content to React.
+    expect(tooltipStyles).not.toContain('#89d185');
+    expect(tooltipStyles).not.toContain('#cca700');
+    expect(tooltipStyles).not.toContain('#f48771');
+    expect(tooltipStyles).toContain('var(--vscode-charts-green)');
+    expect(tooltipStyles).toContain('var(--vscode-charts-red)');
+    expect(screen.getByText('Port bind error')).toBeInTheDocument();
+    expect(screen.getByText('Advanced git skill')).toBeInTheDocument();
   });
 
   /**
@@ -1021,14 +1036,18 @@ describe('PromptInputHeader', () => {
     );
 
     const versionEl = screen.getByTestId('header-version');
-    const tooltip = versionEl.getAttribute('data-custom-title') || '';
+    const tooltip = getRegisteredTooltipContent(
+      versionEl.getAttribute('data-custom-title-content'),
+    );
+    const { container } = render(<>{tooltip}</>);
+    const tooltipText = container.textContent || '';
 
     // Real values coming from package.json + /global/health
-    expect(tooltip).toContain('v0.1.32');
-    expect(tooltip).toContain('fiyqkrc');
-    expect(tooltip).toContain('v1.16.2');
+    expect(tooltipText).toContain('v0.1.32');
+    expect(tooltipText).toContain('fiyqkrc');
+    expect(tooltipText).toContain('v1.16.2');
 
     // The previous hard-coded placeholder must be gone
-    expect(tooltip).not.toContain('Google DeepMind');
+    expect(tooltipText).not.toContain('Google DeepMind');
   });
 });

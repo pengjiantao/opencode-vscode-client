@@ -4,12 +4,11 @@
  * Also displays a Redo button when a revert is active.
  */
 
-import React from 'react';
 import type { LspServerInfo, McpServerInfo, SkillInfo } from '../../shared/types';
 import { useIPC } from '../hooks/useIPC';
 import { useSessionStore } from '../store/sessionStore';
-import { escapeHtml } from '../utils/chipUtils';
 import { createReviewID } from '../utils/review-utils';
+import { useTooltipContent } from '../utils/tooltipContentRegistry';
 import { Codicon } from './Codicon';
 import { DiffButton } from './DiffButton';
 
@@ -70,100 +69,125 @@ export function PromptInputHeader({
   const hasRevert = !!activeSession?.revert?.messageID;
   const activeDiffs = activeSessionID ? (sessionDiffs[activeSessionID] ?? []) : [];
 
-  // Compile rich HTML tooltips for hover displays.
-  // Memoization ensures we don't rebuild HTML strings unnecessarily on every render.
-  const lspTooltip = React.useMemo(() => {
-    return `
-      <strong>Language Servers (LSP)</strong><br/>
-      ${
-        lspServers.length === 0
-          ? 'No language servers active.'
-          : `
+  const lspTooltipId = useTooltipContent(
+    <>
+      <strong>Language Servers (LSP)</strong>
+      {lspServers.length === 0 ? (
+        <div>No language servers active.</div>
+      ) : (
         <table>
-          ${lspServers
-            .map(
-              (lsp) => `
-            <tr>
-              <td>${escapeHtml(lsp.name)}:</td>
-              <td><span style="color: ${lsp.status === 'running' ? 'var(--vscode-charts-green)' : 'var(--vscode-charts-orange)'}">${escapeHtml(lsp.status)}</span></td>
-            </tr>
-          `,
-            )
-            .join('')}
+          <tbody>
+            {lspServers.map((lsp) => (
+              <tr key={lsp.name}>
+                <td>{lsp.name}:</td>
+                <td>
+                  <span
+                    style={{
+                      color:
+                        lsp.status === 'running'
+                          ? 'var(--vscode-charts-green)'
+                          : 'var(--vscode-charts-orange)',
+                    }}
+                  >
+                    {lsp.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
         </table>
-      `
-      }
-    `;
-  }, [lspServers]);
-
-  const mcpTooltip = React.useMemo(() => {
-    return `
-      <strong>Model Context Protocol (MCP)</strong><br/>
-      ${
-        mcpServers.length === 0
-          ? 'No MCP servers configured.'
-          : `
+      )}
+    </>,
+  );
+  const mcpTooltipId = useTooltipContent(
+    <>
+      <strong>Model Context Protocol (MCP)</strong>
+      {mcpServers.length === 0 ? (
+        <div>No MCP servers configured.</div>
+      ) : (
         <table>
-          ${mcpServers
-            .map(
-              (mcp) => `
-            <tr>
-              <td>${escapeHtml(mcp.name)}:</td>
-              <td>
-                <span style="color: ${mcp.status === 'connected' || mcp.status === 'running' ? 'var(--vscode-charts-green)' : 'var(--vscode-charts-red)'}">
-                  ${escapeHtml(mcp.status)}
-                </span>
-                ${mcp.error ? `<br/><span style="font-size:10px;color:var(--vscode-charts-red)">${escapeHtml(mcp.error)}</span>` : ''}
-              </td>
-            </tr>
-          `,
-            )
-            .join('')}
+          <tbody>
+            {mcpServers.map((mcp) => (
+              <tr key={mcp.name}>
+                <td>{mcp.name}:</td>
+                <td>
+                  <span
+                    style={{
+                      color:
+                        mcp.status === 'connected' || mcp.status === 'running'
+                          ? 'var(--vscode-charts-green)'
+                          : 'var(--vscode-charts-red)',
+                    }}
+                  >
+                    {mcp.status}
+                  </span>
+                  {mcp.error && (
+                    <div style={{ color: 'var(--vscode-charts-red)', fontSize: '10px' }}>
+                      {mcp.error}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
         </table>
-      `
-      }
-    `;
-  }, [mcpServers]);
-
-  const skillsTooltip = React.useMemo(() => {
-    return `
-      <strong>Discovered Skills</strong><br/>
-      ${
-        skills.length === 0
-          ? 'No custom skills discovered.'
-          : `
+      )}
+    </>,
+  );
+  const skillsTooltipId = useTooltipContent(
+    <>
+      <strong>Discovered Skills</strong>
+      {skills.length === 0 ? (
+        <div>No custom skills discovered.</div>
+      ) : (
         <ul>
-          ${skills
-            .map(
-              (s) => `
-            <li>
-              <strong>${escapeHtml(s.name)}</strong>
-              ${s.description ? `<br/><span style="font-size: 11px; color: var(--vscode-descriptionForeground)">${escapeHtml(s.description)}</span>` : ''}
+          {skills.map((skill) => (
+            <li key={skill.name}>
+              <strong>{skill.name}</strong>
+              {skill.description && (
+                <div style={{ color: 'var(--vscode-descriptionForeground)', fontSize: '11px' }}>
+                  {skill.description}
+                </div>
+              )}
             </li>
-          `,
-            )
-            .join('')}
+          ))}
         </ul>
-      `
-      }
-    `;
-  }, [skills]);
-
-  const versionTooltip = React.useMemo(() => {
-    return `
-      <strong>OpenCode Extension</strong><br/>
+      )}
+    </>,
+  );
+  const versionTooltipId = useTooltipContent(
+    <>
+      <strong>OpenCode Extension</strong>
       <table>
-        <tr><td>Version:</td><td>v${escapeHtml(extensionVersion)}</td></tr>
-        <tr><td>Publisher:</td><td>${escapeHtml(publisher)}</td></tr>
-        <tr><td>OpenCode Version:</td><td>v${escapeHtml(opencodeVersion)}</td></tr>
-        <tr><td>Core SDK:</td><td>@opencode-ai/sdk</td></tr>
+        <tbody>
+          <tr>
+            <td>Version:</td>
+            <td>v{extensionVersion}</td>
+          </tr>
+          <tr>
+            <td>Publisher:</td>
+            <td>{publisher}</td>
+          </tr>
+          <tr>
+            <td>OpenCode Version:</td>
+            <td>v{opencodeVersion}</td>
+          </tr>
+          <tr>
+            <td>Core SDK:</td>
+            <td>@opencode-ai/sdk</td>
+          </tr>
+        </tbody>
       </table>
-    `;
-  }, [extensionVersion, publisher, opencodeVersion]);
+    </>,
+  );
 
   return (
     <div className="prompt-input-header">
-      <div className="metadata-item lsp" data-custom-title={lspTooltip} data-testid="header-lsp">
+      <div
+        className="metadata-item lsp"
+        data-custom-title-content={lspTooltipId}
+        data-testid="header-lsp"
+      >
         <Codicon name="combine" className="metadata-icon" />
         <span>
           <span className="metadata-label">LSP: </span>
@@ -171,7 +195,11 @@ export function PromptInputHeader({
         </span>
       </div>
 
-      <div className="metadata-item mcp" data-custom-title={mcpTooltip} data-testid="header-mcp">
+      <div
+        className="metadata-item mcp"
+        data-custom-title-content={mcpTooltipId}
+        data-testid="header-mcp"
+      >
         <Codicon name="plug" className="metadata-icon" />
         <span>
           <span className="metadata-label">MCP: </span>
@@ -181,7 +209,7 @@ export function PromptInputHeader({
 
       <div
         className="metadata-item skills"
-        data-custom-title={skillsTooltip}
+        data-custom-title-content={skillsTooltipId}
         data-testid="header-skills"
       >
         <Codicon name="workspace-trusted" className="metadata-icon" />
@@ -193,7 +221,7 @@ export function PromptInputHeader({
 
       <div
         className="metadata-item version"
-        data-custom-title={versionTooltip}
+        data-custom-title-content={versionTooltipId}
         data-testid="header-version"
       >
         <Codicon name="info" className="metadata-icon" />

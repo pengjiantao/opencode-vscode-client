@@ -1,6 +1,6 @@
 /**
  * @file Interactive Chip component representing pasted or attached files, images, and text snippets.
- * Renders with type-specific icons, details, rich theme-adaptive HTML hover tooltips,
+ * Renders with type-specific icons, details, rich theme-adaptive React hover tooltips,
  * and support for dismissing/removing and click-to-open file operations.
  */
 
@@ -11,8 +11,9 @@ import {
   getChipDisplayLabel,
   getCommandIconClass,
   getIconClass,
-  getTooltipHtml,
+  getTooltipContent,
 } from '../utils/chipUtils';
+import { useTooltipContent } from '../utils/tooltipContentRegistry';
 import { Codicon } from './Codicon';
 import { FileIcon } from './FileIcon';
 
@@ -114,27 +115,29 @@ export function Chip({
     (type === 'code-selection' && !!path);
 
   const displayLabel = getChipDisplayLabel(type, filename, linesCount, startLine, endLine, text);
+  const tooltipContent = getTooltipContent(
+    {
+      type,
+      filename,
+      path,
+      text,
+      size,
+      mime,
+      isWorkspace,
+      dataUrl,
+      linesCount,
+      startLine,
+      endLine,
+    },
+    fileInfos || {},
+  );
+  const tooltipContentId = useTooltipContent(tooltipContent);
 
   return (
     <span
       className={`opencode-chip ${type}-chip ${isClickable ? 'clickable' : ''}`}
       onClick={handleClick}
-      data-custom-title={getTooltipHtml(
-        {
-          type,
-          filename,
-          path,
-          text,
-          size,
-          mime,
-          isWorkspace,
-          dataUrl,
-          linesCount,
-          startLine,
-          endLine,
-        },
-        fileInfos || {},
-      )}
+      data-custom-title-content={tooltipContentId}
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
     >
