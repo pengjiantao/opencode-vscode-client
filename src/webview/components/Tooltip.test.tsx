@@ -5,6 +5,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerTooltipContent } from '../utils/tooltipContentRegistry';
+import { CodeBlock } from './CodeBlock';
 import { Tooltip } from './Tooltip';
 
 describe('Tooltip Component', () => {
@@ -204,6 +205,35 @@ describe('Tooltip Component', () => {
       vi.advanceTimersByTime(150);
     });
     expect(screen.queryByTestId('custom-tooltip')).toBeNull();
+  });
+
+  it('regression: preserves rich tooltip content when hovering a nested copy button', () => {
+    const contentId = registerTooltipContent(
+      <CodeBlock lang="typescript" code="const value = 1;" />,
+    );
+    render(
+      <div>
+        <Tooltip />
+        <button data-testid="trigger" data-custom-title-content={contentId}>
+          Hover Me
+        </button>
+      </div>,
+    );
+
+    fireEvent.mouseOver(screen.getByTestId('trigger'));
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    const tooltip = screen.getByTestId('custom-tooltip');
+    const copyButton = screen.getByRole('button', { name: 'Copy Code' });
+    fireEvent.mouseOver(copyButton);
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(tooltip).toContainElement(copyButton);
+    expect(tooltip).toHaveTextContent('const value = 1;');
   });
 
   it('should dynamically calculate coordinates and adjust placements on bounds collision', () => {

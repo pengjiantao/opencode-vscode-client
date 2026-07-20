@@ -173,6 +173,10 @@ export function Tooltip() {
       );
       if (!target) return;
 
+      // Tooltip content can include controls with their own tooltip labels. They must not
+      // become global tooltip triggers, otherwise the overlay re-anchors to itself and closes.
+      if (tooltipRef.current?.contains(target)) return;
+
       const registeredContent = getRegisteredTooltipContent(
         target.getAttribute('data-custom-title-content'),
       );
