@@ -31,21 +31,6 @@ export function parseFilenameLineRange(filename?: string): ParsedLineRange | und
 }
 
 /**
- * Escapes special HTML characters to prevent XSS inside the global custom tooltip.
- *
- * @param str The string to escape.
- * @returns The escaped HTML string.
- */
-export function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-/**
  * Resolves the VS Code codicon class name for a given attachment type.
  *
  * @param type The type of attachment ('file', 'image', 'text', 'code-selection', 'terminal').

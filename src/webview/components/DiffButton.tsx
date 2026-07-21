@@ -5,9 +5,9 @@
  */
 
 import type { SnapshotFileDiff } from '@opencode-ai/sdk/v2/client';
-import type { MouseEvent } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { useMemo } from 'react';
-import { escapeHtml } from '../utils/chipUtils';
+import { useTooltipContent } from '../utils/tooltipContentRegistry';
 import { Codicon } from './Codicon';
 
 /** Props for the DiffButton component. */
@@ -40,36 +40,51 @@ function computeStats(diffs: SnapshotFileDiff[]): {
 }
 
 /**
- * Builds an HTML tooltip string listing per-file diff details.
+ * Builds structured tooltip content listing per-file diff details.
  * Each row shows the file path, additions (green), and deletions (red).
  *
  * @param diffs The file diff array.
- * @returns HTML string for use with data-custom-title.
+ * @returns React content for the global tooltip registry.
  */
-function buildTooltipHtml(diffs: SnapshotFileDiff[]): string {
-  if (diffs.length === 0) return '';
-
-  const header = '<strong>Modified Files</strong>';
+function buildTooltipContent(diffs: SnapshotFileDiff[]): ReactNode {
   const maxRows = 30;
-  const rows = diffs.slice(0, maxRows).map((d) => {
-    const file = escapeHtml(d.file ?? '(unknown)');
-    const statusIcon = d.status === 'added' ? 'A' : d.status === 'deleted' ? 'D' : 'M';
-    const additionsHtml = d.additions
-      ? `<span style="color:var(--vscode-charts-green)">+${d.additions}</span>`
-      : '';
-    const deletionsHtml = d.deletions
-      ? `<span style="color:var(--vscode-charts-red)">-${d.deletions}</span>`
-      : '';
-    const stats = [additionsHtml, deletionsHtml].filter(Boolean).join(' ');
-    return `<tr><td style="padding-right:8px">${statusIcon}</td><td>${file}</td><td style="padding-left:8px;text-align:right">${stats}</td></tr>`;
-  });
-
-  const truncationNote =
-    diffs.length > maxRows
-      ? `<tr><td colspan="3" style="color:var(--vscode-descriptionForeground);padding-top:4px">... and ${diffs.length - maxRows} more files</td></tr>`
-      : '';
-
-  return `${header}<br/><table>${rows.join('')}${truncationNote}</table>`;
+  return (
+    <>
+      <strong>Modified Files</strong>
+      <table>
+        <tbody>
+          {diffs.slice(0, maxRows).map((diff, index) => {
+            const statusIcon =
+              diff.status === 'added' ? 'A' : diff.status === 'deleted' ? 'D' : 'M';
+            return (
+              <tr key={`${diff.file ?? 'unknown'}-${index}`}>
+                <td style={{ paddingRight: '8px' }}>{statusIcon}</td>
+                <td>{diff.file ?? '(unknown)'}</td>
+                <td style={{ paddingLeft: '8px', textAlign: 'right' }}>
+                  {diff.additions > 0 && (
+                    <span style={{ color: 'var(--vscode-charts-green)' }}>+{diff.additions}</span>
+                  )}{' '}
+                  {diff.deletions > 0 && (
+                    <span style={{ color: 'var(--vscode-charts-red)' }}>-{diff.deletions}</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+          {diffs.length > maxRows && (
+            <tr>
+              <td
+                colSpan={3}
+                style={{ color: 'var(--vscode-descriptionForeground)', paddingTop: '4px' }}
+              >
+                ... and {diffs.length - maxRows} more files
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </>
+  );
 }
 
 /**
@@ -79,7 +94,8 @@ function buildTooltipHtml(diffs: SnapshotFileDiff[]): string {
  */
 export function DiffButton({ diffs, onClick, className = '' }: DiffButtonProps) {
   const stats = useMemo(() => computeStats(diffs), [diffs]);
-  const tooltipHtml = useMemo(() => buildTooltipHtml(diffs), [diffs]);
+  const tooltipContent = useMemo(() => buildTooltipContent(diffs), [diffs]);
+  const tooltipContentId = useTooltipContent(tooltipContent);
 
   if (diffs.length === 0) return null;
 
@@ -88,7 +104,7 @@ export function DiffButton({ diffs, onClick, className = '' }: DiffButtonProps) 
       type="button"
       className={`action-btn diff-btn ${className}`.trim()}
       onClick={onClick}
-      data-custom-title={tooltipHtml}
+      data-custom-title-content={tooltipContentId}
       data-testid="diff-btn"
     >
       <Codicon name="diff" />
