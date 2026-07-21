@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.42](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.41...v0.1.42) (2026-07-21)
+
+### Features
+
+- add /compact slash command with compaction part rendering ([8810690](https://github.com/pengjiantao/opencode-vscode-client/commit/8810690684429fd764fa62e853630f40ae2d83f3))
+- add click-to-open for input box chips and unify chip DOM construction ([3847bef](https://github.com/pengjiantao/opencode-vscode-client/commit/3847bef4e880bec51bae3d2fe8a9d4e895952e91))
+
+### Bug Fixes
+
+- buffer IPC messages until webview signals readiness ([ced9bd4](https://github.com/pengjiantao/opencode-vscode-client/commit/ced9bd4378bc6fc012af0254231e030c07b88415))
+- expand sub-agent tool details by default when executing ([508ac90](https://github.com/pengjiantao/opencode-vscode-client/commit/508ac90d45dc7fdab0241814f107e45e42cc43b0))
+- harden markdown rendering ([f97fb45](https://github.com/pengjiantao/opencode-vscode-client/commit/f97fb45f474bbabd1dd986b00c5e6c2acb4488f0))
+- keep tooltip open over nested controls ([444b8ca](https://github.com/pengjiantao/opencode-vscode-client/commit/444b8cab8a8909f24f47a723eae596bb817d9b56))
+- render diff tooltip as React content ([5da0485](https://github.com/pengjiantao/opencode-vscode-client/commit/5da0485cdad8fb72fe3a00d69b4da4e5ce84e04d))
+
 ### [0.1.41](https://github.com/pengjiantao/opencode-vscode-client/compare/v0.1.40...v0.1.41) (2026-07-09)
 
 ### Bug Fixes
