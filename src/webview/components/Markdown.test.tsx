@@ -296,10 +296,16 @@ describe('Markdown Component', () => {
       startLine: 10,
       endLine: 12,
     });
-    expect(screen.getByRole('link', { name: 'docs' })).toHaveAttribute(
-      'href',
-      'https://example.com/a.ts:10',
-    );
+    const externalLink = screen.getByRole('link', { name: 'docs' });
+    expect(externalLink).toHaveAttribute('href', 'https://example.com/a.ts:10');
+    expect(externalLink).toHaveAttribute('data-custom-title', 'Open https://example.com/a.ts:10');
+  });
+
+  it('regression: attaches custom tooltip title to external markdown links', () => {
+    render(<Markdown text="Check out [OpenCode Docs](https://opencode.ai/docs)." />);
+    const link = screen.getByRole('link', { name: 'OpenCode Docs' });
+    expect(link).toHaveAttribute('data-custom-title', 'Open https://opencode.ai/docs');
+    expect(link).toHaveClass('markdown-link');
   });
 
   it('renders ordered lists separated by empty lines in a single list (loose lists)', () => {

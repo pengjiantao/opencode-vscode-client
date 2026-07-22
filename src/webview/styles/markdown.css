@@ -61,6 +61,7 @@
 
 .markdown-link {
   color: var(--vscode-textLink-foreground);
+  text-decoration: underline;
 }
 
 .markdown-link:hover {

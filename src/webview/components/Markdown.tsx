@@ -356,7 +356,14 @@ function renderLink(
   }
 
   return (
-    <a key={key} href={href} target="_blank" rel="noopener noreferrer" className="markdown-link">
+    <a
+      key={key}
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="markdown-link"
+      data-custom-title={`Open ${href}`}
+    >
       {children}
     </a>
   );
