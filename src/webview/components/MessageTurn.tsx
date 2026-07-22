@@ -36,6 +36,8 @@ interface MessageTurnProps {
   isReverted?: boolean;
   /** Callback when the user confirms reverting this turn's user message. */
   onRevert?: (messageID: string) => void;
+  /** Callback when the user triggers redoing (revert + re-send) this turn. */
+  onRedo?: (messageID: string) => void;
   /** Callback when the user confirms forking at this turn's user message. */
   onFork?: (messageID: string) => void;
 }
@@ -238,6 +240,7 @@ export const MessageTurn = memo(function MessageTurn({
   isSessionBusy = false,
   isReverted = false,
   onRevert,
+  onRedo,
   onFork,
 }: MessageTurnProps) {
   const [copied, setCopied] = useState(false);
@@ -487,6 +490,18 @@ export const MessageTurn = memo(function MessageTurn({
             <Codicon name="$(chevron-up)" />
             <span>To User Message</span>
           </button>
+          {onRedo && (
+            <button
+              className={`action-btn redo-btn${isSessionBusy ? ' disabled' : ''}`}
+              onClick={() => !isSessionBusy && onRedo(userMessage.id)}
+              disabled={isSessionBusy}
+              data-custom-title="Redo — re-ask this question"
+              data-testid="redo-btn"
+            >
+              <Codicon name="redo" />
+              <span>Redo</span>
+            </button>
+          )}
         </div>
       )}
 

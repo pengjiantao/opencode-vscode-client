@@ -100,6 +100,29 @@ describe('restoreUserMessageToEditor', () => {
     expect(chips[0].getAttribute('data-chip-filename')).toBe('explain');
   });
 
+  it('regression: restores subtask part (without metadata) cleanly without throwing TypeError', () => {
+    const editor = document.createElement('div');
+    const subtaskPart = {
+      id: 'prt-1',
+      sessionID: 's1',
+      messageID: 'm1',
+      type: 'subtask',
+      command: 'review',
+      agent: 'plan',
+      description: 'Review changes',
+      prompt: 'Review uncommitted changes',
+    } as unknown as Part;
+
+    const displayPart = makeTextPart('t1', 'Please review [Command: review] changes');
+
+    restoreUserMessageToEditor(editor, [displayPart, subtaskPart]);
+
+    const chips = editor.querySelectorAll('.opencode-chip');
+    expect(chips).toHaveLength(1);
+    expect(chips[0].getAttribute('data-chip-type')).toBe('command');
+    expect(chips[0].getAttribute('data-chip-filename')).toBe('review');
+  });
+
   it('restores skill chip from inline metadata part', () => {
     const editor = document.createElement('div');
     const parts = [

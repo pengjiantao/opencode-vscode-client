@@ -295,6 +295,23 @@ export function App() {
     [activeSessionID, messages, parts, send],
   );
 
+  /** Handles redo prompt: collects non-synthetic user message parts and sends session:redo IPC without populating input editor. */
+  const handleRedoPrompt = useCallback(
+    (messageID: string) => {
+      if (!activeSessionID) return;
+      const userParts = (parts[messageID] || []).filter(
+        (p) => !(p as { synthetic?: boolean }).synthetic,
+      );
+      send({
+        type: 'session:redo',
+        sessionID: activeSessionID,
+        messageID,
+        parts: userParts,
+      } as never);
+    },
+    [activeSessionID, parts, send],
+  );
+
   /** Handles redo: finds next user message forward or fully restores. */
   const handleRedo = () => {
     if (!activeSessionID) return;
@@ -400,6 +417,7 @@ export function App() {
             messages={messages[activeSessionID] || []}
             parts={activeSessionParts}
             onRevert={handleRevert}
+            onRedo={handleRedoPrompt}
             onFork={handleForkAtMessage}
           />
           {hasPendingQuestion ? (

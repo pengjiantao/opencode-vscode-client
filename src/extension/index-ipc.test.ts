@@ -47,6 +47,15 @@ const mockSdk = {
     // Mirrors the new statusAll() SDKClient method used to seed the in-memory
     // sessionStatuses map on extension activation.
     statusAll: vi.fn().mockResolvedValue({}),
+    get: vi.fn().mockResolvedValue({
+      id: 'sess-1',
+      model: { providerID: 'provider-1', id: 'model-1' },
+    }),
+    revert: vi.fn().mockResolvedValue(undefined),
+    prompt: vi.fn().mockResolvedValue(undefined),
+    promptAsync: vi.fn().mockResolvedValue(undefined),
+    summarize: vi.fn().mockResolvedValue(undefined),
+    command: vi.fn().mockResolvedValue(undefined),
   },
   subscribeEvents: vi.fn((handler: (event: unknown) => void) => {
     sseHandlerCallback = handler;
@@ -521,5 +530,143 @@ describe('Extension IPC & Permission Event Handlers', () => {
     expect(errorCalls.length).toBeGreaterThan(0);
     const errorMsg = (errorCalls[0]?.[0] as { message: string })?.message;
     expect(errorMsg).toContain('SDK reject error');
+  });
+
+  it('regression: handles session:redo IPC by reverting and re-sending prompt sequentially', async () => {
+    await activate(mockContext);
+    mockSdk.session.revert.mockResolvedValueOnce(undefined);
+    mockSdk.session.prompt.mockResolvedValueOnce({ id: 'msg-new' });
+
+    const redoHandler = ipcHandlers.get('session:redo');
+    expect(redoHandler).toBeDefined();
+
+    const mockParts = [
+      {
+        id: 'p1',
+        sessionID: 'sess-1',
+        messageID: 'msg-1',
+        type: 'text',
+        text: 'Redo test question',
+      },
+    ];
+
+    if (redoHandler) {
+      await redoHandler({
+        sessionID: 'sess-1',
+        messageID: 'msg-1',
+        parts: mockParts,
+      });
+    }
+
+    expect(mockSdk.session.revert).toHaveBeenCalledWith('sess-1', 'msg-1');
+    expect(mockSdk.session.promptAsync).toHaveBeenCalled();
+  });
+
+  it('regression: handles session:redo IPC for compact command by routing to summarize API', async () => {
+    await activate(mockContext);
+    mockSdk.session.revert.mockResolvedValueOnce(undefined);
+    mockSdk.session.summarize.mockResolvedValueOnce(undefined);
+
+    const redoHandler = ipcHandlers.get('session:redo');
+    expect(redoHandler).toBeDefined();
+
+    const mockParts = [
+      {
+        id: 'p1',
+        sessionID: 'sess-1',
+        messageID: 'msg-1',
+        type: 'text',
+        text: '[Command: compact]',
+        metadata: { type: 'command', command: 'compact' },
+      },
+    ];
+
+    if (redoHandler) {
+      await redoHandler({
+        sessionID: 'sess-1',
+        messageID: 'msg-1',
+        parts: mockParts,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    expect(mockSdk.session.revert).toHaveBeenCalledWith('sess-1', 'msg-1');
+    expect(mockSdk.session.summarize).toHaveBeenCalledWith({
+      id: 'sess-1',
+      providerID: 'provider-1',
+      modelID: 'model-1',
+    });
+  });
+
+  it('regression: handles session:redo IPC for slash command by routing to command API', async () => {
+    await activate(mockContext);
+    mockSdk.session.revert.mockResolvedValueOnce(undefined);
+    mockSdk.session.command.mockResolvedValueOnce(undefined);
+
+    const redoHandler = ipcHandlers.get('session:redo');
+    expect(redoHandler).toBeDefined();
+
+    const mockParts = [
+      {
+        id: 'p1',
+        sessionID: 'sess-1',
+        messageID: 'msg-1',
+        type: 'text',
+        text: 'Explain this [Command: explain]',
+        metadata: { type: 'command', command: 'explain' },
+      },
+    ];
+
+    if (redoHandler) {
+      await redoHandler({
+        sessionID: 'sess-1',
+        messageID: 'msg-1',
+        parts: mockParts,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    expect(mockSdk.session.revert).toHaveBeenCalledWith('sess-1', 'msg-1');
+    expect(mockSdk.session.command).toHaveBeenCalled();
+  });
+
+  it('regression: handles session:redo IPC for subtask command part by routing to command API with correct agent', async () => {
+    await activate(mockContext);
+    mockSdk.session.revert.mockResolvedValueOnce(undefined);
+    mockSdk.session.command.mockResolvedValueOnce(undefined);
+
+    const redoHandler = ipcHandlers.get('session:redo');
+    expect(redoHandler).toBeDefined();
+
+    const mockParts = [
+      {
+        id: 'prt-1',
+        sessionID: 'sess-1',
+        messageID: 'msg-1',
+        type: 'subtask',
+        command: 'review',
+        agent: 'plan',
+        prompt: 'Review uncommitted changes',
+      },
+    ];
+
+    if (redoHandler) {
+      await redoHandler({
+        sessionID: 'sess-1',
+        messageID: 'msg-1',
+        parts: mockParts,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    expect(mockSdk.session.revert).toHaveBeenCalledWith('sess-1', 'msg-1');
+    expect(mockSdk.session.command).toHaveBeenCalledWith({
+      id: 'sess-1',
+      cmd: 'review',
+      args: 'Review uncommitted changes',
+      model: undefined,
+      agent: 'plan',
+      variant: undefined,
+    });
   });
 });

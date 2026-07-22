@@ -247,3 +247,19 @@
   cursor: not-allowed;
   pointer-events: none;
 }
+
+/* Redo button styling */
+.action-btn.redo-btn {
+  color: var(--vscode-textLink-foreground, #3794ff);
+}
+
+.action-btn.redo-btn:hover:not(.disabled) {
+  color: var(--vscode-textLink-activeForeground, #3794ff);
+  background-color: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.08));
+}
+
+.action-btn.redo-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}

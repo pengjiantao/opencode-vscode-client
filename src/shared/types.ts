@@ -370,6 +370,7 @@ export type WebviewToExt =
   | { type: 'sync-pending-requests' }
   | { type: 'pong' }
   | { type: 'session:revert'; sessionID: string; messageID: string }
+  | { type: 'session:redo'; sessionID: string; messageID: string; parts: Part[] }
   | { type: 'session:unrevert'; sessionID: string }
   | { type: 'session:fork'; sessionID: string; messageID?: string }
   | { type: 'session:load-child-messages'; sessionID: string }

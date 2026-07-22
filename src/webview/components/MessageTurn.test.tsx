@@ -392,6 +392,92 @@ describe('MessageTurn', () => {
     });
   });
 
+  describe('Redo Feature', () => {
+    it('renders Redo button in assistant action bar when onRedo is provided', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+      const onRedoSpy = vi.fn();
+
+      render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessage={assistantMsg}
+          parts={{}}
+          isGenerating={false}
+          isLastTurn={true}
+          onRedo={onRedoSpy}
+        />,
+      );
+
+      const redoBtn = screen.getByTestId('redo-btn');
+      expect(redoBtn).toBeInTheDocument();
+      expect(redoBtn).toHaveAttribute('data-custom-title', 'Redo — re-ask this question');
+    });
+
+    it('does NOT render Redo button when onRedo is not provided', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+
+      render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessage={assistantMsg}
+          parts={{}}
+          isGenerating={false}
+          isLastTurn={true}
+        />,
+      );
+
+      expect(screen.queryByTestId('redo-btn')).not.toBeInTheDocument();
+    });
+
+    it('disables Redo button when session is busy', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+      const onRedoSpy = vi.fn();
+
+      render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessage={assistantMsg}
+          parts={{}}
+          isGenerating={false}
+          isLastTurn={true}
+          isSessionBusy={true}
+          onRedo={onRedoSpy}
+        />,
+      );
+
+      const redoBtn = screen.getByTestId('redo-btn');
+      expect(redoBtn).toBeDisabled();
+      expect(redoBtn).toHaveClass('disabled');
+
+      fireEvent.click(redoBtn);
+      expect(onRedoSpy).not.toHaveBeenCalled();
+    });
+
+    it('calls onRedo with user message ID when clicked', () => {
+      const userMsg = createMockUserMessage();
+      const assistantMsg = createMockAssistantMessage();
+      const onRedoSpy = vi.fn();
+
+      render(
+        <MessageTurn
+          userMessage={userMsg}
+          assistantMessage={assistantMsg}
+          parts={{}}
+          isGenerating={false}
+          isLastTurn={true}
+          onRedo={onRedoSpy}
+        />,
+      );
+
+      const redoBtn = screen.getByTestId('redo-btn');
+      fireEvent.click(redoBtn);
+      expect(onRedoSpy).toHaveBeenCalledWith(userMsg.id);
+    });
+  });
+
   it('regression: renders both text parts and file/chip parts inline in user message bubble', () => {
     const userMsg = createMockUserMessage();
     const textPart = createMockTextPart(

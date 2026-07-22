@@ -24,6 +24,7 @@ function isDisplayTextPart(part: Part): boolean {
 
 /** Checks if a text part is an inline metadata part (backs a chip in display text). */
 function isInlinePayloadPart(part: Part): boolean {
+  if (part.type === 'subtask') return true;
   if (part.type !== 'text') return false;
   const metadata = (part as { metadata?: { type?: unknown } }).metadata;
   return metadata?.type === 'command' || metadata?.type === 'skill';
@@ -33,15 +34,31 @@ function isInlinePayloadPart(part: Part): boolean {
 function getInlinePlaceholder(part: Part): string | undefined {
   if (!isInlinePayloadPart(part)) return undefined;
   const rec = part as unknown as Record<string, unknown>;
-  const metadata = rec.metadata as {
-    type: string;
-    command?: string;
-    name?: string;
-    placeholder?: string;
-  };
+  if (part.type === 'subtask' || rec.type === 'subtask') {
+    const cmd =
+      (typeof rec.command === 'string' && rec.command) ||
+      (typeof rec.agent === 'string' && rec.agent) ||
+      '';
+    return `[Command: ${cmd}]`;
+  }
+  if (rec.type === 'command') {
+    const cmd =
+      (typeof rec.command === 'string' && rec.command) ||
+      (typeof rec.name === 'string' && rec.name) ||
+      '';
+    return `[Command: ${cmd}]`;
+  }
+  const metadata = rec.metadata as
+    | {
+        type: string;
+        command?: string;
+        name?: string;
+        placeholder?: string;
+      }
+    | undefined;
   return (
-    metadata.placeholder ||
-    `[${metadata.type === 'command' ? 'Command' : 'Skill'}: ${metadata.type === 'command' ? metadata.command : metadata.name}]`
+    metadata?.placeholder ||
+    `[${metadata?.type === 'command' ? 'Command' : 'Skill'}: ${metadata?.type === 'command' ? metadata?.command : metadata?.name}]`
   );
 }
 
@@ -159,8 +176,7 @@ export function restoreUserMessageToEditor(
     if (fp.type !== 'file') continue;
     const rec = fp as unknown as Record<string, unknown>;
     const source = rec.source as
-      | { path?: string; text?: { value?: string; start?: number; end?: number } }
-      | undefined;
+      { path?: string; text?: { value?: string; start?: number; end?: number } } | undefined;
     const isImage = fp.mime?.startsWith('image/');
     const isTerminal = fp.filename?.startsWith('terminal [');
     // Must check terminal before code-selection since terminal parts also have source.text
@@ -224,13 +240,35 @@ export function restoreUserMessageToEditor(
     const placeholder = getInlinePlaceholder(ip);
     if (!placeholder) continue;
     const rec = ip as unknown as Record<string, unknown>;
-    const metadata = rec.metadata as { type: string; command?: string; name?: string };
+
+    let chipType: 'command' | 'skill';
+    let chipFilename: string | undefined;
+
+    if (ip.type === 'subtask' || rec.type === 'subtask') {
+      chipType = 'command';
+      chipFilename =
+        (typeof rec.command === 'string' && rec.command) ||
+        (typeof rec.agent === 'string' && rec.agent) ||
+        undefined;
+    } else if (rec.type === 'command') {
+      chipType = 'command';
+      chipFilename =
+        (typeof rec.command === 'string' && rec.command) ||
+        (typeof rec.name === 'string' && rec.name) ||
+        undefined;
+    } else {
+      const metadata = rec.metadata as
+        { type: string; command?: string; name?: string } | undefined;
+      chipType = (metadata?.type as 'command' | 'skill') || 'command';
+      chipFilename = metadata?.type === 'command' ? metadata?.command : metadata?.name;
+    }
+
     chipEntries.push({
       placeholder,
       chipData: {
         id: ip.id,
-        type: metadata.type as 'command' | 'skill',
-        filename: metadata.type === 'command' ? metadata.command : metadata.name,
+        type: chipType,
+        filename: chipFilename,
         text: 'text' in ip ? (ip as { text: string }).text : undefined,
       },
     });
@@ -241,8 +279,7 @@ export function restoreUserMessageToEditor(
     if (p.type !== 'text') continue;
     const rec = p as unknown as Record<string, unknown>;
     const metadata = rec.metadata as
-      | { type?: string; linesCount?: number; filename?: string }
-      | undefined;
+      { type?: string; linesCount?: number; filename?: string } | undefined;
     if (metadata?.type !== 'pasted-text') continue;
     const filename = metadata.filename || 'Pasted text';
     const linesCount = metadata.linesCount;

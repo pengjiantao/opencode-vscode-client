@@ -501,6 +501,65 @@ export async function activate(context: ExtensionContext): Promise<void> {
       }
     });
 
+    ipc.on('session:redo', async (msg) => {
+      const { sessionID, messageID, parts } = msg as {
+        sessionID: string;
+        messageID: string;
+        parts: Part[];
+      };
+      try {
+        // Step 1: Revert the session to the target user message ID.
+        // Intermediate messages:list is intentionally omitted to avoid intermediate UI state flickers.
+        await sdk.session.revert(sessionID, messageID);
+      } catch (err) {
+        ipc.send({ type: 'error', message: `Revert failed: ${(err as Error).message}` });
+        return;
+      }
+
+      try {
+        // Step 2: Retrieve active session model/agent/variant state.
+        const sessionState = sessionStateStore.getOrInitialize(
+          sessionID,
+          cachedModels,
+          cachedAgents,
+        );
+        const activeVariant = sessionState.model
+          ? sessionState.modelVariants[sessionState.model] || 'default'
+          : 'default';
+        const sdkVariant = activeVariant === 'default' ? undefined : activeVariant;
+
+        // Step 3: Check if the prompt contains a command part (e.g. compact or slash command).
+        const text = parts
+          .filter((p) => p.type === 'text' && 'text' in p)
+          .map((p) => (p as { text: string }).text)
+          .join('\n');
+
+        const handled = handleCommandPart({
+          parts,
+          text,
+          activeID: sessionID,
+          activeModel: sessionState.model || undefined,
+          activeAgent: sessionState.agent || undefined,
+          activeVariant: sdkVariant,
+          sessionManager,
+          ipc,
+        });
+
+        if (!handled) {
+          // Re-send standard prompt. Backend revert cleanup will delete reverted messages before starting new prompt.
+          await sessionManager.sendPrompt(
+            sessionID,
+            parts,
+            sessionState.model || undefined,
+            sessionState.agent || undefined,
+            sdkVariant,
+          );
+        }
+      } catch (err) {
+        ipc.send({ type: 'error', message: `Redo prompt failed: ${(err as Error).message}` });
+      }
+    });
+
     ipc.on('session:unrevert', async (msg) => {
       const { sessionID } = msg as { sessionID: string };
       try {

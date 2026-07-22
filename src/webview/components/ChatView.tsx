@@ -32,6 +32,8 @@ interface ChatViewProps {
   parts: Record<string, Part[]>;
   /** Callback when the user confirms reverting a message. Restores it to the input box. */
   onRevert?: (messageID: string) => void;
+  /** Callback when the user triggers redoing (revert + re-send) a turn. */
+  onRedo?: (messageID: string) => void;
   /** Callback when the user confirms forking at a specific message. */
   onFork?: (messageID: string) => void;
 }
@@ -43,7 +45,7 @@ interface ChatViewProps {
  *  `parts`, and the revert/fork callbacks. */
 export const ChatView = memo(
   forwardRef<ChatViewHandle, ChatViewProps>(function ChatView(
-    { sessionID, messages, parts, onRevert, onFork }: ChatViewProps,
+    { sessionID, messages, parts, onRevert, onRedo, onFork }: ChatViewProps,
     ref,
   ) {
     const sessionStatus = useSessionStore((s) => s.sessionStatus);
@@ -131,6 +133,7 @@ export const ChatView = memo(
               isSessionBusy={isSessionBusy}
               isReverted={isReverted}
               onRevert={onRevert}
+              onRedo={onRedo}
               onFork={onFork}
             />
           );
