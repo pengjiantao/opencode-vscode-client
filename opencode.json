@@ -8,8 +8,9 @@
     "bash": {
       "git reset *": "deny",
       "git rebase *": "deny",
-      "git merge *": "deny"
+      "git merge *": "deny",
+      "git commit --amend -m *": "deny"
     }
   },
-  "default_agent": "spec-explorer"
+  "default_agent": "plan"
 }
