@@ -4,7 +4,15 @@
  */
 
 import type { Message, Part } from '@opencode-ai/sdk/v2/client';
-import { forwardRef, memo, useCallback, useImperativeHandle, useMemo, useState } from 'react';
+import {
+  forwardRef,
+  memo,
+  useCallback,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { useSessionStore } from '../store/sessionStore';
 import { Codicon } from './Codicon';
 import { MessageTurn } from './MessageTurn';
@@ -72,6 +80,19 @@ export const ChatView = memo(
       }),
       [triggerScrollToBottom],
     );
+
+    // Pin the chat to the bottom whenever the active session changes. The
+    // ScrollFadeContainer's shouldStickToBottomRef is a long-lived ref that
+    // tracks the previous session's user scroll intent (e.g. reading history
+    // by scrolling up). Without this reset, switching into a session whose
+    // messages then arrive over IPC would inherit the "do not auto-scroll"
+    // state from the previous session and leave the view stuck mid-history.
+    // useLayoutEffect (rather than useEffect) ensures the scrollTrigger is
+    // bumped before the browser paints, so the new session is anchored at
+    // its latest message without a visible flash of the wrong position.
+    useLayoutEffect(() => {
+      triggerScrollToBottom();
+    }, [sessionID, triggerScrollToBottom]);
 
     /** Groups sequential messages into user→assistant turn pairs.
      *  Backend-generated synthetic user messages (all parts synthetic) are skipped
