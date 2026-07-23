@@ -239,13 +239,13 @@
 }
 
 .question-bar-btn-back {
-  color: var(--vscode-button-foreground);
+  color: var(--vscode-foreground);
   background-color: transparent;
-  border: 1px solid var(--vscode-button-border, transparent);
+  border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border, #454545));
 }
 
 .question-bar-btn-back:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--vscode-button-foreground) 10%, transparent);
+  background-color: var(--vscode-toolbar-hoverBackground);
 }
 
 .question-bar-btn-back:disabled {
